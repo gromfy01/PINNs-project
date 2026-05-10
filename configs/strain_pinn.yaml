@@ -1,0 +1,22 @@
+version: strain_pinn_v1
+
+model:
+  type: strain_system
+  in_dim: 6
+  out_dim: 4
+  hidden: [256, 256, 256]
+  activation: tanh
+  n_freq: 16
+  use_z: false
+
+training:
+  epochs: 1000
+  batch_size: 512
+  lr: 5.0e-4
+  patience: 60
+  lambda_compat: 1.0e-4
+
+data:
+  holdout_frac: 0.15
+  seed: 42
+  n_folds: 5
