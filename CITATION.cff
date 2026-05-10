@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "Если вы используете этот код или результаты, пожалуйста, ссылайтесь как указано ниже."
+title: "Анализ архитектур PINN для прогнозирования остаточных напряжений и накопленных деформаций после волочения проволоки"
+abstract: >-
+  Сравнительное исследование архитектур физически-информированных нейронных
+  сетей (PINN), многослойных перцептронов (MLP) и вариационных PINN (VPINN)
+  в задаче построения суррогатных моделей для прогноза остаточных напряжений
+  и накопленных деформаций после осесимметричного волочения проволоки на
+  основе данных конечно-элементного моделирования в Abaqus.
+type: software
+authors:
+  - given-names: Georgii
+    family-names: Romanenko
+    affiliation: "HSE University, Faculty of Computer Science"
+    email: ""
+keywords:
+  - physics-informed neural networks
+  - PINN
+  - residual stress
+  - wire drawing
+  - finite element method
+  - surrogate modeling
+  - axisymmetric plasticity
+license: MIT
+repository-code: "https://github.com/gromfy01/PINNs-project"
+version: "0.1.0"
+date-released: "2026-05-10"
