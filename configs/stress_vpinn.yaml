@@ -1,0 +1,22 @@
+version: stress_vpinn_v1
+
+model:
+  type: vpinn
+  in_dim: 6
+  out_dim: 4
+  hidden: [78, 137, 52, 247, 256, 143]
+  activation: softplus
+  n_freq: 8
+
+training:
+  epochs: 5000
+  batch_size: 1024
+  lr: 1.0e-3
+  patience: 80
+  n_quad: 8
+  n_test_funcs: 3
+
+data:
+  holdout_frac: 0.15
+  seed: 42
+  n_folds: 5

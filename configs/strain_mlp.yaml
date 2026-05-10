@@ -1,0 +1,19 @@
+version: strain_mlp_v1
+
+model:
+  type: mlp
+  in_dim: 6
+  out_dim: 4
+  hidden: [211, 180, 91, 114]
+  activation: gelu
+
+training:
+  epochs: 1000
+  batch_size: 512
+  lr: 5.0e-4
+  patience: 60
+
+data:
+  holdout_frac: 0.15
+  seed: 42
+  n_folds: 5
