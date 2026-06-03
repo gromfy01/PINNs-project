@@ -48,18 +48,25 @@ import deepxde as dde
 
 ### 2. Данные
 
-Архив с обработанными `.npy`-массивами:
+Исходные `.rpt`-отчёты Abaqus выложены как asset к релизу
+[`raw-data-v1`](https://github.com/gromfy01/PINNs-project/releases/tag/raw-data-v1).
+Скачать и распаковать в `data/Raw_Data/`:
 
-**[Google Drive - данные МКЭ](https://drive.google.com/your-link-here)**
+```bash
+curl -L -o Raw_Data.zip \
+  https://github.com/gromfy01/PINNs-project/releases/download/raw-data-v1/Raw_Data.zip
+unzip Raw_Data.zip -d data/Raw_Data/
+```
 
-Распаковать в `data/processed/`:
+Препроцессинг `.rpt` → `.pkl` запускается через `preprocessing/preproc.ipynb`,
+результат — четыре массива в `data/processed/`:
 
 ```
 data/processed/
-├── stress_data.npy       # (4, N_sets, 20) - компоненты тензора напряжений
-├── strain_data.npy       # (4, N_sets, 20) - компоненты тензора деформаций
-├── process_params.npy    # (N_sets, 5)     - параметры процесса (Q, k, α, μ, v)
-└── radii_norm.npy        # (N_sets, 20)    - нормированные радиальные координаты
+├── X_stress.pkl   # (4, N_sets, 5)   — параметры процесса по плоскостям
+├── y_stress.pkl   # (4, N_sets, 20)  — компоненты тензора напряжений
+├── X_strain.pkl   # (4, N_sets, 5)
+└── y_strain.pkl   # (4, N_sets, 20)  — компоненты тензора деформаций
 ```
 
 Порядок компонент: `[σ_rr, σ_θθ, σ_zz, τ_rz]` для напряжений, `[ε_rr, ε_θθ, ε_zz, ε_rz]` для деформаций.
