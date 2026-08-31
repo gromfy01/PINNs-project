@@ -250,8 +250,9 @@ def main():
     ap.add_argument("--fem-trz", type=float, default=None)
     a = ap.parse_args()
     os.makedirs(a.outdir, exist_ok=True)
-    df = pd.read_csv(a.csv)
-    df = df[df["error"].isna() | (df["error"].astype(str).str.len() == 0)]
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from analyze import load as _load
+    df = _load(a.csv)
     zero = None
     if a.dataset:
         sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))

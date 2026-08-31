@@ -25,8 +25,39 @@ METRIC = "macro_rmse"
 
 
 def load(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    bad = df["error"].notna() & (df["error"].astype(str).str.len() > 0)
+    """
+    Читает csv прогонов, терпя РАЗНЫЕ схемы строк в одном файле.
+
+    Так бывает законно: набор колонок расширяется между стадиями (добавились
+    phys_gain и глобальные метрики), а файл дописывается, и заголовок остаётся
+    от первой записи. Первые семь колонок — ключ прогона — во всех схемах
+    совпадают, поэтому строки разной ширины сопоставимы; недостающие поля
+    заполняются пустыми.
+    """
+    import csv as _csv
+    from run_matrix import FIELDS as _F
+
+    with open(path, newline="") as fh:
+        rows = list(_csv.reader(fh))
+    if not rows:
+        return pd.DataFrame()
+    header = rows[0]
+    schemas = {len(header): header, len(_F): list(_F)}
+    recs = []
+    for r in rows[1:]:
+        cols = schemas.get(len(r))
+        if cols is None:
+            cols = header if len(r) < len(_F) else list(_F)
+            r = (r + [""] * len(cols))[: len(cols)]
+        recs.append(dict(zip(cols, r)))
+    df = pd.DataFrame(recs)
+    for c in df.columns:
+        if c not in ("stage", "family", "backend", "split", "error"):
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    if "error" not in df:
+        df["error"] = ""
+    df["error"] = df["error"].fillna("")
+    bad = df["error"].astype(str).str.len() > 0
     if bad.any():
         print(f"⚠ прогонов с ошибкой: {int(bad.sum())} — исключены\n")
         for e in df.loc[bad, "error"].head(3):
