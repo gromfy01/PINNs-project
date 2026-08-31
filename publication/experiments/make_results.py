@@ -361,14 +361,50 @@ def section_curves(df, L):
             rows.append(r)
         h = ["модель"] + [f"{int(fr*100)} %" for fr in fracs]
         L(md_table(rows, h, h) + "\n")
+        from scipy.stats import ttest_ind
         curves = {f: {fr: sub[(sub["family"] == f) & (sub["frac"] == fr)]["macro_rmse"].mean()
                       for fr in fracs} for f in fams}
+
+        # немонотонность: становится ли хуже при БОЛЬШЕМ объёме обучения
+        notes = []
+        for f in fams:
+            best_fr = min(fracs, key=lambda fr: curves[f][fr])
+            if best_fr == max(fracs):
+                continue
+            a = sub[(sub["family"] == f) & (sub["frac"] == best_fr)]["macro_rmse"].to_numpy()
+            b = sub[(sub["family"] == f) & (sub["frac"] == max(fracs))]["macro_rmse"].to_numpy()
+            if len(a) >= 3 and len(b) >= 3:
+                p_ = float(ttest_ind(a, b, equal_var=False).pvalue)
+                notes.append(f"{LABEL[f]}: минимум при {int(best_fr*100)} % "
+                             f"({curves[f][best_fr]:.2f}) против {curves[f][max(fracs)]:.2f} "
+                             f"на полном пуле, p = {p_:.3f}"
+                             + ("" if p_ < 0.05 else " — не установлено"))
+        if notes:
+            L("> **Немонотонность.** На этом сплите ошибка у части семейств "
+              "минимальна НЕ на полном обучающем пуле:\n>\n> - " +
+              "\n> - ".join(notes) +
+              "\n>\n> Правдоподобное объяснение: с ростом объёма модель точнее "
+              "подстраивается под покрытую часть оси фактора и хуже продолжается "
+              "за её пределы. Утверждать это как установленный эффект можно "
+              "только по строкам, где p < 0.05.\n")
+
         phys = [f for f in fams if f != "mlp"]
         if phys and "mlp" in fams:
             cross = [fr for fr in fracs if curves["mlp"][fr] <= min(curves[p][fr] for p in phys)]
-            L(f"Доля данных, начиная с которой датадривен-базлайн не хуже лучшей "
-              f"physics-informed модели: **{int(min(cross)*100) if cross else '—'}%**"
-              + ("" if cross else " (в исследованном диапазоне не догоняет)") + "\n")
+            if cross:
+                L(f"Доля данных, начиная с которой датадривен-базлайн не хуже лучшей "
+                  f"physics-informed модели: **{int(min(cross)*100)} %**\n")
+            else:
+                fr0 = min(fracs)
+                best_p = min(phys, key=lambda x: curves[x][fr0])
+                a = sub[(sub["family"] == "mlp") & (sub["frac"] == fr0)]["macro_rmse"].to_numpy()
+                b = sub[(sub["family"] == best_p) & (sub["frac"] == fr0)]["macro_rmse"].to_numpy()
+                p_ = float(ttest_ind(a, b, equal_var=False).pvalue) if min(len(a), len(b)) >= 3 else float("nan")
+                L(f"Датадривен-базлайн не догоняет лучшую physics-informed модель ни "
+                  f"на одной доле пула. Но при наименьшей доле ({int(fr0*100)} %) отрыв "
+                  f"составляет {curves['mlp'][fr0] - curves[best_p][fr0]:+.2f} МПа при "
+                  f"p = {p_:.3f} → преимущество физприора в режиме дефицита данных "
+                  f"{'установлено' if p_ < 0.05 else '**не установлено**'}.\n")
 
 
 def section_corrupt(df, L):
