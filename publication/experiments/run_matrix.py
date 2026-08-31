@@ -51,10 +51,32 @@ def key_of(row: Dict) -> Tuple:
 
 
 def load_done(path: str) -> set:
+    """
+    Ключи уже посчитанных прогонов.
+
+    Читает файл терпимо к РАЗНЫМ схемам строк: набор колонок расширялся между
+    стадиями, а файл дописывается, и заголовок остаётся от первой записи. При
+    наивном DictReader поле `error` у строк новой схемы попадало на чужую
+    колонку, оказывалось непустым, и такие прогоны считались неудачными — то
+    есть возобновление пересчитывало бы уже посчитанное.
+    """
     if not os.path.exists(path):
         return set()
     with open(path, newline="") as f:
-        return {key_of(r) for r in csv.DictReader(f) if not r.get("error")}
+        rows = list(csv.reader(f))
+    if not rows:
+        return set()
+    header = rows[0]
+    schemas = {len(header): header, len(FIELDS): list(FIELDS)}
+    done = set()
+    for r in rows[1:]:
+        cols = schemas.get(len(r))
+        if cols is None:
+            continue
+        rec = dict(zip(cols, r))
+        if not rec.get("error"):
+            done.add(key_of(rec))
+    return done
 
 
 # ───────────────────────────── один прогон ──────────────────────────────
@@ -255,8 +277,11 @@ def main():
     for j in jobs:
         j["max_epochs"] = a.max_epochs
     done = load_done(a.out)
+    n_all = len(jobs)
     jobs = [j for j in jobs if key_of(j) not in done]
-    print(f"стадия {a.stage}: заданий к запуску {len(jobs)} (пропущено готовых {len(done)})")
+    print(f"стадия {a.stage}: заданий к запуску {len(jobs)}, "
+          f"пропущено уже посчитанных {n_all - len(jobs)} "
+          f"(в файле готовых прогонов: {len(done)})")
     if not jobs:
         return
 
