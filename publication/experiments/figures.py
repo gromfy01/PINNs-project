@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from typing import Dict, List, Optional
 
 import matplotlib
@@ -61,7 +62,8 @@ def agg(df: pd.DataFrame, by: List[str], metric: str) -> pd.DataFrame:
 
 
 def fig_extrapolation(df, out, splits=("random", "matched:alpha_max",
-                                        "interp:alpha_mid", "extrap:alpha_max")):
+                                        "interp:alpha_mid", "extrap:alpha_max"),
+                      zero_rmse=None):
     """
     Две панели на одних категориях: абсолютная ошибка и R².
 
@@ -82,8 +84,11 @@ def fig_extrapolation(df, out, splits=("random", "matched:alpha_max",
 
     fig, axes = plt.subplots(2, 1, figsize=(COL_W, 4.2), sharex=True,
                              gridspec_kw={"height_ratios": [1, 1], "hspace": 0.12})
+    metric2 = "r2_normal_g" if "r2_normal_g" in d.columns else "macro_r2"
     for ax, metric, ylab in ((axes[0], "macro_rmse", "macro-RMSE, МПа"),
-                             (axes[1], "macro_r2", "macro-$R^2$")):
+                             (axes[1], metric2,
+                              "$R^2$, нормальные компоненты" if metric2 == "r2_normal_g"
+                              else "macro-$R^2$")):
         g = agg(d, ["split", "family"], metric)
         for i, fam in enumerate(fams):
             sub = g[g["family"] == fam].set_index("split").reindex(splits)
@@ -93,9 +98,13 @@ def fig_extrapolation(df, out, splits=("random", "matched:alpha_max",
                    error_kw={"ecolor": INK, "elinewidth": 0.7, "capthick": 0.7})
         ax.set_ylabel(ylab)
         _grid(ax)
-    axes[1].axhline(0.0, color=INK, lw=0.9, ls="--")
-    axes[1].text(-0.45, -0.06, "ниже пунктира — хуже предсказания средним",
-                 fontsize=6.5, color=INK, ha="left", va="top")
+    if zero_rmse:
+        for j, sp in enumerate(splits):
+            if sp in zero_rmse:
+                axes[0].plot([j - 0.42, j + 0.42], [zero_rmse[sp]] * 2,
+                             color=INK, lw=1.0, ls="--")
+        axes[0].text(0.0, zero_rmse[splits[0]], " предсказание средним",
+                     fontsize=6.5, color=INK, va="bottom", ha="left")
     axes[1].set_xticks(x); axes[1].set_xticklabels(ticks)
     axes[0].legend(frameon=False, ncol=1, loc="upper center",
                    bbox_to_anchor=(0.5, 1.42), handlelength=1.4)
@@ -236,14 +245,22 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True)
     ap.add_argument("--outdir", required=True)
+    ap.add_argument("--dataset", default="")
     ap.add_argument("--fem-srr", type=float, default=None)
     ap.add_argument("--fem-trz", type=float, default=None)
     a = ap.parse_args()
     os.makedirs(a.outdir, exist_ok=True)
     df = pd.read_csv(a.csv)
     df = df[df["error"].isna() | (df["error"].astype(str).str.len() == 0)]
+    zero = None
+    if a.dataset:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+        from make_results import add_global_metrics, constant_predictor, global_std
+        df = add_global_metrics(df, global_std(a.dataset))
+        zero = constant_predictor(a.dataset, sorted(df["split"].dropna().unique()))
     made = [
-        fig_extrapolation(df, os.path.join(a.outdir, "fig_extrapolation.png")),
+        fig_extrapolation(df, os.path.join(a.outdir, "fig_extrapolation.png"),
+                          zero_rmse=zero),
         fig_curves(df, os.path.join(a.outdir, "fig_learning_curves.png")),
         fig_corruption(df, os.path.join(a.outdir, "fig_corruption.png")),
         fig_bc(df, os.path.join(a.outdir, "fig_bc_violation.png"), a.fem_srr, a.fem_trz),

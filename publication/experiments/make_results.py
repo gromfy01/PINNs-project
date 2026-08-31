@@ -65,6 +65,59 @@ def fmt(v, n=3):
     return "—" if v is None or (isinstance(v, float) and not np.isfinite(v)) else f"{v:.{n}f}"
 
 
+COMP_COLS = ["rmse_sigma_rr", "rmse_sigma_tt", "rmse_sigma_zz", "rmse_tau_rz"]
+
+
+def global_std(dataset_path: str) -> np.ndarray:
+    sys.path.insert(0, os.path.join(HERE, "..", "code"))
+    from dataset import StressDataset
+    return StressDataset.load(dataset_path).y.reshape(-1, 4).std(axis=0)
+
+
+def add_global_metrics(df: pd.DataFrame, gstd: np.ndarray) -> pd.DataFrame:
+    """
+    Пересчитать нормированные метрики с ЕДИНЫМ знаменателем (std по всему
+    датасету) из покомпонентных RMSE. Локальный вариант (std того же среза)
+    между сплитами несравним: у held-out регионов разная дисперсия, и одна и та
+    же абсолютная ошибка даёт разный R². На τ_rz это давало ложный вывод —
+    локальный R² уходил в −4.4 и утаскивал среднее по четырём компонентам ниже
+    нуля, создавая впечатление, что модель хуже предсказания средним.
+    """
+    d = df.copy()
+    rm = d[COMP_COLS].to_numpy(dtype=float)
+    nr = rm / (np.asarray(gstd, dtype=float)[None, :] + 1e-12)
+    r2 = 1.0 - nr ** 2
+    d["macro_nrmse_g"] = nr.mean(axis=1)
+    d["macro_r2_g"] = r2.mean(axis=1)
+    d["r2_normal_g"] = r2[:, :3].mean(axis=1)
+    for i, c in enumerate(("sigma_rr", "sigma_tt", "sigma_zz", "tau_rz")):
+        d[f"nrmse_{c}_g"] = nr[:, i]
+        d[f"r2_{c}_g"] = r2[:, i]
+    return d
+
+
+def constant_predictor(dataset_path: str, splits: List[str]) -> Dict[str, float]:
+    """
+    macro-RMSE предсказания константой (средним held-out по компонентам).
+    Это единственная честная «нулевая модель», с которой имеет смысл сравнивать
+    абсолютную ошибку.
+    """
+    sys.path.insert(0, os.path.join(HERE, "..", "code"))
+    from dataset import StressDataset
+    from splits import build_split_suite
+    ds = StressDataset.load(dataset_path)
+    suite = build_split_suite(ds.proc)
+    out = {}
+    for sp in splits:
+        if sp not in suite:
+            continue
+        y = ds.y[suite[sp].test_sets]
+        const = y.mean(axis=(0, 1))
+        out[sp] = float(np.mean([np.sqrt(((y[:, :, c] - const[c]) ** 2).mean())
+                                 for c in range(4)]))
+    return out
+
+
 def fem_baseline(dataset_path: str, splits: List[str]) -> Dict[str, Dict[str, float]]:
     """Невязка равновесия и нарушение ГУ у самих данных FEM на каждом
     held-out регионе. Без этой строки цифры моделей не с чем сравнивать."""
@@ -114,42 +167,52 @@ def section_main(df, L, dataset_path: str = ""):
         L("> Неполные по сидам сплиты: " + ", ".join(f"`{x}`" for x in incomplete) +
           ". Сравнение ведётся только по сидам, посчитанным у всех моделей.\n")
 
-    L("### 1.0б Нормированные метрики\n")
-    L("Абсолютная macro-RMSE сравнима между сплитами только при равной дисперсии "
-      "held-out региона, а она не равна. Поэтому рядом обязательны macro-NRMSE "
-      "(RMSE, делённая на std компоненты) и R²: они отвечают на вопрос «лучше ли "
-      "модель предсказания средним», а RMSE — нет.\n")
+    L("### 1.0б Нормированные метрики и нулевая модель\n")
+    L("Абсолютная macro-RMSE сама по себе не говорит, работает ли модель: нужна "
+      "нулевая модель. Ниже — предсказание константой (среднее held-out по "
+      "компонентам) и R², посчитанный с ЕДИНЫМ знаменателем (std по всему "
+      "датасету). Локальный R², нормированный на дисперсию того же среза, между "
+      "сплитами несравним и на τ_rz даёт заведомо вводящие в заблуждение "
+      "значения — см. §1.3б.\n")
+    zero = constant_predictor(dataset_path, splits) if dataset_path else {}
     rows = []
     for sp in splits:
         sub = d[d["split"] == sp]
-        r = {"сплит": f"`{sp}`"}
+        r = {"сплит": f"`{sp}`",
+             "предсказание средним": f"{zero.get(sp, float('nan')):.1f}" if zero else "—"}
         for f in fams:
             v = sub[sub["family"] == f]
-            if v.empty:
-                r[LABEL[f]] = "—"
-            else:
-                r[LABEL[f]] = (f"{v['macro_nrmse'].mean():.3f} / "
-                               f"{v['macro_r2'].mean():+.3f}")
+            r[LABEL[f]] = "—" if v.empty else (
+                f"{v['macro_rmse'].mean():.2f} · R²={v['macro_r2_g'].mean():+.2f} · "
+                f"R²норм={v['r2_normal_g'].mean():+.2f}")
         rows.append(r)
-    h2 = ["сплит"] + [LABEL[f] for f in fams]
-    L("macro-NRMSE / macro-R²\n")
+    h2 = ["сплит", "предсказание средним"] + [LABEL[f] for f in fams]
+    L("macro-RMSE, МПа · R² (единый знаменатель) · R² только по нормальным компонентам\n")
     L(md_table(rows, h2, h2) + "\n")
 
     interior = [sp for sp in splits if sp.startswith("interp:")]
     beyond = [sp for sp in splits if sp.startswith("extrap:")]
-    if interior and beyond:
-        i_r2 = d[d["split"].isin(interior)]["macro_r2"].mean()
-        b_r2 = d[d["split"].isin(beyond)]["macro_r2"].mean()
-        i_rm = d[d["split"].isin(interior)]["macro_rmse"].mean()
-        b_rm = d[d["split"].isin(beyond)]["macro_rmse"].mean()
-        L(f"> **Ключевое сравнение.** Изъятие ВНУТРЕННЕГО уровня фактора "
-          f"({', '.join('`'+x+'`' for x in interior)}) даёт macro-RMSE "
-          f"{i_rm:.1f} МПа при R² = {i_r2:+.2f}; выход ЗА диапазон "
-          f"({', '.join('`'+x+'`' for x in beyond)}) — {b_rm:.1f} МПа при "
-          f"R² = {b_r2:+.2f}. В абсолютной RMSE разница мала, а по R² она "
-          f"качественная: во внутреннем срезе модель ещё объясняет часть "
-          f"дисперсии, за диапазоном — хуже предсказания средним. Именно это "
-          f"различие случайный hold-out (R² ≈ 0.89) не показывает вовсе.\n")
+    inside = [sp for sp in splits if sp.startswith(("random", "matched"))]
+    if interior and beyond and inside:
+        def mm(ss, col):
+            return d[d["split"].isin(ss)][col].mean()
+        L(f"> **Ключевое сравнение.** Внутри пространства параметров (случайный "
+          f"hold-out и контроль того же объёма) macro-RMSE = {mm(inside,'macro_rmse'):.1f} МПа "
+          f"при R² = {mm(inside,'macro_r2_g'):+.2f}. Изъятие ВНУТРЕННЕГО уровня фактора — "
+          f"{mm(interior,'macro_rmse'):.1f} МПа при R² = {mm(interior,'macro_r2_g'):+.2f}. "
+          f"Выход ЗА диапазон — {mm(beyond,'macro_rmse'):.1f} МПа при "
+          f"R² = {mm(beyond,'macro_r2_g'):+.2f}. Ошибка примерно удваивается в обоих "
+          f"случаях, и разница между «внутри диапазона, но уровень изъят» и «за "
+          f"диапазоном» невелика — то есть цена платится за саму дыру в сетке "
+          f"фактора, а не за направление выхода.\n")
+        L(f"> При этом модель остаётся заметно лучше нулевой: предсказание средним "
+          f"даёт {np.mean([zero[s] for s in beyond if s in zero]):.0f} МПа против "
+          f"{mm(beyond,'macro_rmse'):.1f} у моделей. По ТРЁМ НОРМАЛЬНЫМ компонентам "
+          f"R² почти не падает ({mm(inside,'r2_normal_g'):+.2f} внутри против "
+          f"{mm(beyond,'r2_normal_g'):+.2f} за диапазоном) — рушится только τ_rz. "
+          f"Заявлять «за диапазоном модель хуже предсказания средним» нельзя: это "
+          f"артефакт усреднения четырёх неограниченных снизу R² с локальным "
+          f"знаменателем.\n")
 
     L("### 1.1 ΔRMSE относительно контроля того же объёма\n")
     L("Без этой величины «RMSE вырос» не интерпретируется: рост может объясняться "
@@ -181,8 +244,10 @@ def section_main(df, L, dataset_path: str = ""):
         L(nemenyi(s).to_text())
         L("```\n")
 
-    L("### 1.3 Порог содержательности разницы\n")
-    L("Утверждение о разнице делается только если |Δ| ≥ σ по сидам.\n")
+    L("### 1.3 Установлена ли разница между семействами\n")
+    L("Критерий — парный тест по сидам (один сид = один блок). Порог "
+      "|Δ| ≥ σ по сидам приводится отдельно как размер эффекта: тестом он не "
+      "является и при малом числе сидов даёт «установлено» там, где данных нет.\n")
     for sp in splits:
         s, _ = safe_summary(d, sp)
         if s is None:
@@ -221,6 +286,13 @@ def section_main(df, L, dataset_path: str = ""):
              "\\|σ_rr\\| при r=1, МПа": f"{r['bcr']:.2f} ± {0 if np.isnan(r['bcr_s']) else r['bcr_s']:.2f}",
              "\\|τ_rz\\| при r=1, МПа": f"{r['bct']:.3f} ± {0 if np.isnan(r['bct_s']) else r['bct_s']:.3f}"}
             for _, r in g.iterrows()]
+    if "phys_gain" in d.columns:
+        pg = d[d["family"].isin(["pinn", "vpinn"])].groupby("family")["phys_gain"].mean()
+        if len(pg):
+            L("Калибровочные множители физлосса (норма градиента физического члена "
+              "приведена к норме data-члена, λ_physics читается как доля от неё): "
+              + ", ".join(f"{LABEL.get(k,k)} ×{v:.3g}" for k, v in pg.items()) + "\n")
+
     if dataset_path:
         try:
             base = fem_baseline(dataset_path, splits)
@@ -356,6 +428,8 @@ def main():
     ap.add_argument("--dataset", default="")
     a = ap.parse_args()
     df = load(a.csv)
+    if a.dataset:
+        df = add_global_metrics(df, global_std(a.dataset))
     lines: List[str] = []
     L = lines.append
 
