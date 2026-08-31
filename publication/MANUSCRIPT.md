@@ -54,29 +54,67 @@
 > measurable without experimental validation, and they are what we claim.
 >
 > The factorial grid is incomplete and unbalanced: the level `v = 5` m/min is
-> represented by 122 cases against 554–607 for the other levels, and ⟨N⟩ % of
-> the raw cases are exact duplicates of another case differing only in the
-> friction label, so friction cannot be used as an extrapolation axis.
+> represented by 122 cases against 554–607 for the other levels, and 13.2 % of
+> the raw cases are bit-identical duplicates of another case differing only in
+> the friction label, so friction cannot be used as an extrapolation axis.
+>
+> The shear component `τ_rz` is essentially not predicted: its NRMSE is 0.58 on
+> a random hold-out and 2.2–2.4 beyond the training range, against a physical
+> scale of 0.67 MPa mean absolute value — two orders of magnitude below the
+> normal components. Reported macro-averaged figures are therefore dominated by
+> the normal components, and per-component figures must be given alongside them.
 
 ## 4. Формулировка вклада
 
 Сравнение бэкендов не может быть вкладом: их два, а не три, и их производные
 совпадают до машинной точности. Защитимая рамка:
 
-> **Contribution.** On a single, fully controlled finite-element dataset we show
-> that a physics-informed regulariser buys ⟨…⟩ under extrapolation beyond the
-> training range and ⟨…⟩ under corruption of the training labels, at ⟨…⟩ cost in
-> interpolation accuracy, when every model is trained under an identical
-> protocol — same architecture, optimiser, schedule, budget, early stopping and
-> seeds, with only the loss composition differing. We further show that the
-> traction-free condition is satisfied by the physics-informed surrogates
-> ⟨N⟩ times more strictly than by the finite-element data on which they were
-> trained.
+> **Contribution.** Under a protocol in which every model shares architecture,
+> optimiser, budget, early stopping and seeds — only the loss composition
+> differing, and the weight of the physics term calibrated so that its gradient
+> norm is a fixed fraction of the data term's — we report three findings.
+>
+> First, the physics-informed surrogates satisfy the traction-free condition
+> **5.4 times more strictly than the finite-element data on which they were
+> trained** (0.64 MPa against 3.43 MPa for the data and 4.50 MPa for the
+> data-driven baseline), and halve the equilibrium residual (920 against
+> 1936 MPa/m), at no measurable cost in accuracy (11.87 against 11.43 MPa
+> macro-RMSE, p = 0.052). The advantage persists on a held-out region outside
+> the training range (1.76 against 5.89 MPa, with 3.31 MPa for the data).
+>
+> Second, under systematic corruption of 10 % of the training labels the
+> physics-informed surrogate degrades to 17.45 MPa against 19.47 MPa for the
+> data-driven baseline (p = 0.001), while at zero corruption the two are
+> indistinguishable.
+>
+> Third, transferability beyond the training range is **strongly
+> axis-dependent**: holding out an entire factor level costs nothing along the
+> land-length coefficient (×0.94), a factor of two along the die semi-angle
+> (×1.94), a factor of 2.5 along the area reduction (×2.49), and a factor of
+> 5.5 along drawing speed (×5.51), where the surrogate ceases to beat a
+> constant predictor. The spread between axes exceeds the spread between model
+> families, so a single "extrapolation error" figure is not informative.
 
-Последнее предложение — самое сильное, что есть в работе: суррогат
-воспроизводит физику строже источника. Оно проверяемо, не требует
-экспериментальной валидации МКЭ и прямо отвечает на «what is added is a standard
-PDE penalty term».
+Первое утверждение — самое сильное, что есть в работе: суррогат воспроизводит
+физику строже источника. Оно проверяемо, не требует экспериментальной
+валидации МКЭ и прямо отвечает на «what is added is a standard PDE penalty
+term». Третье — прямой и полезный ответ на «interpolation within this
+particular case».
+
+### 4.1 Что заявлять НЕЛЬЗЯ
+
+Проверено и не подтвердилось:
+
+* **«Physics-informed выигрывает при дефиците данных».** При 10 % обучающего
+  пула отрыв +1.21 МПа при p = 0.443 — не установлен; на случайном hold-out
+  преимущества нет ни на одной доле.
+* **«Выбор бэкенда важен».** Производные torch и JAX совпадают до 8.7e-15, а
+  DeepXDE в работе — это PyTorch. Две независимые реализации одного метода
+  расходятся на 0.6–3.4 МПа, и знак расхождения меняется от сплита к сплиту:
+  ровно такой разрыв и был заявлен в отклонённой версии как эффект движка.
+* **«Слабая форма лучше/хуже сильной».** При равной норме градиента физического
+  члена сильная форма давит невязку равновесия вдвое сильнее (920 против 1605),
+  но по точности семейства неразличимы; на разных сплитах лидируют разные.
 
 ## 5. Замены точечных мест
 
