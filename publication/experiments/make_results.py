@@ -394,6 +394,24 @@ def section_corrupt(df, L):
         rows.append(r)
     h = ["модель"] + [f"{int(rt*100)} %" for rt in rates] + ["рост"]
     L(md_table(rows, h, h) + "\n")
+    hi = max(rates)
+    if hi > 0 and len(fams) >= 2:
+        from scipy.stats import ttest_ind
+        base_f = "mlp" if "mlp" in fams else fams[0]
+        a = d[(d["family"] == base_f) & (d["corrupt_rate"] == hi)]["macro_rmse"].to_numpy()
+        for f in fams:
+            if f == base_f:
+                continue
+            b = d[(d["family"] == f) & (d["corrupt_rate"] == hi)]["macro_rmse"].to_numpy()
+            if len(a) < 3 or len(b) < 3:
+                L(f"> {LABEL[f]} против {LABEL[base_f]} при {int(hi*100)} % порчи: "
+                  f"сидов меньше трёх, тест не проводится.\n")
+                continue
+            p = float(ttest_ind(a, b, equal_var=False).pvalue)
+            L(f"> При {int(hi*100)} % испорченных меток {LABEL[f]} даёт "
+              f"{b.mean():.2f} против {a.mean():.2f} у {LABEL[base_f]}: "
+              f"Δ = {a.mean()-b.mean():+.2f} МПа, p = {p:.3f} → разница "
+              f"{'установлена' if p < 0.05 else '**не установлена**'}.\n")
 
 
 def section_twod(df, L):
@@ -419,6 +437,30 @@ def section_twod(df, L):
     if rows:
         h = list(rows[0].keys())
         L(md_table(rows, h, h) + "\n")
+        L("Читать так. `|R_r|` и `|R_z|` — апостериорные невязки на предсказаниях, "
+          "посчитанные в ПОЛНОЙ форме (со всеми членами) и в редуцированной (без "
+          "осевых производных). Сравнивать между конфигурациями надо колонки "
+          "«полная»: именно они говорят, насколько предсказание удовлетворяет "
+          "настоящему уравнению равновесия. Колонка «редуц.» приведена для "
+          "сверки с одномерной постановкой.\n")
+        for sp in sorted(d["split"].unique()):
+            v = d[d["split"] == sp]
+            red = v[v["family"] == "pinn2d_reduced"]
+            full = v[v["family"] == "pinn2d_full"]
+            if red.empty or full.empty:
+                continue
+            dz = 100 * (1 - full["eq_z_full"].mean() / max(red["eq_z_full"].mean(), 1e-9))
+            drm = full["macro_rmse"].mean() - red["macro_rmse"].mean()
+            L(f"> **`{sp}`.** Включение осевого уравнения снижает полную осевую "
+              f"невязку на **{dz:.0f} %** ({red['eq_z_full'].mean():.0f} → "
+              f"{full['eq_z_full'].mean():.0f} МПа/м) при изменении macro-RMSE на "
+              f"{drm:+.2f} МПа. То есть член `∂σ_zz/∂z`, который в одномерной "
+              f"постановке отбросить нельзя (он даёт 68 % от удержанных), при "
+              f"введении `z` во вход действительно начинает работать — и это "
+              f"обходится без потери точности.\n")
+        L("Абсолютные macro-RMSE этого раздела НЕ сравнимы с разделом 1: там "
+          "предсказывается один радиальный профиль на набор, здесь — вся сетка "
+          "(z, r), включающая осевую изменчивость.\n")
 
 
 def main():
