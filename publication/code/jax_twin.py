@@ -196,8 +196,8 @@ class JaxTrainer:
         X = np.concatenate([proc, np.full((n, 1), r_scalar)], 1)
         return np.asarray(self._net(X) * self._ys + self._ym)
 
-    def evaluate(self, proc, y, r) -> Dict[str, float]:
-        return metrics(y, self.predict(proc, r))
+    def evaluate(self, proc, y, r, global_std=None) -> Dict[str, float]:
+        return metrics(y, self.predict(proc, r), global_std)
 
 
 def check_gradient_agreement(cfg: Config, n_points: int = 64) -> Dict[str, float]:
