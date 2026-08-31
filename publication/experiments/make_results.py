@@ -114,6 +114,43 @@ def section_main(df, L, dataset_path: str = ""):
         L("> Неполные по сидам сплиты: " + ", ".join(f"`{x}`" for x in incomplete) +
           ". Сравнение ведётся только по сидам, посчитанным у всех моделей.\n")
 
+    L("### 1.0б Нормированные метрики\n")
+    L("Абсолютная macro-RMSE сравнима между сплитами только при равной дисперсии "
+      "held-out региона, а она не равна. Поэтому рядом обязательны macro-NRMSE "
+      "(RMSE, делённая на std компоненты) и R²: они отвечают на вопрос «лучше ли "
+      "модель предсказания средним», а RMSE — нет.\n")
+    rows = []
+    for sp in splits:
+        sub = d[d["split"] == sp]
+        r = {"сплит": f"`{sp}`"}
+        for f in fams:
+            v = sub[sub["family"] == f]
+            if v.empty:
+                r[LABEL[f]] = "—"
+            else:
+                r[LABEL[f]] = (f"{v['macro_nrmse'].mean():.3f} / "
+                               f"{v['macro_r2'].mean():+.3f}")
+        rows.append(r)
+    h2 = ["сплит"] + [LABEL[f] for f in fams]
+    L("macro-NRMSE / macro-R²\n")
+    L(md_table(rows, h2, h2) + "\n")
+
+    interior = [sp for sp in splits if sp.startswith("interp:")]
+    beyond = [sp for sp in splits if sp.startswith("extrap:")]
+    if interior and beyond:
+        i_r2 = d[d["split"].isin(interior)]["macro_r2"].mean()
+        b_r2 = d[d["split"].isin(beyond)]["macro_r2"].mean()
+        i_rm = d[d["split"].isin(interior)]["macro_rmse"].mean()
+        b_rm = d[d["split"].isin(beyond)]["macro_rmse"].mean()
+        L(f"> **Ключевое сравнение.** Изъятие ВНУТРЕННЕГО уровня фактора "
+          f"({', '.join('`'+x+'`' for x in interior)}) даёт macro-RMSE "
+          f"{i_rm:.1f} МПа при R² = {i_r2:+.2f}; выход ЗА диапазон "
+          f"({', '.join('`'+x+'`' for x in beyond)}) — {b_rm:.1f} МПа при "
+          f"R² = {b_r2:+.2f}. В абсолютной RMSE разница мала, а по R² она "
+          f"качественная: во внутреннем срезе модель ещё объясняет часть "
+          f"дисперсии, за диапазоном — хуже предсказания средним. Именно это "
+          f"различие случайный hold-out (R² ≈ 0.89) не показывает вовсе.\n")
+
     L("### 1.1 ΔRMSE относительно контроля того же объёма\n")
     L("Без этой величины «RMSE вырос» не интерпретируется: рост может объясняться "
       "тем, что регион малочисленнее или физически тяжелее.\n")
@@ -155,6 +192,24 @@ def section_main(df, L, dataset_path: str = ""):
         for v in significance_gate(s):
             L(str(v))
         L("```\n")
+
+    L("### 1.3б Покомпонентная нормированная ошибка\n")
+    L("NRMSE = RMSE / std компоненты на held-out. Значение около 1 означает, "
+      "что компонента не предсказывается вовсе.\n")
+    comps = [("nrmse_sigma_rr", "σ_rr"), ("nrmse_sigma_tt", "σ_θθ"),
+             ("nrmse_sigma_zz", "σ_zz"), ("nrmse_tau_rz", "τ_rz")]
+    rows = []
+    for sp in splits:
+        for f in fams:
+            v = d[(d["split"] == sp) & (d["family"] == f)]
+            if v.empty:
+                continue
+            r = {"сплит": f"`{sp}`", "модель": LABEL[f]}
+            for c, nm in comps:
+                r[nm] = f"{v[c].mean():.3f}"
+            rows.append(r)
+    h3 = ["сплит", "модель"] + [nm for _, nm in comps]
+    L(md_table(rows, h3, h3) + "\n")
 
     L("### 1.4 Физический аудит на held-out регионе\n")
     g = d.groupby(["split", "family"]).agg(

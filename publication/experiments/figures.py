@@ -60,31 +60,45 @@ def agg(df: pd.DataFrame, by: List[str], metric: str) -> pd.DataFrame:
     return g.fillna({"std": 0.0})
 
 
-def fig_extrapolation(df, out, metric="macro_rmse",
-                      splits=("random", "interp:alpha_mid", "matched:alpha_max",
-                              "extrap:alpha_max")):
+def fig_extrapolation(df, out, splits=("random", "matched:alpha_max",
+                                        "interp:alpha_mid", "extrap:alpha_max")):
+    """
+    Две панели на одних категориях: абсолютная ошибка и R².
+
+    Обе нужны и вместе: в абсолютной RMSE изъятие внутреннего уровня и выход за
+    диапазон выглядят одинаково, потому что дисперсия held-out регионов разная.
+    R² показывает качественное различие — за диапазоном модель хуже предсказания
+    средним. Это не два взгляда на одно, а два разных факта.
+    """
     d = df[(df["stage"] == "main") & (df["split"].isin(splits))]
     if d.empty:
         return None
-    g = agg(d, ["split", "family"], metric)
-    splits = [s for s in splits if s in set(g["split"])]
-    fams = [f for f in ORDER if f in set(g["family"])]
+    splits = [s for s in splits if s in set(d["split"])]
+    fams = [f for f in ORDER if f in set(d["family"])]
     x = np.arange(len(splits)); w = 0.8 / max(len(fams), 1)
+    ticks = [s.replace("extrap:", "экстрап.\n").replace("interp:", "интерп.\n")
+             .replace("matched:", "контроль\n").replace("random", "случайный\nhold-out")
+             for s in splits]
 
-    fig, ax = plt.subplots(figsize=(COL_W, 2.5))
-    for i, fam in enumerate(fams):
-        sub = g[g["family"] == fam].set_index("split").reindex(splits)
-        ax.bar(x + (i - (len(fams) - 1) / 2) * w, sub["mean"], w * 0.92,
-               yerr=sub["std"], capsize=2, color=COLOR[fam], hatch=HATCH[fam],
-               edgecolor="white", linewidth=0.8, label=LABEL[fam],
-               error_kw={"ecolor": INK, "elinewidth": 0.7, "capthick": 0.7})
-    ax.set_xticks(x)
-    ax.set_xticklabels([s.replace("extrap:", "экстрап.\n").replace("interp:", "интерп.\n")
-                        .replace("matched:", "контроль\n").replace("random", "случайный\nhold-out")
-                        for s in splits])
-    ax.set_ylabel("macro-RMSE, МПа")
-    ax.legend(frameon=False, loc="upper left")
-    _grid(ax)
+    fig, axes = plt.subplots(2, 1, figsize=(COL_W, 4.2), sharex=True,
+                             gridspec_kw={"height_ratios": [1, 1], "hspace": 0.12})
+    for ax, metric, ylab in ((axes[0], "macro_rmse", "macro-RMSE, МПа"),
+                             (axes[1], "macro_r2", "macro-$R^2$")):
+        g = agg(d, ["split", "family"], metric)
+        for i, fam in enumerate(fams):
+            sub = g[g["family"] == fam].set_index("split").reindex(splits)
+            ax.bar(x + (i - (len(fams) - 1) / 2) * w, sub["mean"], w * 0.92,
+                   yerr=sub["std"], capsize=2, color=COLOR[fam], hatch=HATCH[fam],
+                   edgecolor="white", linewidth=0.8, label=LABEL[fam],
+                   error_kw={"ecolor": INK, "elinewidth": 0.7, "capthick": 0.7})
+        ax.set_ylabel(ylab)
+        _grid(ax)
+    axes[1].axhline(0.0, color=INK, lw=0.9, ls="--")
+    axes[1].text(-0.45, -0.06, "ниже пунктира — хуже предсказания средним",
+                 fontsize=6.5, color=INK, ha="left", va="top")
+    axes[1].set_xticks(x); axes[1].set_xticklabels(ticks)
+    axes[0].legend(frameon=False, ncol=1, loc="upper center",
+                   bbox_to_anchor=(0.5, 1.42), handlelength=1.4)
     fig.savefig(out); plt.close(fig)
     return out
 
