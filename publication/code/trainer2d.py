@@ -44,8 +44,9 @@ class Config2D:
     max_epochs: int = 300
     patience: int = 30
     val_frac: float = 0.15
-    lambda_physics: float = 0.02
+    lambda_physics: float = 0.3      # доля нормы градиента data-члена
     lambda_bc: float = 0.5
+    calibrate_physics: bool = True
     r_clip: float = 0.05
     seed: int = 0
     device: str = "cpu"
@@ -120,7 +121,11 @@ class Trainer2D:
         L_char = float(np.mean(z_phys[tr_sets][:, -1] - z_phys[tr_sets][:, 0]))
         sd = self.sc.y_std
         self.res_r_scale = self._t(np.array((sd[IDX_SRR] + sd[IDX_STT]) / R_char))
-        self.res_z_scale = self._t(np.array((sd[IDX_TRZ] + sd[IDX_SZZ]) / R_char))
+        # осевая невязка нормируется ОСЕВЫМ масштабом: доминирующий член
+        # ∂σ_zz/∂z имеет величину sd[σ_zz]/L_char, а не /R_char. При L/R ≈ 3.7
+        # ошибка масштаба делала член численно инертным, и абляция
+        # «редуцированная против полной формы» ничего бы не показала.
+        self.res_z_scale = self._t(np.array(sd[IDX_SZZ] / L_char + sd[IDX_TRZ] / R_char))
         self.L_char = L_char
 
         self.net = Net2D(cfg).to(dtype=self.dtype)
@@ -136,6 +141,12 @@ class Trainer2D:
         g = torch.Generator().manual_seed(cfg.seed)
         use_phys = cfg.family != "mlp2d"
         full = cfg.family == "pinn2d_full"
+
+        self.phys_gain = 1.0
+        if use_phys and cfg.calibrate_physics and cfg.lambda_physics > 0:
+            k = min(cfg.batch_sets, n_tr)
+            self.phys_gain = self._calibrate(P[:k], Rn[:k], Zn[:k], RP[:k], ZP[:k],
+                                             Ysc[:k], k, nz, nr, full)
 
         for epoch in range(cfg.max_epochs):
             self.net.train()
@@ -170,6 +181,51 @@ class Trainer2D:
         if best_state is not None:
             self.net.load_state_dict(best_state)
         return Result2D(cfg.as_dict(), len(hist), best, hist)
+
+    def _grad_norm(self, loss) -> float:
+        gs = torch.autograd.grad(loss, list(self.net.parameters()),
+                                 retain_graph=False, allow_unused=True)
+        return float(torch.sqrt(sum((g ** 2).sum() for g in gs if g is not None)))
+
+    def _calibrate(self, pb, rb, zb, rpb, zpb, yb, B, nz, nr, full) -> float:
+        """
+        Множитель, уравнивающий норму градиента физического члена с нормой
+        градиента data-члена. Обе конфигурации — редуцированная и полная —
+        калибруются каждая под себя, поэтому абляция сравнивает ФОРМУ
+        уравнений при равном влиянии на обучение, а не веса слагаемых.
+        """
+        X = self._pack(pb, rb, zb, B, nz, nr)
+        pred = self.net((X - self.xm) / self.xs).reshape(B, nz, nr, 4)
+        g_data = self._grad_norm(((pred - yb) ** 2).mean())
+        l_phys = self._physics_only(pb, rb, zb, rpb, zpb, B, nz, nr, full)
+        g_phys = self._grad_norm(l_phys)
+        return 1.0 if g_phys <= 1e-30 else g_data / g_phys
+
+    def _physics_only(self, pb, rb, zb, rpb, zpb, B, nz, nr, full):
+        """Физическая часть лосса отдельно — нужна для калибровки."""
+        cfg = self.cfg
+        p = pb.unsqueeze(1).unsqueeze(1).expand(B, nz, nr, 5).reshape(-1, 5)
+        rr = rb.reshape(-1, 1).clone().requires_grad_(True)
+        zz = zb.unsqueeze(-1).expand(B, nz, nr).reshape(-1, 1).clone().requires_grad_(True)
+        X = torch.cat([p, zz, rr], 1)
+        y_ph = self.net((X - self.xm) / self.xs) * self.ys + self.ym
+        Rm = rpb[:, :, -1:].expand(B, nz, nr).reshape(-1)
+        Lm = (zpb[:, -1] - zpb[:, 0]).reshape(B, 1, 1).expand(B, nz, nr).reshape(-1)
+        r_safe = torch.maximum(rpb.reshape(-1), Rm * cfg.r_clip)
+        d_srr_dr = torch.autograd.grad(y_ph[:, IDX_SRR].sum(), rr, create_graph=True)[0][:, 0] / Rm
+        d_tau_dr = torch.autograd.grad(y_ph[:, IDX_TRZ].sum(), rr, create_graph=True)[0][:, 0] / Rm
+        if full:
+            d_tau_dz = torch.autograd.grad(y_ph[:, IDX_TRZ].sum(), zz, create_graph=True)[0][:, 0] / Lm
+            d_szz_dz = torch.autograd.grad(y_ph[:, IDX_SZZ].sum(), zz, create_graph=True)[0][:, 0] / Lm
+        else:
+            d_tau_dz = torch.zeros_like(d_srr_dr)
+            d_szz_dz = torch.zeros_like(d_srr_dr)
+        res_r = d_srr_dr + d_tau_dz + (y_ph[:, IDX_SRR] - y_ph[:, IDX_STT]) / r_safe
+        l = torch.log1p((res_r / self.res_r_scale) ** 2).mean()
+        if full:
+            res_z = d_tau_dr + d_szz_dz + y_ph[:, IDX_TRZ] / r_safe
+            l = l + torch.log1p((res_z / self.res_z_scale) ** 2).mean()
+        return l
 
     def _pack(self, pb, rb, zb, B, nz, nr):
         p = pb.unsqueeze(1).unsqueeze(1).expand(B, nz, nr, 5).reshape(-1, 5)
@@ -217,7 +273,7 @@ class Trainer2D:
         l_bc = ((pb_[:, IDX_SRR] / self.ys[0, IDX_SRR]) ** 2
                 + (pb_[:, IDX_TRZ] / self.ys[0, IDX_TRZ]) ** 2).mean()
 
-        return l_data + cfg.lambda_physics * l_phys + cfg.lambda_bc * l_bc
+        return l_data + cfg.lambda_physics * self.phys_gain * l_phys + cfg.lambda_bc * l_bc
 
     @torch.no_grad()
     def predict(self, proc, r, z) -> np.ndarray:
@@ -236,8 +292,9 @@ class Trainer2D:
         return (self.net((self._t(X) - self.xm) / self.xs) * self.ys
                 + self.ym).cpu().numpy()
 
-    def evaluate(self, proc, y, r, z) -> Dict[str, float]:
-        return metrics(y.reshape(-1, 1, 4), self.predict(proc, r, z).reshape(-1, 1, 4))
+    def evaluate(self, proc, y, r, z, global_std=None) -> Dict[str, float]:
+        return metrics(y.reshape(-1, 1, 4),
+                       self.predict(proc, r, z).reshape(-1, 1, 4), global_std)
 
 
 def equilibrium_audit_2d(y: np.ndarray, r_phys: np.ndarray, z_phys: np.ndarray,

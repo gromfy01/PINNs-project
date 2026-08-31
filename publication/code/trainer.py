@@ -58,8 +58,9 @@ class Config:
     patience: int = 40
     val_frac: float = 0.15
 
-    lambda_physics: float = 0.05
+    lambda_physics: float = 0.3      # доля нормы градиента data-члена, см. calibrate
     lambda_bc: float = 0.5
+    calibrate_physics: bool = True
     lambda_shear: float = 0.0     # сглаживание сдвига; НЕ осевое равновесие
     n_quadrature: int = 32        # узлы Гаусса–Лежандра (vpinn)
     n_test_funcs: int = 8         # тест-функции sin(kπr) (vpinn)
@@ -152,6 +153,7 @@ class TrainResult:
     epochs_run: int
     best_val: float
     history: List[float] = field(default_factory=list)
+    phys_gain: float = 1.0
 
 
 class Trainer:
@@ -182,6 +184,41 @@ class Trainer:
     # ---- потери ---------------------------------------------------------
     def _data_loss(self, pred_sc, tgt_sc):
         return ((pred_sc - tgt_sc) ** 2).mean()
+
+    # ---- калибровка веса физики -----------------------------------------
+    def _grad_norm(self, loss) -> float:
+        """‖∂loss/∂θ‖₂ по параметрам сети, без обновления весов."""
+        gs = torch.autograd.grad(loss, list(self.net.parameters()),
+                                 retain_graph=False, allow_unused=True)
+        return float(torch.sqrt(sum((g ** 2).sum() for g in gs if g is not None)))
+
+    def _calibrate(self, pb, rb, rpb, rcb, yb_sc) -> float:
+        """
+        Множитель, при котором норма градиента физического члена равна норме
+        градиента data-члена. После него `lambda_physics` читается одинаково у
+        всех семейств: «физический градиент составляет λ от data-градиента».
+
+        Зачем. Сильная и слабая формы дают невязки принципиально разной
+        амплитуды: слабая — это проекция того же остатка на осциллирующие
+        тест-функции, и она гасится примерно в 200 раз. При одинаковом
+        номинальном λ слабый член оказывается численно инертным, и сравнение
+        «сильная против слабой формы» вырождается в «физика включена против
+        выключенной». Калибровка убирает эту подмену: сравниваются формы при
+        равном влиянии на обучение, а не веса.
+        """
+        B = pb.shape[0]
+        X = torch.cat([pb.unsqueeze(1).expand(B, N_R, 5).reshape(-1, 5),
+                       rb.reshape(-1, 1)], 1)
+        pred_sc = self.net((X - self.xm) / self.xs).reshape(B, N_R, 4)
+        g_data = self._grad_norm(self._data_loss(pred_sc, yb_sc))
+        if self.cfg.family == "pinn":
+            l = self._physics_strong(pb, rb, rpb, rcb)
+        else:
+            l = self._physics_weak(pb, rpb, rcb)
+        g_phys = self._grad_norm(l)
+        if g_phys <= 1e-30:
+            return 1.0
+        return g_data / g_phys
 
     def _bc_loss(self, proc_b):
         """σ_rr = τ_rz = 0 на r = 1 (свободная поверхность)."""
@@ -309,6 +346,12 @@ class Trainer:
         n_tr = len(tr_sets)
         g = torch.Generator().manual_seed(cfg.seed)
 
+        self.phys_gain = 1.0
+        if cfg.family in ("pinn", "vpinn") and cfg.calibrate_physics and cfg.lambda_physics > 0:
+            idx0 = torch.arange(min(cfg.batch_sets, n_tr))
+            self.phys_gain = self._calibrate(P_tr[idx0], R_tr[idx0], RP_tr[idx0],
+                                             RC_tr[idx0], Ytr_sc[idx0])
+
         for epoch in range(cfg.max_epochs):
             self.net.train()
             order = torch.randperm(n_tr, generator=g)
@@ -325,10 +368,11 @@ class Trainer:
 
                 if cfg.family in ("pinn", "vpinn"):
                     loss = loss + cfg.lambda_bc * self._bc_loss(pb)
+                    w_phys = cfg.lambda_physics * self.phys_gain
                     if cfg.family == "pinn":
-                        loss = loss + cfg.lambda_physics * self._physics_strong(pb, rb, rpb, rcb)
+                        loss = loss + w_phys * self._physics_strong(pb, rb, rpb, rcb)
                     else:
-                        loss = loss + cfg.lambda_physics * self._physics_weak(pb, rpb, rcb)
+                        loss = loss + w_phys * self._physics_weak(pb, rpb, rcb)
                     if cfg.lambda_shear > 0:
                         loss = loss + cfg.lambda_shear * self._shear_smooth(pb, rb, rpb, rcb)
 
@@ -351,7 +395,9 @@ class Trainer:
 
         if best_state is not None:
             self.net.load_state_dict(best_state)
-        return TrainResult(cfg.as_dict(), len(hist), best, hist)
+        res = TrainResult(cfg.as_dict(), len(hist), best, hist)
+        res.phys_gain = float(self.phys_gain)
+        return res
 
     # ---- предсказание и метрики -----------------------------------------
     @torch.no_grad()
@@ -363,9 +409,8 @@ class Trainer:
         p = self.net(Xs) * self.ys + self.ym
         return p.cpu().numpy().reshape(n, N_R, 4)
 
-    def evaluate(self, proc, y, r) -> Dict[str, float]:
-        pred = self.predict(proc, r)
-        return metrics(y, pred)
+    def evaluate(self, proc, y, r, global_std=None) -> Dict[str, float]:
+        return metrics(y, self.predict(proc, r), global_std)
 
     @torch.no_grad()
     def predict_at(self, proc, r_scalar: float) -> np.ndarray:
@@ -379,13 +424,27 @@ class Trainer:
 
 # ──────────────────────────── метрики ───────────────────────────────────
 
-def metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+def metrics(y_true: np.ndarray, y_pred: np.ndarray,
+            global_std: Optional[np.ndarray] = None) -> Dict[str, float]:
     """
     y_*: (n_sets, 20, 4) МПа.
 
     macro_rmse — среднее RMSE по четырём компонентам (как в статье).
-    macro_nrmse — то же, нормированное на std компоненты: без него τ_rz
-    (масштаб ~0.7 МПа против ~80 у нормальных) не виден в макро-метрике вообще.
+
+    Нормированные величины считаются ДВАЖДЫ и это принципиально:
+
+      *_local  — знаменатель = std компоненты В ЭТОМ ЖЕ тестовом срезе;
+      *_global — знаменатель = std по всему датасету (аргумент global_std).
+
+    Локальный вариант нельзя сравнивать между сплитами: у разных held-out
+    регионов разная дисперсия, и одна и та же абсолютная ошибка даёт разный
+    R². На τ_rz это давало ложный вывод: локальный R² уходил в −4.4 и,
+    попадая в среднее по четырём компонентам, утаскивал macro-R² ниже нуля,
+    из-за чего казалось, что модель хуже предсказания средним. На деле по
+    macro-RMSE она лучше среднего в 2.8–5.9 раза на всех сплитах.
+
+    macro_r2 оставлено равным локальному — так считала отклонённая версия,
+    и совместимость нужна для сверки; ОТЧЁТ обязан печатать глобальный.
     """
     t = y_true.reshape(-1, 4)
     p = y_pred.reshape(-1, 4)
@@ -405,6 +464,17 @@ def metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     out["macro_nrmse"] = float(np.mean(nrmses))
     out["macro_r2"] = float(np.mean(r2s))
     out["rmse_normal_only"] = float(np.mean(rmses[:3]))
+    out["r2_normal_only"] = float(np.mean(r2s[:3]))
+    if global_std is not None:
+        gs = np.asarray(global_std, dtype=float) + 1e-12
+        g_nr = np.asarray(rmses) / gs
+        g_r2 = 1.0 - g_nr ** 2
+        for c, name in enumerate(COMPONENTS):
+            out[f"nrmse_{name}_global"] = float(g_nr[c])
+            out[f"r2_{name}_global"] = float(g_r2[c])
+        out["macro_nrmse_global"] = float(np.mean(g_nr))
+        out["macro_r2_global"] = float(np.mean(g_r2))
+        out["r2_normal_only_global"] = float(np.mean(g_r2[:3]))
     return out
 
 

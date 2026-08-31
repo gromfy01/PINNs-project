@@ -37,7 +37,11 @@ FIELDS = ["stage", "family", "backend", "split", "seed", "frac", "corrupt_rate",
           "r2_sigma_rr", "r2_sigma_tt", "r2_sigma_zz", "r2_tau_rz",
           "eq_res_median", "bc_sigma_rr", "bc_tau_rz",
           "lambda_physics", "lambda_bc", "learning_rate", "n_units", "n_layers",
-          "eq_r_reduced", "eq_z_full", "eq_z_reduced",
+          "eq_r_reduced", "eq_z_full", "eq_z_reduced", "phys_gain",
+          "macro_nrmse_global", "macro_r2_global", "r2_normal_only",
+          "r2_normal_only_global",
+          "nrmse_sigma_rr_global", "nrmse_sigma_tt_global",
+          "nrmse_sigma_zz_global", "nrmse_tau_rz_global",
           "error"]
 
 
@@ -76,12 +80,14 @@ def one_run_2d(job: Dict) -> Dict:
         T = Trainer2D(cfg)
         res = T.fit(f.proc[tr], f.y[tr], f.r[tr], f.z[tr], f.r_phys[tr], f.z_phys[tr])
         secs = time.time() - t0
-        m = T.evaluate(f.proc[te], f.y[te], f.r[te], f.z[te])
+        gstd = f.y.reshape(-1, 4).std(axis=0)
+        m = T.evaluate(f.proc[te], f.y[te], f.r[te], f.z[te], global_std=gstd)
         pred = T.predict(f.proc[te], f.r[te], f.z[te])
         eq = equilibrium_audit_2d(pred, f.r_phys[te], f.z_phys[te])
         surf = T.predict_surface(f.proc[te], f.z[te])
         row.update(m)
-        row.update({"eq_res_median": eq["eq_r_full"],
+        row.update({"phys_gain": round(getattr(T, "phys_gain", 1.0), 5),
+                    "eq_res_median": eq["eq_r_full"],
                     "eq_r_reduced": eq["eq_r_reduced"],
                     "eq_z_full": eq["eq_z_full"], "eq_z_reduced": eq["eq_z_reduced"],
                     "bc_sigma_rr": float(np.abs(surf[:, 0]).mean()),
@@ -133,13 +139,15 @@ def one_run(job: Dict) -> Dict:
         res = T.fit(ds.proc[tr], y_tr, ds.r[tr], ds.r_phys[tr])
         secs = time.time() - t0
 
-        m = T.evaluate(ds.proc[te], ds.y[te], ds.r[te])
+        gstd = ds.y.reshape(-1, 4).std(axis=0)
+        m = T.evaluate(ds.proc[te], ds.y[te], ds.r[te], global_std=gstd)
         pred = T.predict(ds.proc[te], ds.r[te])
         eq = equilibrium_audit(pred, ds.r_phys[te])
         bc = bc_audit(T.predict_at(ds.proc[te], 1.0))
 
         row.update(m); row.update(eq); row.update(bc)
-        row.update({"n_train": len(tr), "n_test": len(te),
+        row.update({"phys_gain": round(getattr(res, "phys_gain", 1.0), 5),
+                    "n_train": len(tr), "n_test": len(te),
                     "epochs": res.epochs_run, "seconds": round(secs, 1),
                     "lambda_physics": cfg.lambda_physics, "lambda_bc": cfg.lambda_bc,
                     "learning_rate": cfg.learning_rate, "n_units": cfg.n_units,

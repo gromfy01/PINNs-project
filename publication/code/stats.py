@@ -99,33 +99,58 @@ def build_seed_summary(records: Sequence[Dict[str, object]],
 
 # ───────────────────── порог содержательности разницы ───────────────────
 
+MIN_SEEDS_FOR_TEST = 3
+
+
 @dataclass
 class PairVerdict:
     a: str
     b: str
     delta: float            # mean(a) − mean(b)
     pooled_std: float
-    established: bool
+    n_seeds: int
+    p_value: float
+    established: bool       # статистически: парный тест по сидам
+    practical: bool         # практически: |Δ| ≥ k·σ по сидам
 
     def __str__(self) -> str:
+        if self.n_seeds < MIN_SEEDS_FOR_TEST:
+            return (f"{self.a} − {self.b}: Δ = {self.delta:+.3f} МПа, сидов "
+                    f"{self.n_seeds} — тест невозможен, разница НЕ установлена")
         mark = "установлена" if self.established else "НЕ установлена"
-        return (f"{self.a} − {self.b}: Δ = {self.delta:+.3f} МПа, "
-                f"σ по сидам = {self.pooled_std:.3f} → разница {mark}")
+        return (f"{self.a} − {self.b}: Δ = {self.delta:+.3f} МПа, p = {self.p_value:.3f}, "
+                f"σ по сидам = {self.pooled_std:.3f} → разница {mark}"
+                + ("" if self.practical else "; и |Δ| меньше σ по сидам"))
 
 
-def significance_gate(summary: SeedSummary, k_sigma: float = 1.0) -> List[PairVerdict]:
+def significance_gate(summary: SeedSummary, k_sigma: float = 1.0,
+                      alpha: float = 0.05) -> List[PairVerdict]:
     """
-    Критерий приёмки пункта 3: утверждение о разнице между моделями делается
-    только если |Δ| ≥ k_sigma · σ_pooled, где σ_pooled — объединённый
-    межсидовый разброс пары. Иначе разница «не установлена».
+    Разница между моделями считается установленной, только если её
+    подтверждает ПАРНЫЙ тест по сидам (один и тот же сид — один блок).
+
+    Порог |Δ| ≥ k_sigma·σ_pooled оставлен отдельной величиной: он говорит о
+    практическом размере эффекта, но тестом не является. В прежней версии он
+    служил единственным критерием, и это давало «разница установлена» при
+    p ≈ 0.12, а при единственном сиде (σ = 0) — вообще всегда, включая Δ = 0.
+    Ниже трёх сидов вердикт всегда «не установлена»: это согласовано с
+    friedman_test, который при том же условии отказывается считать.
     """
+    from scipy.stats import ttest_rel
     out: List[PairVerdict] = []
     m, s = summary.mean, summary.std
+    n = summary.values.shape[1]
     for i, j in combinations(range(len(summary.models)), 2):
         pooled = float(np.sqrt(0.5 * (s[i] ** 2 + s[j] ** 2)))
         delta = float(m[i] - m[j])
+        if n >= MIN_SEEDS_FOR_TEST:
+            res = ttest_rel(summary.values[i], summary.values[j])
+            p = float(res.pvalue) if np.isfinite(res.pvalue) else 1.0
+            est = p < alpha
+        else:
+            p, est = float("nan"), False
         out.append(PairVerdict(summary.models[i], summary.models[j], delta, pooled,
-                               abs(delta) >= k_sigma * pooled))
+                               n, p, est, abs(delta) >= k_sigma * pooled))
     return out
 
 
@@ -177,17 +202,34 @@ class NemenyiResult:
 
     def cliques(self) -> List[List[str]]:
         """
-        Максимальные группы моделей, попарно неразличимых на уровне CD.
-        Возвращает клики по порядку среднего ранга.
+        Максимальные группы моделей, ПОПАРНО неразличимых на уровне CD.
+
+        Считается скользящим окном по отсортированным средним рангам: группа
+        {i..j} допустима, только если разность рангов её крайних членов не
+        превышает CD — тогда неразличимы все пары внутри. Прежняя версия
+        собирала CD-окрестности каждой модели, и в них попадали пары с
+        разностью рангов больше CD: например при рангах 1.2 / 2.0 / 2.8 и
+        CD = 1.48 печаталась одна группа из трёх, хотя крайняя пара (Δ = 1.6)
+        различима. Это ровно та ошибка, которая помечена в ERRATA E-15 как
+        дефект аннотации отклонённой версии.
         """
-        order = np.argsort(self.mean_ranks)
-        res: List[List[str]] = []
-        for i in order:
-            grp = [self.models[j] for j in order
-                   if abs(self.mean_ranks[j] - self.mean_ranks[i]) <= self.cd]
-            if not any(set(grp) <= set(g) for g in res):
-                res = [g for g in res if not set(g) <= set(grp)] + [grp]
-        return res
+        order = list(np.argsort(self.mean_ranks))
+        groups: List[List[int]] = []
+        for a in range(len(order)):
+            b = a
+            while (b + 1 < len(order) and
+                   self.mean_ranks[order[b + 1]] - self.mean_ranks[order[a]] <= self.cd + 1e-12):
+                b += 1
+            groups.append(order[a:b + 1])
+        maximal = [g for g in groups
+                   if not any(set(g) < set(h) for h in groups)]
+        seen, out = set(), []
+        for g in maximal:
+            key = tuple(sorted(g))
+            if key not in seen:
+                seen.add(key)
+                out.append([self.models[i] for i in g])
+        return out
 
     def to_text(self) -> str:
         order = np.argsort(self.mean_ranks)
@@ -199,9 +241,14 @@ class NemenyiResult:
             out.append(f"   {self.models[i]:<14}{self.mean_ranks[i]:.3f}")
         out.append("неразличимые группы: " +
                    " | ".join("{" + ", ".join(g) + "}" for g in self.cliques()))
-        out.append("⚠ группа неразличимых НЕ означает, что все её члены "
-                   "неразличимы между собой попарно: связь может идти через "
-                   "промежуточную модель (см. ERRATA E-08).")
+        pairs = []
+        for i, j in combinations(range(len(self.models)), 2):
+            if abs(self.mean_ranks[i] - self.mean_ranks[j]) > self.cd:
+                pairs.append(f"{self.models[i]} ↔ {self.models[j]}")
+        out.append("различимые пары: " + (", ".join(pairs) if pairs else "нет"))
+        out.append("⚠ Неразличимость не транзитивна: принадлежность одной группе "
+                   "не означает, что различима или неразличима любая пара внутри "
+                   "неё — смотреть строку выше (ERRATA E-15).")
         return "\n".join(out)
 
 
@@ -226,12 +273,22 @@ def delta_vs_matched(extrap: SeedSummary, matched: SeedSummary) -> List[Dict[str
     """
     if extrap.models != matched.models:
         raise ValueError("наборы моделей не совпадают")
+    from scipy.stats import ttest_ind
     out = []
+    n = min(extrap.values.shape[1], matched.values.shape[1])
     for i, m in enumerate(extrap.models):
         d = float(extrap.mean[i] - matched.mean[i])
         s = float(np.sqrt(extrap.std[i] ** 2 + matched.std[i] ** 2))
+        if n >= MIN_SEEDS_FOR_TEST:
+            # сиды у двух сплитов независимы (разные выборки), поэтому тест
+            # непарный — парный здесь был бы подлогом
+            res = ttest_ind(extrap.values[i], matched.values[i], equal_var=False)
+            p = float(res.pvalue) if np.isfinite(res.pvalue) else 1.0
+            est = p < 0.05
+        else:
+            p, est = float("nan"), False
         out.append({"model": m, "rmse_extrap": float(extrap.mean[i]),
                     "rmse_matched": float(matched.mean[i]),
-                    "delta": d, "delta_std": s,
-                    "established": abs(d) >= s})
+                    "delta": d, "delta_std": s, "p_value": p,
+                    "n_seeds": n, "established": est})
     return out
