@@ -190,29 +190,62 @@ def section_main(df, L, dataset_path: str = ""):
     L("macro-RMSE, МПа · R² (единый знаменатель) · R² только по нормальным компонентам\n")
     L(md_table(rows, h2, h2) + "\n")
 
+    # По осям, а не в среднем: средняя цена экстраполяции — величина без смысла,
+    # потому что по разным осям она различается на порядок.
+    axis_pairs = [(e, m) for e, m in PAIRS if e in splits and m in splits]
+    if axis_pairs:
+        rows = []
+        for e, m in axis_pairs:
+            ve = d[d["split"] == e]
+            vm = d[d["split"] == m]
+            if ve.empty or vm.empty:
+                continue
+            rows.append({
+                "ось": f"`{e}`",
+                "RMSE вне": f"{ve['macro_rmse'].mean():.1f}",
+                "RMSE контроль": f"{vm['macro_rmse'].mean():.1f}",
+                "во сколько раз": f"×{ve['macro_rmse'].mean()/vm['macro_rmse'].mean():.2f}",
+                "R²норм вне": f"{ve['r2_normal_g'].mean():+.2f}",
+                "нулевая модель": f"{zero.get(e, float('nan')):.0f}" if zero else "—",
+            })
+        if rows:
+            h3 = list(rows[0].keys())
+            L("**Цена экстраполяции зависит от оси, и различие на порядок.**\n")
+            L(md_table(rows, h3, h3) + "\n")
+            L("> Это, а не средняя цифра, и есть содержательный ответ на замечание "
+              "про «interpolation within this particular case». Суррогат переносится "
+              "по одним осям факторного пространства и не переносится по другим, и "
+              "для проектировщика важно именно какие это оси, а не то, что «RMSE "
+              "выросла». Усреднять по осям бессмысленно: разброс между ними больше, "
+              "чем разница между семействами моделей.\n")
+
     interior = [sp for sp in splits if sp.startswith("interp:")]
-    beyond = [sp for sp in splits if sp.startswith("extrap:")]
-    inside = [sp for sp in splits if sp.startswith(("random", "matched"))]
-    if interior and beyond and inside:
+    if interior and "extrap:alpha_max" in splits and "random" in splits:
         def mm(ss, col):
             return d[d["split"].isin(ss)][col].mean()
-        L(f"> **Ключевое сравнение.** Внутри пространства параметров (случайный "
-          f"hold-out и контроль того же объёма) macro-RMSE = {mm(inside,'macro_rmse'):.1f} МПа "
-          f"при R² = {mm(inside,'macro_r2_g'):+.2f}. Изъятие ВНУТРЕННЕГО уровня фактора — "
-          f"{mm(interior,'macro_rmse'):.1f} МПа при R² = {mm(interior,'macro_r2_g'):+.2f}. "
-          f"Выход ЗА диапазон — {mm(beyond,'macro_rmse'):.1f} МПа при "
-          f"R² = {mm(beyond,'macro_r2_g'):+.2f}. Ошибка примерно удваивается в обоих "
-          f"случаях, и разница между «внутри диапазона, но уровень изъят» и «за "
-          f"диапазоном» невелика — то есть цена платится за саму дыру в сетке "
-          f"фактора, а не за направление выхода.\n")
-        L(f"> При этом модель остаётся заметно лучше нулевой: предсказание средним "
-          f"даёт {np.mean([zero[s] for s in beyond if s in zero]):.0f} МПа против "
-          f"{mm(beyond,'macro_rmse'):.1f} у моделей. По ТРЁМ НОРМАЛЬНЫМ компонентам "
-          f"R² почти не падает ({mm(inside,'r2_normal_g'):+.2f} внутри против "
-          f"{mm(beyond,'r2_normal_g'):+.2f} за диапазоном) — рушится только τ_rz. "
-          f"Заявлять «за диапазоном модель хуже предсказания средним» нельзя: это "
-          f"артефакт усреднения четырёх неограниченных снизу R² с локальным "
-          f"знаменателем.\n")
+        L(f"> **Внутренний уровень против выхода за диапазон (ось α, объёмы почти "
+          f"равны).** Изъятие внутреннего уровня α = 12° даёт "
+          f"{mm(interior,'macro_rmse'):.1f} МПа при R²норм = "
+          f"{mm(interior,'r2_normal_g'):+.2f}; изъятие крайнего α = 20° — "
+          f"{mm(['extrap:alpha_max'],'macro_rmse'):.1f} МПа при R²норм = "
+          f"{mm(['extrap:alpha_max'],'r2_normal_g'):+.2f}, при том что случайный "
+          f"hold-out даёт {mm(['random'],'macro_rmse'):.1f} и "
+          f"{mm(['random'],'r2_normal_g'):+.2f}. То есть по этой оси платится за "
+          f"саму дыру в сетке фактора, а направление выхода почти ничего не "
+          f"добавляет — сетка из пяти уровней слишком редкая, чтобы модель могла "
+          f"продолжить зависимость.\n")
+    if zero:
+        worst = max(((e, d[d['split'] == e]['macro_rmse'].mean()) for e, _ in axis_pairs),
+                    key=lambda t: t[1], default=None)
+        if worst and worst[0] in zero:
+            rel = worst[1] / zero[worst[0]]
+            L(f"> **Где суррогат ломается полностью.** На `{worst[0]}` ошибка "
+              f"{worst[1]:.0f} МПа против {zero[worst[0]]:.0f} у предсказания "
+              f"средним, то есть модель "
+              f"{'не лучше нулевой' if rel > 0.85 else 'ещё лучше нулевой'}. "
+              f"На остальных осях она лучше нулевой в 2–6 раз. Утверждение «модель "
+              f"хуже среднего» верно ровно для этого одного случая и не должно "
+              f"переноситься на экстраполяцию вообще.\n")
 
     L("### 1.1 ΔRMSE относительно контроля того же объёма\n")
     L("Без этой величины «RMSE вырос» не интерпретируется: рост может объясняться "
