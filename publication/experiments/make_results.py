@@ -162,9 +162,9 @@ def section_main(df, L, dataset_path: str = ""):
         bcr=("bc_sigma_rr", "mean"), bcr_s=("bc_sigma_rr", "std"),
         bct=("bc_tau_rz", "mean"), bct_s=("bc_tau_rz", "std")).reset_index()
     rows = [{"сплит": f"`{r['split']}`", "модель": LABEL.get(r["family"], r["family"]),
-             "медиана |R₁|, МПа/м": f"{r['eq']:.0f} ± {0 if np.isnan(r['eq_s']) else r['eq_s']:.0f}",
-             "|σ_rr| при r=1, МПа": f"{r['bcr']:.2f} ± {0 if np.isnan(r['bcr_s']) else r['bcr_s']:.2f}",
-             "|τ_rz| при r=1, МПа": f"{r['bct']:.3f} ± {0 if np.isnan(r['bct_s']) else r['bct_s']:.3f}"}
+             "медиана \\|R₁\\|, МПа/м": f"{r['eq']:.0f} ± {0 if np.isnan(r['eq_s']) else r['eq_s']:.0f}",
+             "\\|σ_rr\\| при r=1, МПа": f"{r['bcr']:.2f} ± {0 if np.isnan(r['bcr_s']) else r['bcr_s']:.2f}",
+             "\\|τ_rz\\| при r=1, МПа": f"{r['bct']:.3f} ± {0 if np.isnan(r['bct_s']) else r['bct_s']:.3f}"}
             for _, r in g.iterrows()]
     if dataset_path:
         try:
@@ -174,11 +174,11 @@ def section_main(df, L, dataset_path: str = ""):
             L(f"> базовая линия FEM не посчитана: {exc}\n")
         for sp, b in base.items():
             rows.append({"сплит": f"`{sp}`", "модель": "**данные FEM (базовая линия)**",
-                         "медиана |R₁|, МПа/м": f"{b['eq_res_median']:.0f}",
-                         "|σ_rr| при r=1, МПа": f"{b['bc_sigma_rr']:.2f}",
-                         "|τ_rz| при r=1, МПа": f"{b['bc_tau_rz']:.3f}"})
+                         "медиана \\|R₁\\|, МПа/м": f"{b['eq_res_median']:.0f}",
+                         "\\|σ_rr\\| при r=1, МПа": f"{b['bc_sigma_rr']:.2f}",
+                         "\\|τ_rz\\| при r=1, МПа": f"{b['bc_tau_rz']:.3f}"})
         rows.sort(key=lambda r: (r["сплит"], r["модель"]))
-    h = ["сплит", "модель", "медиана |R₁|, МПа/м", "|σ_rr| при r=1, МПа", "|τ_rz| при r=1, МПа"]
+    h = ["сплит", "модель", "медиана \\|R₁\\|, МПа/м", "\\|σ_rr\\| при r=1, МПа", "\\|τ_rz\\| при r=1, МПа"]
     L(md_table(rows, h, h) + "\n")
     L("Модель, у которой нарушение ГУ **ниже, чем у самих данных**, воспроизводит "
       "физику строже источника — это и есть содержательный аргумент работы, и "
@@ -206,7 +206,7 @@ def section_backend(df, L):
             rows.append({"сплит": f"`{sp}`",
                          a: f"{va.mean():.3f} ± {va.std(ddof=1):.3f}",
                          b: f"{vb.mean():.3f} ± {vb.std(ddof=1):.3f}",
-                         "|Δ|": f"{delta:.3f}", "σ по сидам": f"{pooled:.3f}",
+                         "\\|Δ\\|": f"{delta:.3f}", "σ по сидам": f"{pooled:.3f}",
                          "разница": "установлена" if delta >= pooled else "**не установлена**"})
     if rows:
         h = list(rows[0].keys())
@@ -284,10 +284,10 @@ def section_twod(df, L):
                 continue
             row = {"сплит": f"`{sp}`", "конфигурация": LABEL[f],
                    "macro-RMSE": f"{v['macro_rmse'].mean():.2f} ± {v['macro_rmse'].std(ddof=1):.2f}",
-                   "|R_r| полная": f"{v['eq_res_median'].mean():.0f}",
-                   "|R_r| редуц.": f"{v['eq_r_reduced'].mean():.0f}" if "eq_r_reduced" in v else "—",
-                   "|R_z| полная": f"{v['eq_z_full'].mean():.0f}" if "eq_z_full" in v else "—",
-                   "|R_z| редуц.": f"{v['eq_z_reduced'].mean():.0f}" if "eq_z_reduced" in v else "—"}
+                   "\\|R_r\\| полная": f"{v['eq_res_median'].mean():.0f}",
+                   "\\|R_r\\| редуц.": f"{v['eq_r_reduced'].mean():.0f}" if "eq_r_reduced" in v else "—",
+                   "\\|R_z\\| полная": f"{v['eq_z_full'].mean():.0f}" if "eq_z_full" in v else "—",
+                   "\\|R_z\\| редуц.": f"{v['eq_z_reduced'].mean():.0f}" if "eq_z_reduced" in v else "—"}
             rows.append(row)
     if rows:
         h = list(rows[0].keys())
