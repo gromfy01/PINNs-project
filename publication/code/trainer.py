@@ -15,10 +15,12 @@ trainer.py — ЕДИНЫЙ тренер для всех семейств мод
 
 Физика (см. publication/code/physics_check.py и ERRATA E-02):
     R₁(r) = ∂σ_rr/∂r + (σ_rr − σ_θθ)/r          — радиальное равновесие
-Осевое уравнение НЕ используется: без ∂σ_zz/∂z оно не является уравнением
-равновесия (отброшенный член даёт 68 % от удержанных). Отдельным
-необязательным членом можно включить сглаживание сдвига — но оно называется
-своим именем и по умолчанию выключено.
+Осевое уравнение НЕ используется. Причин две, и вторая тяжелее первой:
+отброшенный ∂σ_zz/∂z даёт 68 % от удержанных членов, а оставшееся выражение
+∂τ_rz/∂r + τ_rz/r тождественно равно (1/r)·∂(r·τ_rz)/∂r и потому означает не
+«приближённое равновесие», а «τ_rz ≡ 0 на всём радиусе». Оно доступно
+отдельным членом λ_shear, называется своим именем (_zero_shear) и по
+умолчанию выключено.
 
 ГУ: σ_rr(r=1) = τ_rz(r=1) = 0 — на СВОБОДНОЙ ПОВЕРХНОСТИ (ERRATA E-01),
 а не при r = 1.5, как в моделях репозитория.
@@ -61,7 +63,7 @@ class Config:
     lambda_physics: float = 0.3      # доля нормы градиента data-члена, см. calibrate
     lambda_bc: float = 0.5
     calibrate_physics: bool = True
-    lambda_shear: float = 0.0     # сглаживание сдвига; НЕ осевое равновесие
+    lambda_shear: float = 0.0     # «сдвига нет вовсе»; НЕ осевое равновесие, см. _zero_shear
     n_quadrature: int = 32        # узлы Гаусса–Лежандра (vpinn)
     n_test_funcs: int = 8         # тест-функции sin(kπr) (vpinn)
     r_clip: float = 0.05          # клип 1/r у оси, в долях радиуса
@@ -281,8 +283,16 @@ class Trainer:
         W = term1 + term2
         return torch.log1p((W / self.weak_scale) ** 2).mean()
 
-    def _shear_smooth(self, proc_b, r_b, rphys_b, rclip_b):
-        """∂τ_rz/∂r + τ_rz/r — регуляризатор гладкости сдвига, НЕ равновесие."""
+    def _zero_shear(self, proc_b, r_b, rphys_b, rclip_b):
+        """
+        ∂τ_rz/∂r + τ_rz/r — то, что остаётся от осевого равновесия без ∂σ_zz/∂z.
+
+        Тождественно (1/r)·∂(r·τ_rz)/∂r, поэтому обнуление означает r·τ_rz = const,
+        а с регулярностью на оси — τ_rz ≡ 0 на всём радиусе. Это жёсткое условие
+        «сдвига нет», а не ослабленное равновесие и не сглаживание. Данными не
+        подтверждается (медианный относительный размах r·τ_rz равен 3.15), поэтому
+        по умолчанию λ_shear = 0 и в прогонах статьи член не участвует.
+        """
         B, nr = r_b.shape
         r_flat = r_b.reshape(-1, 1).clone().requires_grad_(True)
         p_rep = proc_b.unsqueeze(1).expand(B, nr, 5).reshape(-1, 5)
@@ -374,7 +384,7 @@ class Trainer:
                     else:
                         loss = loss + w_phys * self._physics_weak(pb, rpb, rcb)
                     if cfg.lambda_shear > 0:
-                        loss = loss + cfg.lambda_shear * self._shear_smooth(pb, rb, rpb, rcb)
+                        loss = loss + cfg.lambda_shear * self._zero_shear(pb, rb, rpb, rcb)
 
                 opt.zero_grad(set_to_none=True)
                 loss.backward()
