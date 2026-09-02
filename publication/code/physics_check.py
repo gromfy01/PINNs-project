@@ -165,7 +165,7 @@ def audit(profiles: np.ndarray, r_grid: np.ndarray,
     bc = np.array([bc_violation(profiles[i], r_grid, r_surface) for i in range(n)])
     r1 = np.array([np.median(np.abs(equilibrium_residual_radial(profiles[i], r_grid)))
                    for i in range(n)])
-    sh = np.array([np.median(np.abs(shear_balance_residual(profiles[i], r_grid)))
+    sh = np.array([np.median(np.abs(zero_shear_residual(profiles[i], r_grid)))
                    for i in range(n)])
     return PhysicsAudit(n, float(bc[:, 0].mean()), float(bc[:, 1].mean()),
                         float(np.median(r1)), float(np.median(sh)), r_surface)
