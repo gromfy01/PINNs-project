@@ -110,12 +110,22 @@ def filter_dataset(proc: np.ndarray,
                    drop_mu_offgrid: bool = True,
                    mu_grid: Sequence[float] = MU_GRID,
                    drop_mu_duplicates: bool = True,
+                   cone_mask: Optional[np.ndarray] = None,
                    ) -> Tuple[np.ndarray, FilterReport]:
     """
     Единая отбраковка. Возвращает (kept_index, report).
 
     kept_index — индексы уцелевших НАБОРОВ в исходной нумерации; их надо
     разворачивать в строки через splits.sets_to_rows.
+
+    cone_mask — булева маска наборов, у которых осевое окно захватывает конус
+    волоки (см. `cone_in_window`). Отсев обязан идти ДО сплита, а не при
+    подсчёте метрик: у этих наборов «свободная поверхность» лежит на контакте
+    с волокой, там σ_rr доходит до −571 МПа против −27 МПа у остальных, а
+    |τ_rz| до 166 против 47. Попадая в ОБУЧАЮЩУЮ выборку, они ставят data-лосс
+    в прямое противоречие с граничным условием traction-free, которое требует
+    σ_rr(r=1) = 0. Маску считает вызывающий код: детекция требует радиуса
+    поверхности по каждому осевому срезу, которого нет в одномерном датасете.
     """
     n = proc.shape[0]
     alive = np.ones(n, dtype=bool)
@@ -163,6 +173,19 @@ def filter_dataset(proc: np.ndarray,
             rep.notes.append(
                 f"доля μ-дубликатов среди уцелевших до этого шага: "
                 f"{100.0 * m.sum() / alive.sum():.1f} %")
+        alive &= ~m
+
+    if cone_mask is not None:
+        m = np.asarray(cone_mask, dtype=bool)
+        if m.shape[0] != n:
+            raise ValueError(f"cone_mask длины {m.shape[0]}, ожидалось {n}")
+        m = m & alive
+        rep.removed["конус волоки внутри осевого окна"] = int(m.sum())
+        if m.any():
+            rep.notes.append(
+                "наборы с конусом сняты ДО сплита: при отсеве только на этапе "
+                "оценки модель всё равно обучается на контактном давлении под "
+                "меткой «σ_rr на свободной поверхности»")
         alive &= ~m
 
     rep.kept_index = np.flatnonzero(alive)

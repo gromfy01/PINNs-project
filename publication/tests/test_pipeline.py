@@ -71,6 +71,28 @@ def test_filters():
           str(cov["full_factorial"]))
     check("отчёт печатается", "наборов на входе" in rep.to_text())
 
+    # конус волоки: маска снимает наборы ДО сплита, а не при подсчёте метрик
+    cone = np.zeros(len(proc), dtype=bool)
+    cone[[5, 7, 9]] = True
+    idx2, rep2 = filters.filter_dataset(proc, y, drop_removed_indices=False,
+                                        cone_mask=cone)
+    check("наборы с конусом сняты",
+          not any(i in idx2 for i in (5, 7, 9)))
+    check("остальные наборы не тронуты",
+          set(idx2) == set(idx) - {5, 7, 9},
+          f"{len(idx2)} против {len(idx)}")
+    check("конус попал в отчёт",
+          any("конус" in k for k in rep2.removed))
+    check("без маски поведение прежнее", set(idx) == set(
+        filters.filter_dataset(proc, y, drop_removed_indices=False,
+                               cone_mask=None)[0]))
+    try:
+        filters.filter_dataset(proc, y, drop_removed_indices=False,
+                               cone_mask=np.zeros(3, dtype=bool))
+        check("маска неверной длины отвергнута", False)
+    except ValueError:
+        check("маска неверной длины отвергнута", True)
+
 
 def test_splits():
     print("splits")
