@@ -10,7 +10,9 @@ contours.py — контурные карты напряжений в плоск
                 весь осевой размах, с отметкой окна 25–75 %, из которого
                 собирается обучающая выборка;
   --mode model  МКЭ против предсказания модели с z во входе и их разность,
-                на сетке (z, r) 8 × 20.
+                на сетке (z, r) 8 × 20, для σ_rr, σ_zz и τ_rz; по умолчанию
+                берётся набор с МЕДИАННОЙ ошибкой, а не лучший;
+  --mode alpha  одна компонента при разных полууглах волоки.
 
 Цвет. Напряжения знакопеременные, поэтому шкала расходящаяся, симметричная
 относительно нуля, с нейтральной серединой: ноль всегда читается как «нет
@@ -102,39 +104,80 @@ def fig_raw(path_rpt: str, out: str, job: str = ""):
     return out
 
 
-def fig_model(npz: str, out: str, which: int = 0):
-    """МКЭ против предсказания модели с z во входе, и разность."""
-    d = np.load(npz, allow_pickle=True)
-    yt, yp = d["y_true"][which], d["y_pred"][which]
-    rp, zp = d["r_phys"][which] * 1e3, d["z_phys"][which] * 1e3
-    proc = d["proc"][which]
-    nz, nr, _ = yt.shape
-    R = np.repeat(rp[:, :, None], 1, axis=2)[:, :, 0]
-    Z = np.repeat(zp[:, None], nr, axis=1)
+def fig_model(npz: str, out: str, which: int = -1):
+    """
+    МКЭ против предсказания модели с z во входе, и разность.
 
-    rows = [("sigma_rr", r"$\sigma_{rr}$", 0), ("sigma_zz", r"$\sigma_{zz}$", 2)]
-    fig, axes = plt.subplots(len(rows), 3, figsize=(7.4, 4.6))
-    for i, (key, tex, c) in enumerate(rows):
-        t, p = yt[:, :, c], yp[:, :, c]
-        lim = _sym(np.concatenate([t.ravel(), p.ravel()]))
-        dlim = _sym((p - t).ravel())
-        for j, (v, ttl, L) in enumerate(((t, f"{tex}  МКЭ", lim),
-                                          (p, f"{tex}  модель", lim),
-                                          (p - t, f"{tex}  модель − МКЭ", dlim))):
+    which = -1 (по умолчанию) — набор с МЕДИАННОЙ ошибкой по тесту, а не
+    первый попавшийся и не лучший: показывать надо типичное поведение.
+
+    Один набор — это одна точка выборки, поэтому в подписи печатаются метрики
+    ПО ВСЕМУ тесту: по одной панели о качестве модели судить нельзя, особенно
+    для τ_rz, величина которого сильно меняется от режима к режиму.
+    """
+    d = np.load(npz, allow_pickle=True)
+    y_true_all, y_pred_all = d["y_true"], d["y_pred"]
+    if which < 0:
+        err = np.sqrt(((y_pred_all - y_true_all) ** 2).mean(axis=(1, 2, 3)))
+        which = int(np.argsort(err)[len(err) // 2])
+        print(f"выбран набор {which} (медианная ошибка {err[which]:.2f} МПа, "
+              f"диапазон {err.min():.2f}–{err.max():.2f})")
+
+    rows = [(r"$\sigma_{rr}$", 0), (r"$\sigma_{zz}$", 2), (r"$\tau_{rz}$", 3)]
+    summ = []
+    for tex, c in rows:
+        t, q = y_true_all[..., c].ravel(), y_pred_all[..., c].ravel()
+        r2 = 1.0 - ((q - t) ** 2).sum() / ((t - t.mean()) ** 2).sum()
+        summ.append(f"{tex}: RMSE {np.sqrt(((q - t) ** 2).mean()):.1f} МПа, "
+                    f"$R^2$ {r2:.2f}")
+
+    yt, yp = y_true_all[which], y_pred_all[which]
+    R = d["r_phys"][which] * 1e3
+    Z = np.repeat(d["z_phys"][which][:, None] * 1e3, yt.shape[1], axis=1)
+    proc = d["proc"][which]
+
+    fig, axes = plt.subplots(len(rows), 3, figsize=(7.6, 7.2),
+                             layout="constrained")
+    for i, (tex, c) in enumerate(rows):
+        t, q = yt[:, :, c], yp[:, :, c]
+        lim = _sym(np.concatenate([t.ravel(), q.ravel()]))
+        dlim = _sym((q - t).ravel())
+        cf_pair = None
+        for j, (v, ttl, L) in enumerate(((t, "МКЭ", lim),
+                                         (q, "модель", lim),
+                                         (q - t, "модель − МКЭ", dlim))):
             ax = axes[i, j]
-            cf = ax.contourf(R, Z, v, levels=np.linspace(-L, L, 21),
-                             cmap=DIVERGING, extend="both")
-            ax.contour(R, Z, v, levels=np.linspace(-L, L, 21)[::4],
-                       colors="k", linewidths=0.25, alpha=0.35)
-            ax.set_title(ttl + ", МПа", fontsize=8)
-            if j == 0:
+            lev = np.linspace(-L, L, 21)
+            cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
+            ax.contour(R, Z, v, levels=lev[::5], colors="k",
+                       linewidths=0.25, alpha=0.35)
+            ax.set_title(f"{tex}  {ttl}")
+            if j < 2:
+                cf_pair = cf
+            if j > 0:
+                ax.tick_params(labelleft=False)
+            else:
                 ax.set_ylabel("z, мм")
-            if i == len(rows) - 1:
+            if i < len(rows) - 1:
+                ax.tick_params(labelbottom=False)
+            else:
                 ax.set_xlabel("r, мм")
-            cb = fig.colorbar(cf, ax=ax, fraction=0.05, pad=0.04)
-            cb.ax.tick_params(labelsize=6, color=MUTED)
-    fig.suptitle(f"Q = {proc[0]:g}, k = {proc[1]:g}, α = {proc[2]:g}°, "
-                 f"μ = {proc[3]:g}, v = {proc[4]:g} м/мин", y=1.01, fontsize=8.5)
+        # одна шкала на пару МКЭ/модель — они в одних пределах, дублировать незачем
+        cb = fig.colorbar(cf_pair, ax=axes[i, :2], fraction=0.045, pad=0.02)
+        cb.set_label("МПа", fontsize=7)
+        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+        cbd = fig.colorbar(cf, ax=axes[i, 2], fraction=0.09, pad=0.02)
+        cbd.set_label("МПа", fontsize=7)
+        cbd.ax.tick_params(labelsize=6.5, color=MUTED)
+
+    fig.suptitle(f"Набор с медианной ошибкой:  Q = {proc[0]:g}, k = {proc[1]:g}, "
+                 f"α = {proc[2]:g}°, μ = {proc[3]:g}, v = {proc[4]:g} м/мин",
+                 fontsize=8.5)
+    fig.text(0.5, -0.015,
+             "Шкала МКЭ и модели общая, у разности своя. По всему тесту "
+             f"(n = {len(y_true_all)} наборов):  " + ";  ".join(summ) + ".\n"
+             "Оси не в одном масштабе: радиальная растянута.",
+             ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)
     return out
@@ -194,7 +237,8 @@ def main():
     ap.add_argument("--rpt", default="")
     ap.add_argument("--npz", default="")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--which", type=int, default=0)
+    ap.add_argument("--which", type=int, default=-1,
+                    help="индекс тестового набора; -1 = набор с медианной ошибкой")
     a = ap.parse_args()
     if a.mode == "raw":
         job = os.path.basename(a.rpt)[:-4]
