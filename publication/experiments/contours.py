@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import numpy as np
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "code"))
@@ -293,6 +293,135 @@ def fig_errors(npz: str, out: str, which: int = -1,
     return out
 
 
+
+def _align(npzs: List[str]):
+    """
+    Несколько прогонов → общий набор тестовых наборов и выровненные предсказания.
+
+    Прогоны могут иметь разный порядок и разный состав теста; сравнивать можно
+    только на пересечении, иначе разница между семействами смешается с разницей
+    в тестовой выборке.
+    """
+    ds = [np.load(p, allow_pickle=True) for p in npzs]
+    common = set(ds[0]["test_sets"].tolist())
+    for d in ds[1:]:
+        common &= set(d["test_sets"].tolist())
+    common = np.array(sorted(common))
+    if not len(common):
+        raise SystemExit("у прогонов нет общих тестовых наборов")
+    perms = [np.array([{s: i for i, s in enumerate(d["test_sets"])}[c]
+                       for c in common]) for d in ds]
+    y_true = ds[0]["y_true"][perms[0]]
+    for d, pm in zip(ds[1:], perms[1:]):
+        if not np.allclose(d["y_true"][pm], y_true):
+            raise SystemExit("истина не совпадает между прогонами")
+    preds = [d["y_pred"][pm] for d, pm in zip(ds, perms)]
+    ref = ds[0]
+    geo = {k: ref[k][perms[0]] for k in ("proc", "r", "z")}
+    return common, y_true, preds, geo
+
+
+def fig_compare(npzs: List[str], labels: List[str], out: str,
+                which: int = -1, where: Optional[Dict[str, float]] = None,
+                errors: bool = False):
+    """
+    Сравнение СЕМЕЙСТВ на одном наборе.
+
+    errors=False — поля: верхняя строка МКЭ, дальше по строке на семейство.
+    errors=True  — невязки каждого семейства, общая шкала в % от масштаба
+                   компоненты, поэтому сравнимы и семейства, и компоненты.
+
+    Набор выбирается по МЕДИАННОЙ ошибке ПОСЛЕДНЕГО прогона в списке (обычно
+    это полная модель), чтобы выбор не подыгрывал ни одному из сравниваемых.
+    """
+    _, yt_all, preds, geo = _align(npzs)
+    err = np.sqrt(((preds[-1] - yt_all) ** 2).mean(axis=(1, 2, 3)))
+    which = _pick_set(geo, err, which, where)
+    yt = yt_all[which]
+    R = geo["r"][which]
+    Z = np.repeat(geo["z"][which][:, None], yt.shape[1], axis=1)
+
+    scales = [_sym(np.concatenate([yt[:, :, c].ravel()]
+                                  + [p[which][:, :, c].ravel() for p in preds]))
+              for _, c in ROWS4]
+    if errors:
+        rows = [(lbl, p) for lbl, p in zip(labels, preds)]
+        rel_lim = max(100.0 * _sym((p[which][:, :, c] - yt[:, :, c]).ravel()) / sc
+                      for _, p in rows for (_, c), sc in zip(ROWS4, scales))
+    else:
+        rows = [("МКЭ", None)] + list(zip(labels, preds))
+
+    nr_ = len(rows)
+    fig, axes = plt.subplots(nr_, 4, figsize=(9.6, 1.75 * nr_ + 1.6),
+                             sharex=True, sharey=True, layout="constrained")
+    axes = np.atleast_2d(axes)
+    cf_last = None
+    for i, (lbl, pred) in enumerate(rows):
+        for j, (tex, c) in enumerate(ROWS4):
+            field = yt[:, :, c] if pred is None else pred[which][:, :, c]
+            if errors:
+                v, L = 100.0 * (field - yt[:, :, c]) / scales[j], rel_lim
+            else:
+                v, L = field, scales[j]
+            ax = axes[i, j]
+            lev = np.linspace(-L, L, 21)
+            cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
+            ax.contour(R, Z, v, levels=lev[::5], colors="k",
+                       linewidths=0.25, alpha=0.35)
+            ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+            ax.set_xticks([0, 0.5, 1.0]); ax.set_yticks([0, 0.5, 1.0])
+            if i == 0:
+                ax.set_title(tex, fontsize=9)
+            if j == 0:
+                ax.set_ylabel(f"{lbl}\n" + r"$z/L$", fontsize=8)
+            if i == nr_ - 1:
+                ax.set_xlabel(r"$r/R$")
+            cf_last = cf
+        if not errors:
+            pass
+    if errors:
+        cb = fig.colorbar(cf_last, ax=axes, fraction=0.04, pad=0.02,
+                          location="bottom", orientation="horizontal",
+                          ticks=np.linspace(-rel_lim, rel_lim, 7))
+        cb.set_label("невязка, % от масштаба своей компоненты", fontsize=7)
+        cb.ax.set_xticklabels([f"{t:.0f}" for t in
+                               np.linspace(-rel_lim, rel_lim, 7)])
+        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+    else:
+        for j, (tex, c) in enumerate(ROWS4):
+            sm = plt.cm.ScalarMappable(cmap=DIVERGING,
+                                       norm=plt.Normalize(-scales[j], scales[j]))
+            cb = fig.colorbar(sm, ax=axes[:, j], fraction=0.05, pad=0.02,
+                              location="bottom", orientation="horizontal",
+                              ticks=np.linspace(-scales[j], scales[j], 5))
+            cb.set_label("МПа", fontsize=7)
+            cb.ax.tick_params(labelsize=6, color=MUTED)
+
+    # сводка по всему общему тесту
+    summ = []
+    for lbl, p in zip(labels, preds):
+        parts = []
+        for tex, c in ROWS4:
+            t, q = yt_all[..., c].ravel(), p[..., c].ravel()
+            r2 = 1.0 - ((q - t) ** 2).sum() / ((t - t.mean()) ** 2).sum()
+            parts.append(f"{tex} {r2:.3f}")
+        summ.append(f"{lbl} — $R^2$: " + ", ".join(parts))
+    fig.suptitle(("Невязки семейств" if errors else "Поля: МКЭ и семейства") +
+                 f".  Набор с медианной ошибкой:  {_regime(geo['proc'][which])}",
+                 fontsize=8.5)
+    fig.text(0.5, -0.015,
+             (f"Общий тест: {len(yt_all)} наборов.  " + ";  ".join(summ) + ".\n"
+              "Семейства отличаются ТОЛЬКО составом лосса: архитектура, сплит, "
+              "сид, число эпох и оптимизатор одинаковы.\n"
+              + ("Шкала общая на все панели: сравнимы и семейства, и компоненты."
+                 if errors else
+                 "Шкала общая внутри компоненты для всех строк.")),
+             ha="center", va="top", fontsize=7, color=INK)
+    fig.savefig(out)
+    plt.close(fig)
+    return out
+
+
 def fig_model(npz: str, out: str, which: int = -1,
               where: Optional[Dict[str, float]] = None,
               diff_mode: str = "rel"):
@@ -497,8 +626,13 @@ def fig_alpha_series(root: str, out: str, comp: int = 12, tex: str = r"$\sigma_{
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode",
-                    choices=["raw", "model", "fields", "errors", "alpha"],
+                    choices=["raw", "model", "fields", "errors", "compare",
+                             "compare-errors", "alpha"],
                     required=True)
+    ap.add_argument("--npzs", default="",
+                    help="для compare: список npz через запятую")
+    ap.add_argument("--labels", default="",
+                    help="для compare: подписи строк через запятую")
     ap.add_argument("--root", default="")
     ap.add_argument("--rpt", default="")
     ap.add_argument("--npz", default="")
@@ -519,6 +653,14 @@ def main():
         where = _where(a.where)
         print("создан", fig_model(a.npz, a.out, a.which, where or None,
                                   a.diff_mode))
+    elif a.mode in ("compare", "compare-errors"):
+        npzs = [x.strip() for x in a.npzs.split(",") if x.strip()]
+        labels = [x.strip() for x in a.labels.split(",") if x.strip()]
+        if len(labels) != len(npzs):
+            raise SystemExit(f"--labels: {len(labels)} против {len(npzs)} npz")
+        print("создан", fig_compare(npzs, labels, a.out, a.which,
+                                    _where(a.where),
+                                    errors=a.mode == "compare-errors"))
     elif a.mode == "fields":
         print("создан", fig_fields(a.npz, a.out, a.which, _where(a.where)))
     elif a.mode == "errors":
