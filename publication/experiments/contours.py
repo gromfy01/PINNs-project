@@ -37,7 +37,8 @@ from typing import Dict, Optional
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "code"))
 
-from raw_probe import C_R, C_Z, axial_window, list_jobs, parse_job_name, read_rpt  # noqa: E402
+from raw_probe import (C_R, C_Z, axial_window, billet_radius, list_jobs,  # noqa: E402
+                       parse_job_name, read_rpt)
 
 PROC_COL = {"Q": 0, "k": 1, "alpha": 2, "mu": 3, "v": 4}
 
@@ -80,28 +81,39 @@ def _panel(ax, tri, vals, title, lim, cmap=DIVERGING, nlev=21):
 def fig_raw(path_rpt: str, out: str, job: str = ""):
     """Поля по узлам одного расчёта, весь осевой размах."""
     a = read_rpt(path_rpt)
-    r = a[:, C_R] * 1e3          # мм
-    z = a[:, C_Z] * 1e3
+    # безразмерные координаты: r/R₀ по радиусу ЗАГОТОВКИ (не по текущей
+    # поверхности — она меняется вдоль оси, в том и смысл этого рисунка),
+    # z/L по полной длине модели
+    R0 = billet_radius(path_rpt)
+    L = float(a[:, C_Z].max() - a[:, C_Z].min())
+    r = a[:, C_R] / R0
+    z = (a[:, C_Z] - a[:, C_Z].min()) / L
     lo, hi = axial_window(a[:, C_Z])
+    lo = (lo - a[:, C_Z].min()) / L
+    hi = (hi - a[:, C_Z].min()) / L
     tri = mtri.Triangulation(r, z)
 
-    fig, axes = plt.subplots(1, 4, figsize=(8.6, 3.6), sharey=True)
+    fig, axes = plt.subplots(1, 4, figsize=(9.4, 4.0), sharey=True,
+                             layout="constrained")
     for ax, (key, tex, col) in zip(axes, COMPS):
         v = a[:, col] / 1e6
         lim = _sym(v)
         cf = _panel(ax, tri, v, f"{tex}, МПа", lim)
-        ax.axhline(lo * 1e3, color=INK, lw=1.0, ls="--")
-        ax.axhline(hi * 1e3, color=INK, lw=1.0, ls="--")
-        ax.set_xlabel("r, мм")
-        cb = fig.colorbar(cf, ax=ax, fraction=0.055, pad=0.04)
-        cb.ax.tick_params(labelsize=6.5, color=MUTED)
-    axes[0].set_ylabel("z, мм")
-    fig.suptitle(f"Остаточные напряжения по узлам МКЭ · {job}", y=1.05, fontsize=9)
-    fig.text(0.5, -0.10,
-             "Пунктир — осевое окно 25–75 %: из этой полосы собирается обучающая "
-             "выборка (20 радиальных точек на набор).\n"
-             "Оси не в одном масштабе: радиальная растянута, иначе панель "
-             "вырождается в полоску (радиус ~16 мм при длине ~130 мм).",
+        ax.axhline(lo, color=INK, lw=1.0, ls="--")
+        ax.axhline(hi, color=INK, lw=1.0, ls="--")
+        ax.set_xlabel(r"$r/R_0$")
+        cb = fig.colorbar(cf, ax=ax, fraction=0.06, pad=0.03,
+                          location="bottom", orientation="horizontal")
+        cb.ax.tick_params(labelsize=6, color=MUTED)
+    axes[0].set_ylabel(r"$z/L$")
+    fig.suptitle(f"Остаточные напряжения по узлам МКЭ · {job}", fontsize=9)
+    fig.text(0.5, -0.02,
+             f"Пунктир — осевое окно 25–75 %: из этой полосы собирается обучающая "
+             f"выборка (20 радиальных точек на набор).\n"
+             f"Координаты безразмерные: $R_0$ = {R0 * 1e3:.1f} мм (заготовка), "
+             f"$L$ = {L * 1e3:.1f} мм (длина модели).\n"
+             f"Оси не в одном масштабе: радиальная растянута, иначе панель "
+             f"вырождается в полоску ($L/R_0$ = {L / R0:.1f}).",
              ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)
@@ -109,9 +121,15 @@ def fig_raw(path_rpt: str, out: str, job: str = ""):
 
 
 def fig_model(npz: str, out: str, which: int = -1,
-              where: Optional[Dict[str, float]] = None):
+              where: Optional[Dict[str, float]] = None,
+              diff_mode: str = "rel"):
     """
     МКЭ против предсказания модели с z во входе, и разность.
+
+    Координаты БЕЗРАЗМЕРНЫЕ: r/R — радиус, отнесённый к радиусу поверхности в
+    том же осевом сечении (1 = свободная поверхность при любом z), z/L — доля
+    осевого окна (0 — вход, 1 — выход). Так карты сопоставимы между наборами
+    с разным обжатием, у которых радиус поверхности разный.
 
     which = -1 (по умолчанию) — набор с МЕДИАННОЙ ошибкой, а не первый
     попавшийся и не лучший: показывать надо типичное поведение.
@@ -120,10 +138,20 @@ def fig_model(npz: str, out: str, which: int = -1,
     внутри отобранного подмножества, так что набор остаётся типичным ДЛЯ
     ЭТОГО режима, а не для теста целиком.
 
+    diff_mode — как показывать третий столбец:
+      'rel' (по умолчанию) — (модель − МКЭ) / масштаб компоненты, в процентах.
+            Шкала ОБЩАЯ для всех трёх строк, поэтому строки сравнимы между
+            собой: сразу видно, по какой компоненте модель хуже.
+      'abs' — в МПа, шкала своя у каждой строки. Структура ошибки видна
+            лучше, но строки несравнимы, а панель всегда закрашена на полную
+            насыщенность независимо от того, 3 % это или 30 %.
+
     Один набор — это одна точка выборки, поэтому в подписи печатаются метрики
     ПО ВСЕМУ тесту: по одной панели о качестве модели судить нельзя, особенно
     для τ_rz, величина которого сильно меняется от режима к режиму.
     """
+    if diff_mode not in ("rel", "abs"):
+        raise ValueError(f"diff_mode: 'rel' или 'abs', получено {diff_mode!r}")
     d = np.load(npz, allow_pickle=True)
     y_true_all, y_pred_all = d["y_true"], d["y_pred"]
     err = np.sqrt(((y_pred_all - y_true_all) ** 2).mean(axis=(1, 2, 3)))
@@ -149,7 +177,7 @@ def fig_model(npz: str, out: str, which: int = -1,
         t, q = y_true_all[..., c].ravel(), y_pred_all[..., c].ravel()
         r2 = 1.0 - ((q - t) ** 2).sum() / ((t - t.mean()) ** 2).sum()
         part = f"{tex}: RMSE {np.sqrt(((q - t) ** 2).mean()):.1f}, $R^2$ {r2:.2f}"
-        if clean is not None:
+        if clean is not None and not clean.all():
             tc = y_true_all[clean][..., c].ravel()
             qc = y_pred_all[clean][..., c].ravel()
             r2c = 1.0 - ((qc - tc) ** 2).sum() / ((tc - tc.mean()) ** 2).sum()
@@ -158,59 +186,84 @@ def fig_model(npz: str, out: str, which: int = -1,
         summ.append(part)
 
     yt, yp = y_true_all[which], y_pred_all[which]
-    R = d["r_phys"][which] * 1e3
-    Z = np.repeat(d["z_phys"][which][:, None] * 1e3, yt.shape[1], axis=1)
+    # безразмерные координаты: r/R (1 = поверхность), z/L (0..1 по окну)
+    R = d["r"][which]
+    Z = np.repeat(d["z"][which][:, None], yt.shape[1], axis=1)
     proc = d["proc"][which]
+
+    # масштаб каждой компоненты и общий предел относительной шкалы
+    scales = [_sym(np.concatenate([yt[:, :, c].ravel(), yp[:, :, c].ravel()]))
+              for _, c in rows]
+    rel_lim = max(100.0 * _sym((yp[:, :, c] - yt[:, :, c]).ravel()) / sc
+                  for (_, c), sc in zip(rows, scales))
 
     fig, axes = plt.subplots(len(rows), 3, figsize=(7.6, 7.2),
                              layout="constrained")
+    cf_rel = None
     for i, (tex, c) in enumerate(rows):
         t, q = yt[:, :, c], yp[:, :, c]
-        lim = _sym(np.concatenate([t.ravel(), q.ravel()]))
-        dlim = _sym((q - t).ravel())
+        lim = scales[i]
+        if diff_mode == "rel":
+            dv, dlim = 100.0 * (q - t) / lim, rel_lim
+            dttl = "невязка, % от масштаба"
+        else:
+            dv, dlim = q - t, _sym((q - t).ravel())
+            dttl = f"невязка, МПа  ({100 * dlim / lim:.0f} % от масштаба)"
         cf_pair = None
-        # панель разности масштабируется по СЕБЕ, иначе структура не видна;
-        # поэтому её долю от поля пишем прямо в заголовок — иначе ошибка в
-        # 11 % закрашивается на полную насыщенность и читается как провал
-        diff_ttl = f"модель − МКЭ  ({100 * dlim / lim:.0f} % от поля)"
         for j, (v, ttl, L) in enumerate(((t, "МКЭ", lim),
                                          (q, "модель", lim),
-                                         (q - t, diff_ttl, dlim))):
+                                         (dv, dttl, dlim))):
             ax = axes[i, j]
             lev = np.linspace(-L, L, 21)
             cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
             ax.contour(R, Z, v, levels=lev[::5], colors="k",
                        linewidths=0.25, alpha=0.35)
             ax.set_title(f"{tex}  {ttl}")
+            ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+            ax.set_xticks([0, 0.5, 1.0]); ax.set_yticks([0, 0.5, 1.0])
             if j < 2:
                 cf_pair = cf
+            else:
+                cf_rel = cf
             if j > 0:
                 ax.tick_params(labelleft=False)
             else:
-                ax.set_ylabel("z, мм")
+                ax.set_ylabel(r"$z/L$")
             if i < len(rows) - 1:
                 ax.tick_params(labelbottom=False)
             else:
-                ax.set_xlabel("r, мм")
-        # одна шкала на пару МКЭ/модель — они в одних пределах, дублировать незачем
+                ax.set_xlabel(r"$r/R$")
+        # одна шкала на пару МКЭ/модель — они в одних пределах
         cb = fig.colorbar(cf_pair, ax=axes[i, :2], fraction=0.045, pad=0.02)
         cb.set_label("МПа", fontsize=7)
         cb.ax.tick_params(labelsize=6.5, color=MUTED)
-        cbd = fig.colorbar(cf, ax=axes[i, 2], fraction=0.09, pad=0.02)
-        cbd.set_label("МПа", fontsize=7)
+        if diff_mode == "abs":
+            cbd = fig.colorbar(cf, ax=axes[i, 2], fraction=0.09, pad=0.02)
+            cbd.set_label("МПа", fontsize=7)
+            cbd.ax.tick_params(labelsize=6.5, color=MUTED)
+    if diff_mode == "rel":
+        # ОДНА шкала на весь столбец невязок: строки становятся сравнимы
+        cbd = fig.colorbar(cf_rel, ax=axes[:, 2], fraction=0.055, pad=0.02)
+        cbd.set_label("% от масштаба компоненты", fontsize=7)
         cbd.ax.tick_params(labelsize=6.5, color=MUTED)
 
     fig.suptitle(f"Набор с медианной ошибкой:  Q = {proc[0]:g}, k = {proc[1]:g}, "
                  f"α = {proc[2]:g}°, μ = {proc[3]:g}, v = {proc[4]:g} м/мин",
                  fontsize=8.5)
-    note = ("Шкала МКЭ и модели общая; у разности СВОЯ, её доля от поля "
-            "указана в заголовке панели.\n"
-            f"По всему тесту (n = {len(y_true_all)}):  " + ";  ".join(summ) + ".")
-    if clean is not None:
+    note = (r"$r/R$ — радиус, отнесённый к поверхности в том же сечении "
+            r"($r/R = 1$ — свободная поверхность); $z/L$ — доля осевого окна."
+            "\n")
+    if diff_mode == "rel":
+        note += ("Невязка отнесена к масштабу своей компоненты (99.5-й "
+                 "перцентиль |поля|), шкала общая на столбец — строки сравнимы "
+                 "между собой.\n")
+    else:
+        note += ("Шкала МКЭ и модели общая; у невязки своя, её доля от "
+                 "масштаба указана в заголовке панели.\n")
+    note += f"По всему тесту (n = {len(y_true_all)}):  " + ";  ".join(summ) + "."
+    if clean is not None and not clean.all():
         note += (f"\n«Без конуса» — {int(clean.sum())} наборов после снятия "
-                 f"{int((~clean).sum())} с конусом волоки в окне (E-24): они "
-                 "несут 51 % всей квадратичной ошибки.")
-    note += "\nОси не в одном масштабе: радиальная растянута."
+                 f"{int((~clean).sum())} с конусом волоки в окне (E-24).")
     fig.text(0.5, -0.015, note, ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)
@@ -233,18 +286,22 @@ def fig_alpha_series(root: str, out: str, comp: int = 12, tex: str = r"$\sigma_{
             for nm, p in jobs:
                 if parse_job_name(nm).get("alpha") == alpha:
                     want.append((alpha, nm, p)); break
-    fig, axes = plt.subplots(1, len(want), figsize=(2.6 * len(want), 4.2), sharey=True)
+    fig, axes = plt.subplots(1, len(want), figsize=(2.8 * len(want), 4.4),
+                             sharey=True, layout="constrained")
     axes = np.atleast_1d(axes)
     arrs = [read_rpt(p) for _, _, p in want]
     lim = max(_sym(a[:, comp] / 1e6) for a in arrs)
     others = []
-    for ax, (alpha, nm, _), a in zip(axes, want, arrs):
-        tri = mtri.Triangulation(a[:, C_R] * 1e3, a[:, C_Z] * 1e3)
+    for ax, (alpha, nm, pth), a in zip(axes, want, arrs):
+        R0 = billet_radius(pth)
+        L = float(a[:, C_Z].max() - a[:, C_Z].min())
+        tri = mtri.Triangulation(a[:, C_R] / R0,
+                                 (a[:, C_Z] - a[:, C_Z].min()) / L)
         pj = parse_job_name(nm)
         cf = _panel(ax, tri, a[:, comp] / 1e6, f"α = {alpha:g}°", lim)
-        ax.set_xlabel("r, мм")
+        ax.set_xlabel(r"$r/R_0$")
         others.append((pj.get("Q"), pj.get("k"), pj.get("mu_repo"), pj.get("v")))
-    axes[0].set_ylabel("z, мм")
+    axes[0].set_ylabel(r"$z/L$")
     same = len(set(others)) == 1
     o = others[0]
     fig.text(0.5, -0.06,
@@ -273,6 +330,10 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--which", type=int, default=-1,
                     help="индекс тестового набора; -1 = набор с медианной ошибкой")
+    ap.add_argument("--diff-mode", dest="diff_mode", default="rel",
+                    choices=["rel", "abs"],
+                    help="третий столбец: 'rel' — %% от масштаба, общая шкала "
+                         "на столбец; 'abs' — МПа, своя шкала у каждой строки")
     ap.add_argument("--where", default="",
                     help="ограничить режимом, например 'v=20' или 'v=40,alpha=8'")
     a = ap.parse_args()
@@ -284,7 +345,8 @@ def main():
         for part in filter(None, a.where.split(",")):
             k, v = part.split("=")
             where[k.strip()] = float(v)
-        print("создан", fig_model(a.npz, a.out, a.which, where or None))
+        print("создан", fig_model(a.npz, a.out, a.which, where or None,
+                                  a.diff_mode))
     else:
         print("создан", fig_alpha_series(a.root, a.out))
 

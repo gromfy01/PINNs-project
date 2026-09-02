@@ -134,6 +134,22 @@ def mu_from_token(token: str) -> float:
     return float(token[1:]) / 1000
 
 
+def billet_radius(path_rpt: str, default: float = 0.018) -> float:
+    """
+    Радиус заготовки R₀, м — из имени детали волоки в шапке отчёта.
+
+    Abaqus печатает регион вида `DIE_2A_16_D0_36-1.Region_1`, где `D0_36` —
+    диаметр заготовки в мм. Брать R₀ из сетки нельзя: у сильных обжатий
+    недеформированной части в модели не остаётся вовсе (при rd = 0.25 радиус
+    постоянен по всей длине), поэтому максимум по узлам даёт уже протянутый
+    радиус, а не исходный.
+    """
+    with open(path_rpt, "r", errors="ignore") as fh:
+        head = fh.read(8192)
+    m = re.search(r"DIE_\w*?D0_(\d+)", head)
+    return (int(m.group(1)) / 2.0) * 1e-3 if m else default
+
+
 # ─────────────────────── окно и радиальный профиль ──────────────────────
 
 def axial_window(z: np.ndarray, mode: str = "repo") -> Tuple[float, float]:
