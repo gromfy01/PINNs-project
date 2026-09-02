@@ -32,10 +32,14 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import numpy as np
 
+from typing import Dict, Optional
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "code"))
 
 from raw_probe import C_R, C_Z, axial_window, list_jobs, parse_job_name, read_rpt  # noqa: E402
+
+PROC_COL = {"Q": 0, "k": 1, "alpha": 2, "mu": 3, "v": 4}
 
 COMPS = [("sigma_rr", r"$\sigma_{rr}$", 11),
          ("sigma_tt", r"$\sigma_{\theta\theta}$", 13),
@@ -104,12 +108,17 @@ def fig_raw(path_rpt: str, out: str, job: str = ""):
     return out
 
 
-def fig_model(npz: str, out: str, which: int = -1):
+def fig_model(npz: str, out: str, which: int = -1,
+              where: Optional[Dict[str, float]] = None):
     """
     МКЭ против предсказания модели с z во входе, и разность.
 
-    which = -1 (по умолчанию) — набор с МЕДИАННОЙ ошибкой по тесту, а не
-    первый попавшийся и не лучший: показывать надо типичное поведение.
+    which = -1 (по умолчанию) — набор с МЕДИАННОЙ ошибкой, а не первый
+    попавшийся и не лучший: показывать надо типичное поведение.
+
+    where — ограничить выбор режимом, например {"v": 20}. Медиана берётся
+    внутри отобранного подмножества, так что набор остаётся типичным ДЛЯ
+    ЭТОГО режима, а не для теста целиком.
 
     Один набор — это одна точка выборки, поэтому в подписи печатаются метрики
     ПО ВСЕМУ тесту: по одной панели о качестве модели судить нельзя, особенно
@@ -117,11 +126,21 @@ def fig_model(npz: str, out: str, which: int = -1):
     """
     d = np.load(npz, allow_pickle=True)
     y_true_all, y_pred_all = d["y_true"], d["y_pred"]
+    err = np.sqrt(((y_pred_all - y_true_all) ** 2).mean(axis=(1, 2, 3)))
     if which < 0:
-        err = np.sqrt(((y_pred_all - y_true_all) ** 2).mean(axis=(1, 2, 3)))
-        which = int(np.argsort(err)[len(err) // 2])
-        print(f"выбран набор {which} (медианная ошибка {err[which]:.2f} МПа, "
-              f"диапазон {err.min():.2f}–{err.max():.2f})")
+        pool = np.ones(len(err), dtype=bool)
+        if where:
+            for key, val in where.items():
+                pool &= np.isclose(d["proc"][:, PROC_COL[key]], val)
+            if not pool.any():
+                raise SystemExit(f"нет тестовых наборов с {where}")
+        idx = np.flatnonzero(pool)
+        which = int(idx[np.argsort(err[idx])[len(idx) // 2]])
+        tag = (" при " + ", ".join(f"{k} = {v:g}" for k, v in where.items())
+               ) if where else ""
+        print(f"выбран набор {which}{tag}: медианная ошибка {err[which]:.2f} МПа "
+              f"(из {len(idx)} наборов, диапазон {err[idx].min():.2f}–"
+              f"{err[idx].max():.2f})")
 
     rows = [(r"$\sigma_{rr}$", 0), (r"$\sigma_{zz}$", 2), (r"$\tau_{rz}$", 3)]
     clean = d["clean_mask"] if "clean_mask" in d.files else None
@@ -254,12 +273,18 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--which", type=int, default=-1,
                     help="индекс тестового набора; -1 = набор с медианной ошибкой")
+    ap.add_argument("--where", default="",
+                    help="ограничить режимом, например 'v=20' или 'v=40,alpha=8'")
     a = ap.parse_args()
     if a.mode == "raw":
         job = os.path.basename(a.rpt)[:-4]
         print("создан", fig_raw(a.rpt, a.out, job))
     elif a.mode == "model":
-        print("создан", fig_model(a.npz, a.out, a.which))
+        where = {}
+        for part in filter(None, a.where.split(",")):
+            k, v = part.split("=")
+            where[k.strip()] = float(v)
+        print("создан", fig_model(a.npz, a.out, a.which, where or None))
     else:
         print("создан", fig_alpha_series(a.root, a.out))
 
