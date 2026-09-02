@@ -573,12 +573,22 @@ def main():
     lines: List[str] = []
     L = lines.append
 
+    # число наборов берём из САМОГО датасета, а не из константы: датасет
+    # пересобирался (E-18) и чистился (E-24), и зашитая цифра успела устареть
+    n_sets = None
+    if a.dataset:
+        sys.path.insert(0, os.path.join(HERE, "..", "code"))
+        from dataset import StressDataset as _SD
+        n_sets = _SD.load(a.dataset).n_sets
     L("# Результаты прогонов\n")
     L("Сгенерировано `publication/experiments/make_results.py` из "
-      "`results/runs.csv`. Данные — пересобранный из сырых `.rpt` датасет "
-      "(`publication/code/dataset.py`), 1848 наборов; целевые поля — истинные "
-      "`(σ_rr, σ_θθ, σ_zz, τ_rz)`, а не то, что лежало в прежнем `y_stress.pkl` "
-      "(ERRATA E-18).\n")
+      f"`{os.path.basename(a.csv)}`. Данные — пересобранный из сырых `.rpt` "
+      "датасет (`publication/code/dataset.py`)"
+      + (f", **{n_sets} наборов**" if n_sets else "") +
+      "; целевые поля — истинные `(σ_rr, σ_θθ, σ_zz, τ_rz)`, а не то, что "
+      "лежало в прежнем `y_stress.pkl` (ERRATA E-18). Из датасета сняты "
+      "незавершённые расчёты, где проволока не прошла волоку целиком "
+      "(ERRATA E-24).\n")
     L("Протокол одинаков у всех семейств: AdamW, без планировщика, те же эпохи, "
       "батчи, ранняя остановка, сиды и архитектура; отличается только состав "
       "функции потерь. Гиперпараметры зафиксированы априори и на held-out "
