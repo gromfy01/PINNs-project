@@ -124,12 +124,19 @@ def fig_model(npz: str, out: str, which: int = -1):
               f"диапазон {err.min():.2f}–{err.max():.2f})")
 
     rows = [(r"$\sigma_{rr}$", 0), (r"$\sigma_{zz}$", 2), (r"$\tau_{rz}$", 3)]
+    clean = d["clean_mask"] if "clean_mask" in d.files else None
     summ = []
     for tex, c in rows:
         t, q = y_true_all[..., c].ravel(), y_pred_all[..., c].ravel()
         r2 = 1.0 - ((q - t) ** 2).sum() / ((t - t.mean()) ** 2).sum()
-        summ.append(f"{tex}: RMSE {np.sqrt(((q - t) ** 2).mean()):.1f} МПа, "
-                    f"$R^2$ {r2:.2f}")
+        part = f"{tex}: RMSE {np.sqrt(((q - t) ** 2).mean()):.1f}, $R^2$ {r2:.2f}"
+        if clean is not None:
+            tc = y_true_all[clean][..., c].ravel()
+            qc = y_pred_all[clean][..., c].ravel()
+            r2c = 1.0 - ((qc - tc) ** 2).sum() / ((tc - tc.mean()) ** 2).sum()
+            part += (f" (без конуса {np.sqrt(((qc - tc) ** 2).mean()):.1f} / "
+                     f"{r2c:.2f})")
+        summ.append(part)
 
     yt, yp = y_true_all[which], y_pred_all[which]
     R = d["r_phys"][which] * 1e3
@@ -143,9 +150,13 @@ def fig_model(npz: str, out: str, which: int = -1):
         lim = _sym(np.concatenate([t.ravel(), q.ravel()]))
         dlim = _sym((q - t).ravel())
         cf_pair = None
+        # панель разности масштабируется по СЕБЕ, иначе структура не видна;
+        # поэтому её долю от поля пишем прямо в заголовок — иначе ошибка в
+        # 11 % закрашивается на полную насыщенность и читается как провал
+        diff_ttl = f"модель − МКЭ  ({100 * dlim / lim:.0f} % от поля)"
         for j, (v, ttl, L) in enumerate(((t, "МКЭ", lim),
                                          (q, "модель", lim),
-                                         (q - t, "модель − МКЭ", dlim))):
+                                         (q - t, diff_ttl, dlim))):
             ax = axes[i, j]
             lev = np.linspace(-L, L, 21)
             cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
@@ -173,11 +184,15 @@ def fig_model(npz: str, out: str, which: int = -1):
     fig.suptitle(f"Набор с медианной ошибкой:  Q = {proc[0]:g}, k = {proc[1]:g}, "
                  f"α = {proc[2]:g}°, μ = {proc[3]:g}, v = {proc[4]:g} м/мин",
                  fontsize=8.5)
-    fig.text(0.5, -0.015,
-             "Шкала МКЭ и модели общая, у разности своя. По всему тесту "
-             f"(n = {len(y_true_all)} наборов):  " + ";  ".join(summ) + ".\n"
-             "Оси не в одном масштабе: радиальная растянута.",
-             ha="center", va="top", fontsize=7, color=INK)
+    note = ("Шкала МКЭ и модели общая; у разности СВОЯ, её доля от поля "
+            "указана в заголовке панели.\n"
+            f"По всему тесту (n = {len(y_true_all)}):  " + ";  ".join(summ) + ".")
+    if clean is not None:
+        note += (f"\n«Без конуса» — {int(clean.sum())} наборов после снятия "
+                 f"{int((~clean).sum())} с конусом волоки в окне (E-24): они "
+                 "несут 51 % всей квадратичной ошибки.")
+    note += "\nОси не в одном масштабе: радиальная растянута."
+    fig.text(0.5, -0.015, note, ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)
     return out
