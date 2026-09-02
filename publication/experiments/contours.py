@@ -120,6 +120,179 @@ def fig_raw(path_rpt: str, out: str, job: str = ""):
     return out
 
 
+def _where(spec: str) -> Optional[Dict[str, float]]:
+    """'Q=0.10,v=20' → {'Q': 0.1, 'v': 20.0}."""
+    out = {}
+    for part in filter(None, spec.split(",")):
+        k, v = part.split("=")
+        out[k.strip()] = float(v)
+    return out or None
+
+
+def _pick_set(d, err, which, where):
+    """Общий выбор набора для карт модели: медиана внутри отобранного режима."""
+    if which >= 0:
+        return which
+    pool = np.ones(len(err), dtype=bool)
+    if where:
+        for key, val in where.items():
+            pool &= np.isclose(d["proc"][:, PROC_COL[key]], val)
+        if not pool.any():
+            raise SystemExit(f"нет тестовых наборов с {where}")
+    idx = np.flatnonzero(pool)
+    w = int(idx[np.argsort(err[idx])[len(idx) // 2]])
+    tag = (" при " + ", ".join(f"{k} = {v:g}" for k, v in where.items())) if where else ""
+    print(f"выбран набор {w}{tag}: медианная ошибка {err[w]:.2f} МПа "
+          f"(из {len(idx)} наборов, диапазон {err[idx].min():.2f}–{err[idx].max():.2f})")
+    return w
+
+
+def _regime(proc):
+    return (f"Q = {proc[0]:g}, k = {proc[1]:g}, α = {proc[2]:g}°, "
+            f"μ = {proc[3]:g}, v = {proc[4]:g} м/мин")
+
+
+ROWS4 = [(r"$\sigma_{rr}$", 0), (r"$\sigma_{\theta\theta}$", 1),
+         (r"$\sigma_{zz}$", 2), (r"$\tau_{rz}$", 3)]
+
+
+def fig_fields(npz: str, out: str, which: int = -1,
+               where: Optional[Dict[str, float]] = None):
+    """
+    Только поля: МКЭ (верхний ряд) против модели (нижний), четыре компоненты.
+
+    Невязки сюда НЕ включены намеренно — у них своя шкала и свой вопрос;
+    смешивание в одной сетке заставляло читать разными глазами соседние
+    панели. Ошибки — в fig_errors.
+    """
+    d = np.load(npz, allow_pickle=True)
+    yt_all, yp_all = d["y_true"], d["y_pred"]
+    err = np.sqrt(((yp_all - yt_all) ** 2).mean(axis=(1, 2, 3)))
+    which = _pick_set(d, err, which, where)
+    yt, yp = yt_all[which], yp_all[which]
+    R = d["r"][which]
+    Z = np.repeat(d["z"][which][:, None], yt.shape[1], axis=1)
+
+    fig, axes = plt.subplots(2, 4, figsize=(9.6, 5.4), sharex=True, sharey=True,
+                             layout="constrained")
+    for j, (tex, c) in enumerate(ROWS4):
+        lim = _sym(np.concatenate([yt[:, :, c].ravel(), yp[:, :, c].ravel()]))
+        lev = np.linspace(-lim, lim, 21)
+        for i, (v, who) in enumerate(((yt[:, :, c], "МКЭ"), (yp[:, :, c], "модель"))):
+            ax = axes[i, j]
+            cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
+            ax.contour(R, Z, v, levels=lev[::5], colors="k",
+                       linewidths=0.25, alpha=0.35)
+            ax.set_title(f"{tex}  {who}" if i == 0 else who)
+            ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+            ax.set_xticks([0, 0.5, 1.0]); ax.set_yticks([0, 0.5, 1.0])
+            if j == 0:
+                ax.set_ylabel(r"$z/L$")
+        cb = fig.colorbar(cf, ax=axes[:, j], fraction=0.07, pad=0.02,
+                          location="bottom", orientation="horizontal",
+                          ticks=np.linspace(-lim, lim, 5))
+        cb.set_label("МПа", fontsize=7)
+        cb.ax.tick_params(labelsize=6, color=MUTED)
+        axes[1, j].set_xlabel(r"$r/R$")
+    fig.suptitle(f"Поля: МКЭ против модели.  Набор с медианной ошибкой:  "
+                 f"{_regime(d['proc'][which])}", fontsize=8.5)
+    fig.text(0.5, -0.02,
+             r"Шкала общая для МКЭ и модели внутри каждой компоненты. "
+             r"$r/R = 1$ — свободная поверхность; $z/L$ — доля осевого окна."
+             "\nОси не в одном масштабе: радиальная растянута.",
+             ha="center", va="top", fontsize=7, color=INK)
+    fig.savefig(out)
+    plt.close(fig)
+    return out
+
+
+def fig_errors(npz: str, out: str, which: int = -1,
+               where: Optional[Dict[str, float]] = None,
+               diff_mode: str = "rel"):
+    """
+    Только невязки (модель − МКЭ) по четырём компонентам.
+
+    diff_mode='rel' — в % от масштаба своей компоненты, шкала ОБЩАЯ на все
+    четыре панели, поэтому компоненты сравнимы между собой напрямую.
+    diff_mode='abs' — в МПа, своя шкала у каждой панели.
+    """
+    if diff_mode not in ("rel", "abs"):
+        raise ValueError(f"diff_mode: 'rel' или 'abs', получено {diff_mode!r}")
+    d = np.load(npz, allow_pickle=True)
+    yt_all, yp_all = d["y_true"], d["y_pred"]
+    err = np.sqrt(((yp_all - yt_all) ** 2).mean(axis=(1, 2, 3)))
+    which = _pick_set(d, err, which, where)
+    yt, yp = yt_all[which], yp_all[which]
+    R = d["r"][which]
+    Z = np.repeat(d["z"][which][:, None], yt.shape[1], axis=1)
+    clean = d["clean_mask"] if "clean_mask" in d.files else None
+
+    scales = [_sym(np.concatenate([yt[:, :, c].ravel(), yp[:, :, c].ravel()]))
+              for _, c in ROWS4]
+    rel_lim = max(100.0 * _sym((yp[:, :, c] - yt[:, :, c]).ravel()) / sc
+                  for (_, c), sc in zip(ROWS4, scales))
+
+    fig, axes = plt.subplots(1, 4, figsize=(9.6, 3.4), sharey=True,
+                             layout="constrained")
+    for j, (tex, c) in enumerate(ROWS4):
+        diff = yp[:, :, c] - yt[:, :, c]
+        rmse = float(np.sqrt((diff ** 2).mean()))
+        if diff_mode == "rel":
+            v, L = 100.0 * diff / scales[j], rel_lim
+        else:
+            v, L = diff, _sym(diff.ravel())
+        ax = axes[j]
+        lev = np.linspace(-L, L, 21)
+        cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
+        ax.contour(R, Z, v, levels=lev[::5], colors="k",
+                   linewidths=0.25, alpha=0.35)
+        ax.set_title(f"{tex}\nRMSE {rmse:.1f} МПа = "
+                     f"{100 * rmse / scales[j]:.1f} % масштаба", fontsize=8)
+        ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+        ax.set_xticks([0, 0.5, 1.0]); ax.set_yticks([0, 0.5, 1.0])
+        ax.set_xlabel(r"$r/R$")
+        if j == 0:
+            ax.set_ylabel(r"$z/L$")
+        if diff_mode == "abs":
+            cb = fig.colorbar(cf, ax=ax, fraction=0.07, pad=0.02,
+                              location="bottom", orientation="horizontal")
+            cb.set_label("МПа", fontsize=7)
+            cb.ax.tick_params(labelsize=6, color=MUTED)
+    if diff_mode == "rel":
+        cb = fig.colorbar(cf, ax=axes, fraction=0.05, pad=0.02,
+                          location="bottom", orientation="horizontal",
+                          ticks=np.linspace(-rel_lim, rel_lim, 7))
+        cb.set_label("невязка, % от масштаба своей компоненты", fontsize=7)
+        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+        cb.ax.set_xticklabels([f"{t:.0f}" for t in
+                               np.linspace(-rel_lim, rel_lim, 7)])
+
+    summ = []
+    for tex, c in ROWS4:
+        t, q = yt_all[..., c].ravel(), yp_all[..., c].ravel()
+        r2 = 1.0 - ((q - t) ** 2).sum() / ((t - t.mean()) ** 2).sum()
+        part = f"{tex}: {np.sqrt(((q - t) ** 2).mean()):.1f} МПа, $R^2$ {r2:.2f}"
+        if clean is not None and not clean.all():
+            tc = yt_all[clean][..., c].ravel(); qc = yp_all[clean][..., c].ravel()
+            r2c = 1.0 - ((qc - tc) ** 2).sum() / ((tc - tc.mean()) ** 2).sum()
+            part += f" (чистые {np.sqrt(((qc - tc) ** 2).mean()):.1f} / {r2c:.2f})"
+        summ.append(part)
+    fig.suptitle(f"Невязка модель − МКЭ.  Набор с медианной ошибкой:  "
+                 f"{_regime(d['proc'][which])}", fontsize=8.5)
+    note = ("Заголовок панели — RMSE ЭТОГО набора. "
+            + ("Шкала общая на все четыре панели: компоненты сравнимы напрямую."
+               if diff_mode == "rel" else
+               "Шкала своя у каждой панели: сравнивать между собой нельзя.")
+            + f"\nПо всему тесту (n = {len(yt_all)}): " + ";  ".join(summ) + ".")
+    if clean is not None and not clean.all():
+        note += (f"\n«Чистые» — {int(clean.sum())} наборов после снятия "
+                 f"{int((~clean).sum())} незавершённых расчётов (E-24).")
+    fig.text(0.5, -0.02, note, ha="center", va="top", fontsize=7, color=INK)
+    fig.savefig(out)
+    plt.close(fig)
+    return out
+
+
 def fig_model(npz: str, out: str, which: int = -1,
               where: Optional[Dict[str, float]] = None,
               diff_mode: str = "rel"):
@@ -323,7 +496,9 @@ def fig_alpha_series(root: str, out: str, comp: int = 12, tex: str = r"$\sigma_{
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["raw", "model", "alpha"], required=True)
+    ap.add_argument("--mode",
+                    choices=["raw", "model", "fields", "errors", "alpha"],
+                    required=True)
     ap.add_argument("--root", default="")
     ap.add_argument("--rpt", default="")
     ap.add_argument("--npz", default="")
@@ -341,12 +516,14 @@ def main():
         job = os.path.basename(a.rpt)[:-4]
         print("создан", fig_raw(a.rpt, a.out, job))
     elif a.mode == "model":
-        where = {}
-        for part in filter(None, a.where.split(",")):
-            k, v = part.split("=")
-            where[k.strip()] = float(v)
+        where = _where(a.where)
         print("создан", fig_model(a.npz, a.out, a.which, where or None,
                                   a.diff_mode))
+    elif a.mode == "fields":
+        print("создан", fig_fields(a.npz, a.out, a.which, _where(a.where)))
+    elif a.mode == "errors":
+        print("создан", fig_errors(a.npz, a.out, a.which, _where(a.where),
+                                   a.diff_mode))
     else:
         print("создан", fig_alpha_series(a.root, a.out))
 
