@@ -156,6 +156,26 @@ ROWS4 = [(r"$\sigma_{rr}$", 0), (r"$\sigma_{\theta\theta}$", 1),
          (r"$\sigma_{zz}$", 2), (r"$\tau_{rz}$", 3)]
 
 
+def _model_label(npz: str, d) -> str:
+    """
+    Как называется модель на этом рисунке.
+
+    Без этого «модель» на панели ничего не значит: у нас три семейства,
+    отличающихся составом лосса, и читатель обязан видеть, о каком речь.
+    Берётся из поля `family` в npz, если оно есть, иначе из имени файла.
+    """
+    if "family" in getattr(d, "files", []):
+        return str(d["family"])
+    base = os.path.basename(npz)
+    for key, name in (("pinn2d_full", "PINN, полная форма"),
+                      ("pinn2d_reduced", "PINN, редуц. форма"),
+                      ("mlp2d", "MLP"),
+                      ("noncone", "PINN, полная форма")):
+        if key in base:
+            return name
+    return "модель"
+
+
 def fig_fields(npz: str, out: str, which: int = -1,
                where: Optional[Dict[str, float]] = None):
     """
@@ -173,12 +193,13 @@ def fig_fields(npz: str, out: str, which: int = -1,
     R = d["r"][which]
     Z = np.repeat(d["z"][which][:, None], yt.shape[1], axis=1)
 
+    mlab = _model_label(npz, d)
     fig, axes = plt.subplots(2, 4, figsize=(9.6, 5.4), sharex=True, sharey=True,
                              layout="constrained")
     for j, (tex, c) in enumerate(ROWS4):
         lim = _sym(np.concatenate([yt[:, :, c].ravel(), yp[:, :, c].ravel()]))
         lev = np.linspace(-lim, lim, 21)
-        for i, (v, who) in enumerate(((yt[:, :, c], "МКЭ"), (yp[:, :, c], "модель"))):
+        for i, (v, who) in enumerate(((yt[:, :, c], "МКЭ"), (yp[:, :, c], mlab))):
             ax = axes[i, j]
             cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
             ax.contour(R, Z, v, levels=lev[::5], colors="k",
@@ -194,8 +215,8 @@ def fig_fields(npz: str, out: str, which: int = -1,
         cb.set_label("МПа", fontsize=7)
         cb.ax.tick_params(labelsize=6, color=MUTED)
         axes[1, j].set_xlabel(r"$r/R$")
-    fig.suptitle(f"Поля: МКЭ против модели.  Набор с медианной ошибкой:  "
-                 f"{_regime(d['proc'][which])}", fontsize=8.5)
+    fig.suptitle(f"Поля: МКЭ против модели «{mlab}».  Набор с медианной "
+                 f"ошибкой:  {_regime(d['proc'][which])}", fontsize=8.5)
     fig.text(0.5, -0.02,
              r"Шкала общая для МКЭ и модели внутри каждой компоненты. "
              r"$r/R = 1$ — свободная поверхность; $z/L$ — доля осевого окна."
@@ -277,8 +298,8 @@ def fig_errors(npz: str, out: str, which: int = -1,
             r2c = 1.0 - ((qc - tc) ** 2).sum() / ((tc - tc.mean()) ** 2).sum()
             part += f" (чистые {np.sqrt(((qc - tc) ** 2).mean()):.1f} / {r2c:.2f})"
         summ.append(part)
-    fig.suptitle(f"Невязка модель − МКЭ.  Набор с медианной ошибкой:  "
-                 f"{_regime(d['proc'][which])}", fontsize=8.5)
+    fig.suptitle(f"Невязка «{_model_label(npz, d)}» − МКЭ.  Набор с медианной "
+                 f"ошибкой:  {_regime(d['proc'][which])}", fontsize=8.5)
     note = ("Заголовок панели — RMSE ЭТОГО набора. "
             + ("Шкала общая на все четыре панели: компоненты сравнимы напрямую."
                if diff_mode == "rel" else
@@ -513,7 +534,7 @@ def fig_model(npz: str, out: str, which: int = -1,
             dttl = f"невязка, МПа  ({100 * dlim / lim:.0f} % от масштаба)"
         cf_pair = None
         for j, (v, ttl, L) in enumerate(((t, "МКЭ", lim),
-                                         (q, "модель", lim),
+                                         (q, _model_label(npz, d), lim),
                                          (dv, dttl, dlim))):
             ax = axes[i, j]
             lev = np.linspace(-L, L, 21)
@@ -549,9 +570,9 @@ def fig_model(npz: str, out: str, which: int = -1,
         cbd.set_label("% от масштаба компоненты", fontsize=7)
         cbd.ax.tick_params(labelsize=6.5, color=MUTED)
 
-    fig.suptitle(f"Набор с медианной ошибкой:  Q = {proc[0]:g}, k = {proc[1]:g}, "
-                 f"α = {proc[2]:g}°, μ = {proc[3]:g}, v = {proc[4]:g} м/мин",
-                 fontsize=8.5)
+    fig.suptitle(f"Модель «{_model_label(npz, d)}».  Набор с медианной ошибкой:  "
+                 f"Q = {proc[0]:g}, k = {proc[1]:g}, α = {proc[2]:g}°, "
+                 f"μ = {proc[3]:g}, v = {proc[4]:g} м/мин", fontsize=8.5)
     note = (r"$r/R$ — радиус, отнесённый к поверхности в том же сечении "
             r"($r/R = 1$ — свободная поверхность); $z/L$ — доля осевого окна."
             "\n")

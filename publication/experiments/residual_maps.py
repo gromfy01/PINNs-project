@@ -41,7 +41,21 @@ R_CLIP = 0.05          # тот же клип 1/r у оси, что в трен�
 
 
 def residuals(y: np.ndarray, r_phys: np.ndarray, z_phys: np.ndarray):
-    """(R_r, R_z) в МПа/м: y уже в МПа, координаты в м, пересчёт не нужен."""
+    """
+    Невязки равновесия, БЕЗРАЗМЕРНЫЕ.
+
+    Сама невязка имеет размерность МПа/м и величину порядка 10³, что ничего не
+    говорит читателю: непонятно, много это или мало. Поэтому каждая невязка
+    делится на масштаб СВОИХ слагаемых — ровно на тот, по которому она
+    нормирована в функции потерь (`trainer2d.res_r_scale`, `res_z_scale`):
+
+        scale_r = (sd[σ_rr] + sd[σ_θθ]) / R_char
+        scale_z =  sd[σ_zz] / L_char + sd[τ_rz] / R_char
+
+    Результат читается прямо: 0.1 означает, что уравнение не сходится на 10 %
+    от характерной величины входящих в него членов, 1.0 — что невязка одного
+    порядка с ними, то есть уравнение не выполняется вовсе.
+    """
     srr, stt, szz, trz = (y[..., i] for i in range(4))
     dr = np.gradient(r_phys, axis=2)
     dz = np.gradient(z_phys, axis=1)[:, :, None]
@@ -50,7 +64,13 @@ def residuals(y: np.ndarray, r_phys: np.ndarray, z_phys: np.ndarray):
         + (srr - stt) / r_safe
     R_z = np.gradient(trz, axis=2) / dr + np.gradient(szz, axis=1) / dz \
         + trz / r_safe
-    return R_r, R_z
+    # характерные масштабы — те же, что в trainer2d
+    R_char = float(np.mean(r_phys[:, :, -1]))
+    L_char = float(np.mean(z_phys[:, -1] - z_phys[:, 0]))
+    sd = y.reshape(-1, 4).std(axis=0)
+    scale_r = (sd[0] + sd[1]) / R_char
+    scale_z = sd[2] / L_char + sd[3] / R_char
+    return R_r / scale_r, R_z / scale_z
 
 
 def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
@@ -65,8 +85,23 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
     which = _pick_set(geo, err, which, where)
 
     rows = [("МКЭ", yt_all)] + list(zip(labels, preds))
-    Rr = {lbl: residuals(y, rp, zp)[0] for lbl, y in rows}
-    Rz = {lbl: residuals(y, rp, zp)[1] for lbl, y in rows}
+    # ВАЖНО: нормировочные масштабы берутся из данных МКЭ и одни на все
+    # семейства, иначе каждое нормировалось бы на себя и панели стали бы
+    # несравнимы — а рисунок строится именно ради сравнения
+    R_char = float(np.mean(rp[:, :, -1]))
+    L_char = float(np.mean(zp[:, -1] - zp[:, 0]))
+    sd = yt_all.reshape(-1, 4).std(axis=0)
+    sc_r = (sd[0] + sd[1]) / R_char
+    sc_z = sd[2] / L_char + sd[3] / R_char
+    def _res(y):
+        srr, stt, szz, trz = (y[..., i] for i in range(4))
+        dr = np.gradient(rp, axis=2); dz = np.gradient(zp, axis=1)[:, :, None]
+        rs = np.maximum(rp, rp[:, :, -1:] * R_CLIP)
+        a = np.gradient(srr, axis=2) / dr + np.gradient(trz, axis=1) / dz + (srr - stt) / rs
+        b = np.gradient(trz, axis=2) / dr + np.gradient(szz, axis=1) / dz + trz / rs
+        return a / sc_r, b / sc_z
+    Rr = {lbl: _res(y)[0] for lbl, y in rows}
+    Rz = {lbl: _res(y)[1] for lbl, y in rows}
     # внутренние узлы: на краях центральная разность вырождается в одностороннюю
     inner = (slice(None), slice(1, -1), slice(1, -1))
 
@@ -79,8 +114,8 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
     # sharex НЕ ставим: верхние два блока по r/R (0..1), нижний — по МПа
     fig, axes = plt.subplots(3, n, figsize=(2.4 * n + 1.6, 8.0),
                              layout="constrained")
-    blocks = [(r"(a)  $R_r$ — радиальное равновесие", Rr, lim_r),
-              (r"(b)  $R_z$ — осевое равновесие", Rz, lim_z)]
+    blocks = [(r"(a)  $R_r$ — радиальное равновесие, безразм.", Rr, lim_r),
+              (r"(b)  $R_z$ — осевое равновесие, безразм.", Rz, lim_z)]
     for bi, (title, data, lim) in enumerate(blocks):
         for j, (lbl, _) in enumerate(rows):
             ax = axes[bi, j]
@@ -88,8 +123,8 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
             lev = np.linspace(-lim, lim, 21)
             cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
             med = np.median(np.abs(data[lbl][inner]))
-            ax.set_title(f"{lbl}\nмедиана |{'R_r' if bi == 0 else 'R_z'}| = "
-                         f"{med:.0f}", fontsize=8)
+            ax.set_title(f"{lbl}\nмедиана |{'$R_r$' if bi == 0 else '$R_z$'}| = "
+                         f"{med:.3f}", fontsize=8)
             ax.set_xlim(0, 1); ax.set_ylim(0, 1)
             ax.set_xticks([0, 0.5, 1.0]); ax.set_yticks([0, 0.5, 1.0])
             ax.set_xlabel(r"$r/R$")
@@ -99,7 +134,7 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
                 ax.tick_params(labelleft=False)
         cb = fig.colorbar(cf, ax=axes[bi, :], fraction=0.035, pad=0.015,
                           ticks=np.linspace(-lim, lim, 5))
-        cb.set_label("МПа/м", fontsize=7)
+        cb.set_label("невязка / масштаб членов уравнения", fontsize=7)
         cb.ax.tick_params(labelsize=6.5, color=MUTED)
         axes[bi, 0].text(-0.42, 0.5, title, transform=axes[bi, 0].transAxes,
                          rotation=90, va="center", ha="center", fontsize=8.5)
@@ -129,9 +164,18 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
                  f"{_regime(geo['proc'][which])};  числа — по всему тесту "
                  f"({len(common)} наборов)", fontsize=8.5)
     fig.text(0.5, -0.015,
-             "Базовая линия — САМ МКЭ: источник тоже не удовлетворяет уравнениям "
-             "точно, и модель, нарушающая равновесие слабее него, лучше него по "
-             "физике.\nМедианы по ВНУТРЕННИМ узлам: на краях центральная разность "
+             "Невязка ОБЕЗРАЗМЕРЕНА: поделена на масштаб входящих в уравнение "
+             r"членов ($\mathrm{scale}_r=(\mathrm{sd}[\sigma_{rr}]+"
+             r"\mathrm{sd}[\sigma_{\theta\theta}])/R$, "
+             r"$\mathrm{scale}_z=\mathrm{sd}[\sigma_{zz}]/L+"
+             r"\mathrm{sd}[\tau_{rz}]/R$), " "\n"
+             "то же обезразмеривание, что в функции потерь. Значение 0.1 — "
+             "уравнение не сходится на 10 % от характерной величины своих "
+             "членов; 1.0 — не выполняется вовсе.\n"
+             "Масштабы взяты из данных МКЭ и ОДНИ на все семейства, иначе "
+             "панели были бы несравнимы. Базовая линия — сам МКЭ: источник тоже "
+             "не удовлетворяет уравнениям точно.\n"
+             "Медианы по ВНУТРЕННИМ узлам: на краях центральная разность "
              "вырождается в одностороннюю. Семейства отличаются только составом "
              "лосса.",
              ha="center", va="top", fontsize=7, color=INK)
