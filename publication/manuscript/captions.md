@@ -8,6 +8,8 @@
 Нумерация — по расстановке в Overleaf (Рис. 2, 5, 6). Английский вариант —
 основной; русский — как сформулировал руководитель, для сверки смысла.
 
+Note: the area reductions in the captions are the measured values of the factor table (Section 2.2, tab:factors: Q = 0.10 → 20.1 %, Q = 0.025 → 5.4 %), not the identity 1 − (1 − Q)², for consistency with that table. <!-- src: sec22 tab:factors; ERRATA.md E-22 (0.2013, 0.0543) -->
+
 ---
 
 ## Fig. 2 — `paper/fig2_fem_fields.png`
@@ -15,7 +17,7 @@
 **EN**
 
 > **Fig. 2.** Distribution of residual stresses obtained from the FEM
-> simulation at Q = 0.10 (10 % reduction in diameter, 19.0 % in area),
+> simulation at Q = 0.10 (10 % reduction in diameter, 20.1 % in area),
 > k = 0.5, α = 12°, μ = 0.05, v = 10 m/min. Components σ_rr, σ_θθ, σ_zz and
 > τ_rz over the full axial extent of the wire; r is normalised by the billet
 > radius R = 18 mm, z by the model length L = 139.5 mm. Dashed lines mark
@@ -24,7 +26,7 @@
 **RU (по руководителю)**
 
 > Рис. 2. Распределение остаточных напряжений, полученных в результате
-> расчётов МКЭ, при параметрах Q = 10 % (по диаметру; 19,0 % по площади),
+> расчётов МКЭ, при параметрах Q = 10 % (по диаметру; 20,1 % по площади),
 > k = 0,5, α = 12°, μ = 0,05, v = 10 м/мин. Компоненты σ_rr, σ_θθ, σ_zz и
 > τ_rz по всей длине проволоки; r отнесено к радиусу заготовки R = 18 мм,
 > z — к длине модели L = 139,5 мм. Пунктиром показано осевое окно 25–75 % L,
@@ -43,7 +45,7 @@
 
 > **Fig. 5.** Distribution of the residual stress tensor components over the
 > investigated region for FEM, MLP, and PINN in the full and reduced
-> formulations at Q = 0.025 (2.5 % in diameter, 4.9 % in area), k = 0.1,
+> formulations at Q = 0.025 (2.5 % in diameter, 5.4 % in area), k = 0.1,
 > α = 8°, μ = 0.10, v = 20 m/min. Rows: FEM reference and the three model
 > families; columns: σ_rr, σ_θθ, σ_zz, τ_rz. The colour scale is common to
 > all rows within a component. r is normalised by the surface radius in the
@@ -54,7 +56,7 @@
 
 > Рис. 5. Результаты распределения компонент тензора остаточных напряжений
 > по исследуемой области для МКЭ, MLP и PINN в полной и упрощённой
-> постановке при параметрах процесса Q = 2,5 % (по диаметру; 4,9 % по
+> постановке при параметрах процесса Q = 2,5 % (по диаметру; 5,4 % по
 > площади), k = 0,1, α = 8°, μ = 0,10, v = 20 м/мин. Строки — МКЭ и три
 > семейства моделей; столбцы — σ_rr, σ_θθ, σ_zz, τ_rz. Шкала общая для всех
 > строк внутри компоненты. r отнесено к радиусу поверхности в том же сечении

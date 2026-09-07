@@ -505,8 +505,9 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
     L.add(n_pool, "runs per backend, both splits", f"{CSV_NAME}: stage=backend -> count per backend")
 
     cap = (r"Two independent implementations of the same strong-form PINN (PyTorch and JAX; "
-           r"identical architecture, data, splits, hyper-parameters and early-stopping rule, "
-           r"each with its own random initialisation and batch order) on the \texttt{random} and "
+           r"identical architecture, data, splits, nominal hyper-parameters and early-stopping rule; "
+           r"the JAX twin applies $\lambda_{\mathrm{phys}}=0.3$ directly, without the gradient-norm "
+           r"calibration of the PyTorch run, and each draws its own initialisation and batch order) on the \texttt{random} and "
            r"\texttt{extrap:alpha\_max} splits, " + str(n_seeds) + r" seeds each. Accuracy is the "
            r"macro-RMSE on the held-out cases; cost is the wall time of the full training run, "
            r"the number of epochs to early stopping and their ratio (mean of the per-run ratio). "
