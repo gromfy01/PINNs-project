@@ -1,0 +1,308 @@
+% ASSUMPTION (full Overleaf source unavailable): Section 2.2 = FEM data and their preparation; Section 2.3 = surrogate models and training protocol. Everything outside 3.2 is otherwise unchanged; this text replaces the former model/protocol subsections, including the "Adam followed by LBFGS ... cosine schedule" passage (ERRATA E-05: no such protocol exists in the code).
+% Every number below carries a "% src:" comment naming the file it was read from. No v1 (pre-cleaning) figure is used.
+% Cross-references: Fig.~\ref{fig:architecture} = publication/figures/fig_architecture.png (both tracks + loss table); Table~\ref{tab:splits} is the design whose results Table 2 of Section 3.2 reports.
+\subsection{Surrogate models and training protocol}
+\label{sec:models}
+
+\paragraph{Network and inputs.}
+All surrogates share one network, one optimiser and one training budget; the
+families differ only in the composition of the loss (Table~\ref{tab:families},
+Fig.~\ref{fig:architecture}). In the main track the input is
+$\mathbf{x}=(Q,k,\alpha,\mu,v,r)$, with $r\in[0,1]$ the radius normalised by the
+free-surface radius of the same case ($r=1$ is the free surface).
+% src: trainer.py (Net n_in=6, r last column); dataset.py (r normalised per case, r[-1]=1)
+The radius is augmented by a Fourier embedding $[\sin(2\pi k r),\cos(2\pi k r)]$,
+$k=1,\dots,4$ \cite{TODO-fourier-features};
+% src: trainer.py FourierR, n_fourier=4
+inputs and targets are standardised with training-set statistics; the body is a
+multilayer perceptron with three hidden layers of 96 $\tanh$ units and a linear
+head with four outputs
+$\hat{\boldsymbol\sigma}=(\hat\sigma_{rr},\hat\sigma_{\theta\theta},\hat\sigma_{zz},\hat\tau_{rz})$,
+de-standardised before entering any physical term.
+% src: runs_v2.csv (n_layers=3, n_units=96 in all 341 runs); tanh = trainer.py Config default (activation is not logged in the csv)
+All arithmetic is in double precision in both backends.
+% src: trainer.py (torch.float64); jax_twin.py (jax_enable_x64)
+Each FEM case contributes 20 radial points, always kept in the same partition
+(group-aware splitting).
+% src: trainer.py N_R=20; splits.py sets_to_rows
+
+\paragraph{Two tracks and the role of $z$.}
+In the main track the axial coordinate is not an input: each case is one radial
+profile, the median along the steady-state axial window (25--75\,\% of the wire
+length, $L/R\approx3.5$).
+% src: QA_DATA_AND_Z.md §4 (axial window 25–75 %, median length 57.5 mm at R = 16.2 mm)
+Axial derivatives of the network therefore do not exist, and the axisymmetric
+equilibrium equations
+\begin{align}
+  R_r &= \frac{\partial\sigma_{rr}}{\partial r}
+        + \frac{\partial\tau_{rz}}{\partial z}
+        + \frac{\sigma_{rr}-\sigma_{\theta\theta}}{r} = 0, \label{eq:eq_full_r}\\
+  R_z &= \frac{\partial\tau_{rz}}{\partial r}
+        + \frac{\partial\sigma_{zz}}{\partial z}
+        + \frac{\tau_{rz}}{r} = 0 \label{eq:eq_full_z}
+\end{align}
+% src: trainer2d.py docstring; physics_check.py (E-02)
+can only be imposed with the axial terms dropped. Whether that is admissible was
+measured on the raw FEM fields (2443 cases, $20\times20$ $(z,r)$ grid, median per
+case): in \eqref{eq:eq_full_r} the dropped $|\partial\tau_{rz}/\partial z|$ is
+1.3\,\% of the retained terms (75th percentile 3.9\,\%); in \eqref{eq:eq_full_z}
+the dropped $|\partial\sigma_{zz}/\partial z|$ is 68\,\% (75th percentile 86\,\%).
+% src: ERRATA.md E-02 (0.013 / 0.039; 0.68 / 0.86; 2443 sets, 20×20 grid)
+The radial equation is therefore used in the reduced form
+\begin{equation}
+  R_1(r) = \frac{\partial\sigma_{rr}}{\partial r}
+         + \frac{\sigma_{rr}-\sigma_{\theta\theta}}{r},
+  \label{eq:eq_red}
+\end{equation}
+% src: trainer.py _radial_residual
+whereas the axial equation is not used in the main track, for a reason stronger
+than the size of the dropped term: the remainder is a total derivative,
+\begin{equation}
+  \frac{\partial\tau_{rz}}{\partial r} + \frac{\tau_{rz}}{r}
+  \equiv \frac{1}{r}\,\frac{\partial\,(r\,\tau_{rz})}{\partial r},
+  \label{eq:identity}
+\end{equation}
+so forcing it to zero means $r\,\tau_{rz}=\mathrm{const}$ and, with regularity on
+the axis ($\tau_{rz}(0)=0$), $\tau_{rz}\equiv0$ over the whole radius. That is not
+an approximate axial balance but the statement that shear is absent, which the
+FEM data contradict (median relative range of $r\,\tau_{rz}$ along the radius
+3.15).
+% src: ERRATA.md E-02; physics_check.py EQUILIBRIUM_R2_STATUS (3.15)
+The term exists in the code under its true name (zero-shear penalty,
+$\lambda_{\mathrm{shear}}$) and is switched off, $\lambda_{\mathrm{shear}}=0$, in
+every run reported here.
+% src: trainer.py Config.lambda_shear=0.0, _zero_shear
+
+In the extended track the axial coordinate is added,
+$\mathbf{x}=(Q,k,\alpha,\mu,v,z,r)$; the field is sampled on an $8\times20$ $(z,r)$
+grid inside the same window without axial averaging, $z$ normalised to the window
+(0 = inlet, 1 = outlet) and $r$ to the surface radius of the same axial section.
+% src: trainer2d.py (n_in=7); dataset2d.py (n_z=8, n_r=20; z, r normalisation)
+Both equations are then written in full, and three families are compared:
+\texttt{mlp2d} (no physics), \texttt{pinn2d\_reduced} ($R_r$ without
+$\partial\tau_{rz}/\partial z$, exactly the operator of the main track) and
+\texttt{pinn2d\_full} (both residuals).
+% src: trainer2d.py FAMILIES_2D
+Physical derivatives follow from the chain rule,
+$\partial/\partial r_{\mathrm{phys}}=R^{-1}\partial/\partial r$,
+$\partial/\partial z_{\mathrm{phys}}=L^{-1}\partial/\partial z$, with $R$ and $L$
+the surface radius and window length of the case; the $1/r$ factor uses $r$
+clipped at $0.05R$, since nodal radii near the axis carry noise (worst
+$|r|/R=0.054$).
+% src: trainer.py / trainer2d.py (r_clip=0.05); ERRATA.md E-25 (0.054)
+
+\paragraph{Loss function.}
+Every physics-informed family minimises
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_{\mathrm{data}}
+              + \lambda_{\mathrm{bc}}\,\mathcal{L}_{\mathrm{bc}}
+              + \lambda_{\mathrm{phys}}\,g\,\mathcal{L}_{\mathrm{phys}},
+  \label{eq:loss}
+\end{equation}
+% src: trainer.py fit(); trainer2d.py _loss_with_physics
+with $\mathcal{L}_{\mathrm{data}}$ the mean squared error in standardised output
+space. The boundary term enforces the traction-free condition at the free
+surface,
+\begin{equation}
+  \mathcal{L}_{\mathrm{bc}} = \Bigl\langle
+     \bigl(\hat\sigma_{rr}(r{=}1)/s_{rr}\bigr)^2
+   + \bigl(\hat\tau_{rz}(r{=}1)/s_{rz}\bigr)^2 \Bigr\rangle_{\mathrm{batch}},
+  \label{eq:lbc}
+\end{equation}
+% src: trainer.py _bc_loss (r=1, free surface; E-01)
+where $s_c$ is the training standard deviation of component $c$; the condition is
+imposed and later audited at the same point, $r=1$ (at every $z$ in the extended
+track). The physics term is a $\log(1+x^2)$ transform of the dimensionless
+residual,
+\begin{equation}
+  \mathcal{L}_{\mathrm{phys}} = \Bigl\langle \log\!\bigl(1 + (R/s_R)^2\bigr) \Bigr\rangle,
+  \label{eq:lphys}
+\end{equation}
+% src: trainer.py _physics_strong (torch.log1p((res/res_scale)**2).mean())
+evaluated at the 20 data radii (collocation points coincide with data points),
+% src: protocol.py n_collocation = n_r = 20
+with scales $s_{R_1}=(s_{rr}+s_{\theta\theta})/R_{\mathrm{char}}$ for the radial and
+$s_{R_z}=s_{zz}/L_{\mathrm{char}}+s_{rz}/R_{\mathrm{char}}$ for the axial equation,
+$R_{\mathrm{char}}$ and $L_{\mathrm{char}}$ being the mean surface radius and window
+length of the training set.
+% src: trainer.py (res_scale, R_char); trainer2d.py (res_r_scale, res_z_scale, L_char)
+Without this scaling the physics term falls several orders of magnitude below
+$\mathcal{L}_{\mathrm{data}}$ and is inert whatever $\lambda$; scaling the axial
+residual with $R_{\mathrm{char}}$ instead of $L_{\mathrm{char}}$ has the same effect.
+% src: trainer.py comment (five orders of magnitude); trainer2d.py comment
+
+The weights are fixed a priori and shared by all physics-informed families,
+$\lambda_{\mathrm{phys}}=0.3$, $\lambda_{\mathrm{bc}}=0.5$,
+% src: runs_v2.csv (lambda_physics=0.3, lambda_bc=0.5 for all pinn/vpinn/pinn2d runs; 0 for mlp)
+but $\lambda_{\mathrm{phys}}$ is read as a share of the data gradient: before
+training, $g$ is set once on the first mini-batch so that the gradient norms of
+the physics and data terms with respect to the network parameters coincide,
+\begin{equation}
+  g = \lVert\nabla_{\theta}\mathcal{L}_{\mathrm{data}}\rVert_2 \big/
+      \lVert\nabla_{\theta}\mathcal{L}_{\mathrm{phys}}\rVert_2 .
+  \label{eq:calib}
+\end{equation}
+% src: trainer.py _calibrate, _grad_norm; trainer2d.py _calibrate
+This balancing \cite{TODO-pinn-gradient-balancing} is what makes strong and weak
+forms comparable: the weak residual projects the same residual onto oscillating
+test functions and is damped roughly two-hundred-fold, so that at equal nominal
+$\lambda$ the weak term contributed 0.36\,\% of the data-gradient norm against
+37\,\% for the strong term, and ``strong versus weak'' degenerated into ``physics
+on versus off''.
+% src: PLAYBOOK.md §7.0.1a (≈200-fold damping; 0.36 % vs 37 %); trainer.py _calibrate docstring
+The measured multipliers are $g\approx0.165$ (0.13--0.22) for the strong and
+$g\approx4.97$ (2.8--8.0) for the weak form; $g$ is logged with every run.
+% src: RESULTS.md §1.4 (×0.165, ×4.97); runs_v2.csv phys_gain (pinn 0.127–0.220; vpinn 2.76–8.02)
+
+\paragraph{Weak form (VPINN).}
+Multiplying \eqref{eq:eq_red} by $r\,v_k(r)$ with test functions
+$v_k=\sin(k\pi r)$, $k=1,\dots,8$, $v_k(0)=v_k(1)=0$, and integrating by parts over
+$[0,1]$ gives \cite{TODO-vpinn}
+\begin{equation}
+  W_k = -\int_0^1 \hat\sigma_{rr}\,\bigl(v_k + r\,v_k'\bigr)\,dr
+        + \int_0^1 \bigl(\hat\sigma_{rr}-\hat\sigma_{\theta\theta}\bigr)\,v_k\,dr ,
+  \label{eq:weak}
+\end{equation}
+% src: trainer.py _physics_weak (n_test_funcs=8; second integral carries r/r_safe, equal to 1 away from the axis)
+evaluated by 32-point Gauss--Legendre quadrature and inserted into
+\eqref{eq:lphys} with scale $s_W=s_{rr}+s_{\theta\theta}$.
+% src: trainer.py (n_quadrature=32, _gauss_legendre; weak_scale)
+No derivative of the network is computed: this, not another way of computing the
+same derivative, is the substantive difference between the two families.
+
+\begin{table}[t]
+\caption{Model families. All share the network, optimiser, budget, seeds and
+splits; only the loss composition differs. $R_1$: reduced radial residual
+\eqref{eq:eq_red}; $R_r,R_z$: full residuals
+\eqref{eq:eq_full_r}--\eqref{eq:eq_full_z}; $W_k$: weak residual \eqref{eq:weak}.}
+\label{tab:families}
+\centering\small
+\begin{tabular}{@{}llllc@{}}
+\toprule
+Family & Input & Physics term & BC term & Network derivative \\
+\midrule
+MLP                     & $(Q,k,\alpha,\mu,v,r)$   & --                                        & --  & none \\
+PINN (strong)           & $(Q,k,\alpha,\mu,v,r)$   & $R_1$, pointwise                          & yes & $\partial/\partial r$ (autodiff) \\
+VPINN (weak)            & $(Q,k,\alpha,\mu,v,r)$   & $W_k$, $k\le8$, 32-pt quadrature          & yes & none \\
+\texttt{mlp2d}          & $(Q,k,\alpha,\mu,v,z,r)$ & --                                        & --  & none \\
+\texttt{pinn2d\_reduced}& $(Q,k,\alpha,\mu,v,z,r)$ & $R_r$ without $\partial\tau_{rz}/\partial z$ & yes & $\partial/\partial r$ \\
+\texttt{pinn2d\_full}   & $(Q,k,\alpha,\mu,v,z,r)$ & $R_r$ and $R_z$, full                     & yes & $\partial/\partial r,\ \partial/\partial z$ \\
+\bottomrule
+\end{tabular}
+% src: trainer.py FAMILIES, trainer2d.py FAMILIES_2D; BC term present iff lambda_bc>0 (runs_v2.csv)
+\end{table}
+
+\paragraph{Training protocol.}
+The protocol is held in one module imported by every launcher; any deviation
+raises an assertion.
+% src: protocol.py (TrainingProtocol, assert_conforms)
+It is identical for all families: AdamW \cite{TODO-adamw}, learning rate
+$3\times10^{-3}$ ($2\times10^{-3}$ in the extended track), no schedule, weight
+decay $10^{-4}$, gradient-norm clipping at 1.0, mini-batches of 64 cases (32),
+at most 800 epochs (300), early stopping on the macro-RMSE of an internal
+validation subset of 15\,\% of the training cases with patience 40 (30), and
+restoration of the best state.
+% src: runs_v2.csv (learning_rate 0.003 / 0.002; epochs column reaches 800 in 1D stages and 300 in twod); trainer.py Config (weight_decay 1e-4, grad_clip 1.0, batch_sets 64, val_frac 0.15); trainer2d.py Config2D (batch_sets 32); run_matrix.py defaults (patience 40 for 1D, 30 for twod). Batch size and patience are not logged in the csv — TODO: confirm that no override was passed through --hp.
+One architecture and one hyperparameter set were fixed before any held-out
+region was evaluated and were not tuned per family or per split, so no search
+could leak a held-out region.
+% src: RESULTS.md header ("гиперпараметры зафиксированы априори"); PLAYBOOK.md §8 item 1. TODO: state how the 3×96 configuration was chosen — no "tune" stage appears in runs_v2.csv.
+Every configuration is trained with five seeds (0--4) on the thirteen splits of
+Table~\ref{tab:splits} and in the backend comparison, and with three seeds (0--2)
+in the learning-curve, label-corruption and extended-track stages;
+% src: runs_v2.csv (seeds per stage: main/backend 0–4; curves/corrupt/twod 0–2)
+the seed governs initialisation, batch order and the internal validation subset,
+while the test cases of a split are the same for every seed (split seed 42).
+% src: trainer.py fit (rng from cfg.seed); splits.py / protocol.py split_seed=42
+Learning curves use nested group-aware subsamples of 10/25/50/100\,\% of the
+training pool, identical for all families;
+% src: learning_curves.py DEFAULT_FRACTIONS, nested_subsamples(seed=42)
+label corruption adds $+250$\,MPa to $\sigma_{\theta\theta}$ of 1/5/10\,\% of the
+training cases (nested lists shared by all families, hold-out clean), the
+morphology of a solver artefact found in the source rather than Gaussian noise,
+which averages out over a profile.
+% src: corruption.py (DEFAULT_OFFSET_MPA=250, component σ_θθ, rates 0.01/0.05/0.10, hold-out clean)
+
+\begin{table}[t]
+\caption{Evaluation splits. A held-out level is removed from training entirely;
+\texttt{matched} controls are random subsets of the same size from the whole
+pool, \texttt{interp} controls remove an interior level of the same axis.
+Friction is not an axis: 13.2\,\% of raw cases are bit-identical copies
+differing only in the friction label. $n_{\mathrm{test}}$ refers to the cleaned
+dataset (1756 cases).}
+\label{tab:splits}
+\centering\small
+\begin{tabular}{@{}lllr@{}}
+\toprule
+Split & Kind & Held out & $n_{\mathrm{test}}$ \\
+\midrule
+\texttt{random}              & interpolation        & 15\,\% random cases              & 263 \\
+\texttt{extrap:alpha\_max}   & extrapolation        & $\alpha=20^\circ$                & 379 \\
+\texttt{extrap:Q\_high}      & extrapolation        & $Q=0.20$                         & 272 \\
+\texttt{extrap:k\_max}       & extrapolation        & $k=1.0$                          & 290 \\
+\texttt{extrap:v\_max}       & extrapolation        & $v=250$\,m/min                   & 501 \\
+\texttt{extrap\_joint:corner}& joint-space hole     & $\alpha=20^\circ$ and $Q\ge0.15$ & 114 \\
+\texttt{interp:alpha\_mid}   & interior level       & $\alpha=12^\circ$                & 340 \\
+\texttt{interp:Q\_mid}       & interior level       & $Q=0.10$                         & 318 \\
+\texttt{matched:*} (5)       & size-matched control & random, $n$ as the region        & as region \\
+\bottomrule
+\end{tabular}
+% src: splits.py REGIONS (levels, corner predicate, matched/interp construction); RESULTS.md §1 (n_test); ERRATA.md E-06 (13.2 %); RESULTS.md header (1756 cases)
+\end{table}
+
+\paragraph{Metrics and physical audit.}
+The primary metric is the macro-RMSE (mean over the four components of the
+component RMSE, MPa); per-component NRMSE and $R^2$ use the standard deviation
+over the whole dataset as denominator, since a denominator from the held-out slice
+is not comparable between regions.
+% src: trainer.py metrics() docstring (local vs global normalisation); RESULTS.md §1.0б
+Physical admissibility is audited on the predictions with the operators of the
+loss (median $|R_1|$ over the profile by finite differences; $|\hat\sigma_{rr}|$,
+$|\hat\tau_{rz}|$ at $r=1$), always beside the same quantity computed on the FEM
+data of the same test cases, since the source itself satisfies the traction-free
+condition only approximately.
+% src: trainer.py equilibrium_audit, bc_audit; physics_check.py; RESULTS.md §1.4 (FEM baseline rows)
+
+\paragraph{Backends.}
+The reference implementation is PyTorch (\texttt{torch.autograd}); an independent
+twin in JAX (\texttt{jax.grad}, \texttt{optax.adamw}) shares architecture,
+protocol, data, split and hyperparameters but draws initial weights and batch
+order from its own random stream.
+% src: jax_twin.py module docstring
+With identical weights copied into both networks, $\partial\hat\sigma_{rr}/\partial r$
+at 64 random inputs agrees to $8.7\times10^{-15}$ absolute and $9.8\times10^{-16}$
+relative (forward pass $1.0\times10^{-15}$), i.e.\ to double-precision round-off,
+so no accuracy difference between backends can originate in automatic
+differentiation.
+% src: PLAYBOOK.md §7.0.2; ERRATA.md E-19; jax_twin.py check_gradient_agreement (n_points=64)
+Each backend is then trained with five seeds on \texttt{random} and
+\texttt{extrap:alpha\_max} and compared by the paired test below, with wall-clock
+time measured on one CPU thread in double precision.
+% src: runs_v2.csv (stage backend, 5 seeds, two splits); run_matrix.py (torch.set_num_threads(1))
+The DeepXDE model of the previous version runs on the PyTorch backend and obtains
+its derivatives through \texttt{torch.autograd.grad}; it is not a third engine and
+is not reported separately \cite{TODO-deepxde}.
+% src: ERRATA.md E-19
+
+\paragraph{Statistical treatment.}
+The unit of replication is the training run (seed), not the test case. Within a
+split, two families are compared by a paired $t$-test over seeds ($\alpha=0.05$;
+no verdict with fewer than three seeds), with $|\Delta|$ reported beside the pooled
+seed standard deviation as effect size.
+% src: stats.py significance_gate (ttest_rel, MIN_SEEDS_FOR_TEST=3, alpha=0.05)
+Ranking of the three families within a split uses Friedman with Nemenyi post hoc,
+blocks being seeds \cite{TODO-demsar-2006}; indistinguishability is not
+transitive, so distinguishable pairs are listed rather than ``clusters''.
+% src: stats.py nemenyi, NemenyiResult.cliques; ERRATA.md E-15
+Splits are never pooled: ranks in \texttt{extrap:alpha\_max} and in
+\texttt{random} describe different tasks.
+% src: stats.py pool_guard
+The excess error of an extrapolation split over its matched control is tested by
+Welch's unpaired $t$-test; trends across data fraction and corruption rate by
+least squares of the seed-wise PINN$-$MLP gap on $\log$(fraction) and on the rate.
+% src: stats.py delta_vs_matched (ttest_ind, equal_var=False); RESULTS_v1_vs_v2.md §5–6 (regression of the gap)
+The previous version trained each model once and applied Friedman--Nemenyi across
+the 304 hold-out cases; that quantifies the sampling variance of the hold-out, on
+how many cases one model beats another, not whether an advantage reproduces on
+retraining, which is the question at issue.
+% src: ERRATA.md E-08 (304 hold-out sets, single run per model)
