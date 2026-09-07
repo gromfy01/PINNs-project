@@ -34,7 +34,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "code"))
 
-from contours import DIVERGING, INK, MUTED, _align, _pick_set, _regime, _sym, _where  # noqa: E402
+import contours  # noqa: E402
+from contours import DIVERGING, INK, MUTED, T, _align, _pick_set, _regime, _sym, _where  # noqa: E402
 from dataset2d import Field2D  # noqa: E402
 
 R_CLIP = 0.05          # тот же клип 1/r у оси, что в тренере
@@ -84,7 +85,7 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
     err = np.sqrt(((preds[-1] - yt_all) ** 2).mean(axis=(1, 2, 3)))
     which = _pick_set(geo, err, which, where)
 
-    rows = [("МКЭ", yt_all)] + list(zip(labels, preds))
+    rows = [(T("МКЭ", "FEM"), yt_all)] + list(zip(labels, preds))
     # ВАЖНО: нормировочные масштабы берутся из данных МКЭ и одни на все
     # семейства, иначе каждое нормировалось бы на себя и панели стали бы
     # несравнимы — а рисунок строится именно ради сравнения
@@ -114,8 +115,10 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
     # sharex НЕ ставим: верхние два блока по r/R (0..1), нижний — по МПа
     fig, axes = plt.subplots(3, n, figsize=(2.4 * n + 1.6, 8.0),
                              layout="constrained")
-    blocks = [(r"(a)  $R_r$ — радиальное равновесие, безразм.", Rr, lim_r),
-              (r"(b)  $R_z$ — осевое равновесие, безразм.", Rz, lim_z)]
+    blocks = [(T(r"(a)  $R_r$ — радиальное равновесие, безразм.",
+                 r"(a)  $R_r$ — radial equilibrium, dimensionless"), Rr, lim_r),
+              (T(r"(b)  $R_z$ — осевое равновесие, безразм.",
+                 r"(b)  $R_z$ — axial equilibrium, dimensionless"), Rz, lim_z)]
     for bi, (title, data, lim) in enumerate(blocks):
         for j, (lbl, _) in enumerate(rows):
             ax = axes[bi, j]
@@ -123,8 +126,8 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
             lev = np.linspace(-lim, lim, 21)
             cf = ax.contourf(R, Z, v, levels=lev, cmap=DIVERGING, extend="both")
             med = np.median(np.abs(data[lbl][inner]))
-            ax.set_title(f"{lbl}\nмедиана |{'$R_r$' if bi == 0 else '$R_z$'}| = "
-                         f"{med:.3f}", fontsize=8)
+            ax.set_title(f"{lbl}\n{T('медиана', 'median')} "
+                         f"|{'$R_r$' if bi == 0 else '$R_z$'}| = {med:.3f}", fontsize=8)
             ax.set_xlim(0, 1); ax.set_ylim(0, 1)
             ax.set_xticks([0, 0.5, 1.0]); ax.set_yticks([0, 0.5, 1.0])
             ax.set_xlabel(r"$r/R$")
@@ -134,8 +137,9 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
                 ax.tick_params(labelleft=False)
         cb = fig.colorbar(cf, ax=axes[bi, :], fraction=0.035, pad=0.015,
                           ticks=np.linspace(-lim, lim, 5))
-        cb.set_label("невязка / масштаб членов уравнения", fontsize=7)
-        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+        cb.set_label(T("невязка / масштаб членов уравнения",
+                       "residual / scale of equation terms"), fontsize=7)
+        cb.ax.tick_params(labelsize=6.5, color=contours.TICK)
         axes[bi, 0].text(-0.42, 0.5, title, transform=axes[bi, 0].transAxes,
                          rotation=90, va="center", ha="center", fontsize=8.5)
 
@@ -149,21 +153,22 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
                 edgecolor="white", linewidth=0.3)
         m = float(prof.mean())
         ax.axvline(m, color="#D55E00", lw=1.2)
-        ax.set_title(f"{lbl}\nсреднее = {m:.2f} МПа", fontsize=8)
+        ax.set_title(f"{lbl}\n{T('среднее', 'mean')} = {m:.2f} {T('МПа', 'MPa')}", fontsize=8)
         ax.set_xlim(0, hi_bc)
-        ax.set_xlabel(r"$|\sigma_{rr}(r=1)|$, МПа")
+        ax.set_xlabel(r"$|\sigma_{rr}(r=1)|$, " + T("МПа", "MPa"))
         if j == 0:
-            ax.set_ylabel("наборов")
+            ax.set_ylabel(T("наборов", "cases"))
         else:
             ax.tick_params(labelleft=False)
-    axes[2, 0].text(-0.42, 0.5, "(c)  нарушение traction-free",
+    axes[2, 0].text(-0.42, 0.5, T("(c)  нарушение traction-free",
+                                    "(c)  traction-free violation"),
                     transform=axes[2, 0].transAxes, rotation=90,
                     va="center", ha="center", fontsize=8.5)
 
-    fig.suptitle("Где физика меняет решение.  Поля — набор с медианной ошибкой: "
+    contours._suptitle(fig, "Где физика меняет решение.  Поля — набор с медианной ошибкой: "
                  f"{_regime(geo['proc'][which])};  числа — по всему тесту "
                  f"({len(common)} наборов)", fontsize=8.5)
-    fig.text(0.5, -0.015,
+    contours._note(fig, -0.015,
              "Невязка ОБЕЗРАЗМЕРЕНА: поделена на масштаб входящих в уравнение "
              r"членов ($\mathrm{scale}_r=(\mathrm{sd}[\sigma_{rr}]+"
              r"\mathrm{sd}[\sigma_{\theta\theta}])/R$, "
@@ -177,8 +182,7 @@ def fig_residuals(npzs: List[str], labels: List[str], field2d: str, out: str,
              "не удовлетворяет уравнениям точно.\n"
              "Медианы по ВНУТРЕННИМ узлам: на краях центральная разность "
              "вырождается в одностороннюю. Семейства отличаются только составом "
-             "лосса.",
-             ha="center", va="top", fontsize=7, color=INK)
+             "лосса.")
     fig.savefig(out)
     plt.close(fig)
     return out
@@ -192,7 +196,9 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--which", type=int, default=-1)
     ap.add_argument("--where", default="")
+    ap.add_argument("--paper", action="store_true")
     a = ap.parse_args()
+    contours.set_paper(a.paper)
     npzs = [x.strip() for x in a.npzs.split(",") if x.strip()]
     labels = [x.strip() for x in a.labels.split(",") if x.strip()]
     if len(labels) != len(npzs):

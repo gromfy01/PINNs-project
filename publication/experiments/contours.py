@@ -49,6 +49,34 @@ COMPS = [("sigma_rr", r"$\sigma_{rr}$", 11),
 INK, MUTED = "#1a1a1a", "#8a8a8a"
 DIVERGING = "RdBu_r"          # два тона + нейтральная середина, без радуги
 
+# Режим статьи (--paper): английские подписи, чёрные числа на осях, без общего
+# заголовка и без пояснительных заметок под рисунком — по указанию научного
+# руководителя эти пояснения переезжают в текст, а заголовок — в подпись.
+PAPER = False
+TICK = MUTED
+
+
+def set_paper(on: bool) -> None:
+    global PAPER, TICK
+    PAPER = bool(on)
+    TICK = INK if PAPER else MUTED
+    plt.rcParams.update({"xtick.color": TICK, "ytick.color": TICK})
+
+
+def T(ru: str, en: str) -> str:
+    """Подпись по языку режима: русская в рабочих рисунках, английская в статье."""
+    return en if PAPER else ru
+
+
+def _suptitle(fig, text, **kw):
+    if not PAPER:
+        fig.suptitle(text, **kw)
+
+
+def _note(fig, y, text, **kw):
+    if not PAPER:
+        fig.text(0.5, y, text, ha="center", va="top", fontsize=7, color=INK, **kw)
+
 plt.rcParams.update({
     "font.size": 8, "axes.labelsize": 8, "axes.titlesize": 8.5,
     "xtick.labelsize": 7, "ytick.labelsize": 7, "legend.fontsize": 7.5,
@@ -98,23 +126,22 @@ def fig_raw(path_rpt: str, out: str, job: str = ""):
     for ax, (key, tex, col) in zip(axes, COMPS):
         v = a[:, col] / 1e6
         lim = _sym(v)
-        cf = _panel(ax, tri, v, f"{tex}, МПа", lim)
+        cf = _panel(ax, tri, v, f"{tex}, {T('МПа', 'MPa')}", lim)
         ax.axhline(lo, color=INK, lw=1.0, ls="--")
         ax.axhline(hi, color=INK, lw=1.0, ls="--")
-        ax.set_xlabel(r"$r/R_0$")
+        ax.set_xlabel(r"$r/R$")
         cb = fig.colorbar(cf, ax=ax, fraction=0.06, pad=0.03,
                           location="bottom", orientation="horizontal")
-        cb.ax.tick_params(labelsize=6, color=MUTED)
+        cb.ax.tick_params(labelsize=6, color=TICK)
     axes[0].set_ylabel(r"$z/L$")
-    fig.suptitle(f"Остаточные напряжения по узлам МКЭ · {job}", fontsize=9)
-    fig.text(0.5, -0.02,
+    _suptitle(fig, f"Остаточные напряжения по узлам МКЭ · {job}", fontsize=9)
+    _note(fig, -0.02,
              f"Пунктир — осевое окно 25–75 %: из этой полосы собирается обучающая "
              f"выборка (20 радиальных точек на набор).\n"
              f"Координаты безразмерные: $R_0$ = {R0 * 1e3:.1f} мм (заготовка), "
              f"$L$ = {L * 1e3:.1f} мм (длина модели).\n"
              f"Оси не в одном масштабе: радиальная растянута, иначе панель "
-             f"вырождается в полоску ($L/R_0$ = {L / R0:.1f}).",
-             ha="center", va="top", fontsize=7, color=INK)
+             f"вырождается в полоску ($L/R_0$ = {L / R0:.1f}).")
     fig.savefig(out)
     plt.close(fig)
     return out
@@ -213,7 +240,7 @@ def fig_fields(npz: str, out: str, which: int = -1,
                           location="bottom", orientation="horizontal",
                           ticks=np.linspace(-lim, lim, 5))
         cb.set_label("МПа", fontsize=7)
-        cb.ax.tick_params(labelsize=6, color=MUTED)
+        cb.ax.tick_params(labelsize=6, color=TICK)
         axes[1, j].set_xlabel(r"$r/R$")
     fig.suptitle(f"Поля: МКЭ против модели «{mlab}».  Набор с медианной "
                  f"ошибкой:  {_regime(d['proc'][which])}", fontsize=8.5)
@@ -278,13 +305,13 @@ def fig_errors(npz: str, out: str, which: int = -1,
             cb = fig.colorbar(cf, ax=ax, fraction=0.07, pad=0.02,
                               location="bottom", orientation="horizontal")
             cb.set_label("МПа", fontsize=7)
-            cb.ax.tick_params(labelsize=6, color=MUTED)
+            cb.ax.tick_params(labelsize=6, color=TICK)
     if diff_mode == "rel":
         cb = fig.colorbar(cf, ax=axes, fraction=0.05, pad=0.02,
                           location="bottom", orientation="horizontal",
                           ticks=np.linspace(-rel_lim, rel_lim, 7))
         cb.set_label("невязка, % от масштаба своей компоненты", fontsize=7)
-        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+        cb.ax.tick_params(labelsize=6.5, color=TICK)
         cb.ax.set_xticklabels([f"{t:.0f}" for t in
                                np.linspace(-rel_lim, rel_lim, 7)])
 
@@ -370,7 +397,7 @@ def fig_compare(npzs: List[str], labels: List[str], out: str,
         rel_lim = max(100.0 * _sym((p[which][:, :, c] - yt[:, :, c]).ravel()) / sc
                       for _, p in rows for (_, c), sc in zip(ROWS4, scales))
     else:
-        rows = [("МКЭ", None)] + list(zip(labels, preds))
+        rows = [(T("МКЭ", "FEM"), None)] + list(zip(labels, preds))
 
     nr_ = len(rows)
     fig, axes = plt.subplots(nr_, 4, figsize=(9.6, 1.75 * nr_ + 1.6),
@@ -404,10 +431,11 @@ def fig_compare(npzs: List[str], labels: List[str], out: str,
         cb = fig.colorbar(cf_last, ax=axes, fraction=0.04, pad=0.02,
                           location="bottom", orientation="horizontal",
                           ticks=np.linspace(-rel_lim, rel_lim, 7))
-        cb.set_label("невязка, % от масштаба своей компоненты", fontsize=7)
+        cb.set_label(T("невязка, % от масштаба своей компоненты",
+                       "residual, % of component scale"), fontsize=7)
         cb.ax.set_xticklabels([f"{t:.0f}" for t in
                                np.linspace(-rel_lim, rel_lim, 7)])
-        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+        cb.ax.tick_params(labelsize=6.5, color=TICK)
     else:
         for j, (tex, c) in enumerate(ROWS4):
             sm = plt.cm.ScalarMappable(cmap=DIVERGING,
@@ -415,8 +443,8 @@ def fig_compare(npzs: List[str], labels: List[str], out: str,
             cb = fig.colorbar(sm, ax=axes[:, j], fraction=0.05, pad=0.02,
                               location="bottom", orientation="horizontal",
                               ticks=np.linspace(-scales[j], scales[j], 5))
-            cb.set_label("МПа", fontsize=7)
-            cb.ax.tick_params(labelsize=6, color=MUTED)
+            cb.set_label(T("МПа", "MPa"), fontsize=7)
+            cb.ax.tick_params(labelsize=6, color=TICK)
 
     # сводка по всему общему тесту
     summ = []
@@ -427,17 +455,16 @@ def fig_compare(npzs: List[str], labels: List[str], out: str,
             r2 = 1.0 - ((q - t) ** 2).sum() / ((t - t.mean()) ** 2).sum()
             parts.append(f"{tex} {r2:.3f}")
         summ.append(f"{lbl} — $R^2$: " + ", ".join(parts))
-    fig.suptitle(("Невязки семейств" if errors else "Поля: МКЭ и семейства") +
-                 f".  Набор с медианной ошибкой:  {_regime(geo['proc'][which])}",
-                 fontsize=8.5)
-    fig.text(0.5, -0.015,
+    _suptitle(fig, ("Невязки семейств" if errors else "Поля: МКЭ и семейства") +
+              f".  Набор с медианной ошибкой:  {_regime(geo['proc'][which])}",
+              fontsize=8.5)
+    _note(fig, -0.015,
              (f"Общий тест: {len(yt_all)} наборов.  " + ";  ".join(summ) + ".\n"
               "Семейства отличаются ТОЛЬКО составом лосса: архитектура, сплит, "
               "сид, число эпох и оптимизатор одинаковы.\n"
               + ("Шкала общая на все панели: сравнимы и семейства, и компоненты."
                  if errors else
-                 "Шкала общая внутри компоненты для всех строк.")),
-             ha="center", va="top", fontsize=7, color=INK)
+                 "Шкала общая внутри компоненты для всех строк.")))
     fig.savefig(out)
     plt.close(fig)
     return out
@@ -559,16 +586,16 @@ def fig_model(npz: str, out: str, which: int = -1,
         # одна шкала на пару МКЭ/модель — они в одних пределах
         cb = fig.colorbar(cf_pair, ax=axes[i, :2], fraction=0.045, pad=0.02)
         cb.set_label("МПа", fontsize=7)
-        cb.ax.tick_params(labelsize=6.5, color=MUTED)
+        cb.ax.tick_params(labelsize=6.5, color=TICK)
         if diff_mode == "abs":
             cbd = fig.colorbar(cf, ax=axes[i, 2], fraction=0.09, pad=0.02)
             cbd.set_label("МПа", fontsize=7)
-            cbd.ax.tick_params(labelsize=6.5, color=MUTED)
+            cbd.ax.tick_params(labelsize=6.5, color=TICK)
     if diff_mode == "rel":
         # ОДНА шкала на весь столбец невязок: строки становятся сравнимы
         cbd = fig.colorbar(cf_rel, ax=axes[:, 2], fraction=0.055, pad=0.02)
         cbd.set_label("% от масштаба компоненты", fontsize=7)
-        cbd.ax.tick_params(labelsize=6.5, color=MUTED)
+        cbd.ax.tick_params(labelsize=6.5, color=TICK)
 
     fig.suptitle(f"Модель «{_model_label(npz, d)}».  Набор с медианной ошибкой:  "
                  f"Q = {proc[0]:g}, k = {proc[1]:g}, α = {proc[2]:g}°, "
@@ -637,7 +664,7 @@ def fig_alpha_series(root: str, out: str, comp: int = 12, tex: str = r"$\sigma_{
                           for w, x in zip(want, others))),
              ha="center", va="top", fontsize=7, color=INK)
     cb = fig.colorbar(cf, ax=axes.tolist(), fraction=0.045, pad=0.02)
-    cb.set_label("МПа", fontsize=7); cb.ax.tick_params(labelsize=6.5, color=MUTED)
+    cb.set_label("МПа", fontsize=7); cb.ax.tick_params(labelsize=6.5, color=TICK)
     fig.suptitle(f"{tex} при разном полуугле волоки", y=0.99, fontsize=9)
     fig.savefig(out)
     plt.close(fig)
@@ -664,9 +691,13 @@ def main():
                     choices=["rel", "abs"],
                     help="третий столбец: 'rel' — %% от масштаба, общая шкала "
                          "на столбец; 'abs' — МПа, своя шкала у каждой строки")
+    ap.add_argument("--paper", action="store_true",
+                    help="режим статьи: английские подписи, чёрные числа на "
+                         "осях, без общего заголовка и заметок")
     ap.add_argument("--where", default="",
                     help="ограничить режимом, например 'v=20' или 'v=40,alpha=8'")
     a = ap.parse_args()
+    set_paper(a.paper)
     if a.mode == "raw":
         job = os.path.basename(a.rpt)[:-4]
         print("создан", fig_raw(a.rpt, a.out, job))
