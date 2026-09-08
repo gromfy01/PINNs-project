@@ -3,7 +3,7 @@
 %      paired ttest_rel by seed; linregress of seed-level PINN−MLP gap on corrupt_rate
 \begin{table}[htbp]
 \centering
-\caption{Robustness to label corruption on the \texttt{random} split: macro-RMSE on the clean hold-out (MPa, mean $\pm$ sd over 3 seeds) when the given fraction of the training cases carries a systematic offset of one stress component, for the three families; the last column is the degradation factor between the highest and zero corruption. Below the rule: the paired gap to the data-driven baseline at each rate ($\Delta < 0$ favours the physics-informed model; paired $t$-test over seeds), and the linear regression of the seed-level gap PINN $-$ MLP on the corruption fraction.}
+\caption{Robustness to label corruption on the \texttt{random} split: macro-RMSE on the clean hold-out, MPa, mean $\pm$ sd over 3 seeds. Below the rule: the seed-paired gap to the data-driven baseline and its regression on the corrupted fraction.}
 \label{tab:corrupt}
 \small
 \begin{tabular}{@{}lrrrrr@{}}

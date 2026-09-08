@@ -208,17 +208,11 @@ def table_main(df: pd.DataFrame, L: Ledger) -> str:
                          ("15", "random hold-out fraction, percent")]:
         L.add(val, meaning, REGION_SRC if val != "15" else "publication/code/splits.py: make_random_split(frac=0.15)")
 
-    cap = (r"Macro-averaged RMSE of the four stress components on the held-out cases, "
-           r"MPa, mean $\pm$ sd over " + str(n_seeds) + r" seeds, for the " + str(len(splits)) +
-           r" splits of the main track (input $[Q,k,\alpha,\mu,v,r]$). "
-           r"\texttt{random} is a random hold-out; \texttt{interp:*} removes an interior "
-           r"factor level; \texttt{extrap:*} removes the highest level of one factor; "
-           r"\texttt{extrap\_joint:corner} removes a corner of the joint $(\alpha,Q)$ space "
-           r"(each axis separately stays inside the training range); \texttt{matched:*} is a "
-           r"random hold-out of the same size as the corresponding \texttt{extrap} split, i.e. "
-           r"the control that separates the cost of leaving the range from the cost of a "
-           r"smaller training pool. The three families share the architecture, optimiser, "
-           r"budget, early stopping and seeds and differ only in the composition of the loss.")
+    # Caption deliberately short (supervisor's review, comment K19 on bulky captions):
+    # the definition of the split types and of the matched controls is given in the body text.
+    cap = (r"Macro-averaged RMSE on the held-out cases for the " + str(len(splits)) +
+           r" splits of the main track, MPa, mean $\pm$ sd over " + str(n_seeds) +
+           r" seeds. Split types are defined in Section~\ref{sec:fem-dataset}.")
     head = (r"\begin{table}[htbp]" "\n"
             r"\centering" "\n"
             r"\caption{" + cap + "}\n"
@@ -286,21 +280,17 @@ def table_paired(df: pd.DataFrame, L: Ledger) -> str:
               f"{CSV_NAME}: stage=main -> Holm-Bonferroni over the {len(ps)} paired p-values, {FAMILY_LABEL[f]}-MLP")
         L.add(f"{adj.min():.3f}", f"smallest Holm-adjusted p, {FAMILY_LABEL[f]}-MLP",
               f"{CSV_NAME}: stage=main -> Holm-Bonferroni over the {len(ps)} paired p-values, {FAMILY_LABEL[f]}-MLP")
-    holm_txt = (r" With a Holm correction over the " + str(len(splits)) + r" splits, "
-                + str(holm["pinn"]) + r" of the PINN $-$ MLP and " + str(holm["vpinn"])
-                + r" of the VPINN $-$ MLP differences remain significant (smallest adjusted $p = "
-                + f"{holm_adjust(np.array(pvals['pinn'])).min():.3f}" + r"$ and $"
-                + f"{holm_adjust(np.array(pvals['vpinn'])).min():.3f}" + r"$), so the verdicts should be "
-                r"read as consistent direction rather than as isolated proofs.")
+    # The consequence of the Holm correction is stated in the body text; the caption keeps
+    # only the counts (supervisor's review: captions of Tables 8 and 10-13 are too bulky).
+    holm_txt = (r" After a Holm correction over the " + str(len(splits)) + r" splits, "
+                + str(holm["pinn"]) + r" PINN $-$ MLP and " + str(holm["vpinn"])
+                + r" VPINN $-$ MLP differences remain significant.")
 
-    cap = (r"Paired comparison of the physics-informed families with the data-driven baseline "
-           r"on every split of Table~\ref{tab:main}. $\Delta$ is the mean over seeds of the "
-           r"per-seed difference in macro-RMSE (MPa; negative favours the physics-informed model), "
-           r"$t$ and $p$ are from a two-sided paired $t$-test with the seed as the block "
-           r"($n = " + str(n_seeds) + r"$ pairs, 4 degrees of freedom), and the verdict applies "
-           r"$\alpha = 0.05$ without correction for the number of splits. Seeds, not held-out "
-           r"cases, are the replication unit: the test answers whether the advantage survives "
-           r"retraining, not on how many cases one model beats the other." + holm_txt)
+    cap = (r"Seed-paired comparison of the physics-informed families with the data-driven "
+           r"baseline on every split of Table~\ref{tab:main}. $\Delta$ is the mean over "
+           r"seeds of the per-seed difference in macro-RMSE, MPa; negative favours the "
+           r"physics-informed model. Two-sided paired $t$-test, $n = " + str(n_seeds) +
+           r"$ pairs, $\alpha = 0.05$." + holm_txt)
     head = (r"\begin{table}[htbp]" "\n"
             r"\centering" "\n"
             r"\caption{" + cap + "}\n"
@@ -393,13 +383,10 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
                 r"($" + f"{lr.slope / 10:.2f}" + r"$ MPa per 10 percentage points), "
                 r"$p = " + fmt_p(lr.pvalue) + r"$, $R^2 = " + f"{r2:.3f}" + r"$.} \\")
 
-    cap = (r"Robustness to label corruption on the \texttt{" + sp + r"} split: macro-RMSE on the clean "
-           r"hold-out (MPa, mean $\pm$ sd over " + str(n_seeds) + r" seeds) when the given fraction of the "
-           r"training cases carries a systematic offset of one stress component, for the three "
-           r"families; the last column is the degradation factor between the highest and zero "
-           r"corruption. Below the rule: the paired gap to the data-driven baseline at each rate "
-           r"($\Delta < 0$ favours the physics-informed model; paired $t$-test over seeds), and the "
-           r"linear regression of the seed-level gap PINN $-$ MLP on the corruption fraction.")
+    cap = (r"Robustness to label corruption on the \texttt{" + sp + r"} split: macro-RMSE on "
+           r"the clean hold-out, MPa, mean $\pm$ sd over " + str(n_seeds) + r" seeds. Below "
+           r"the rule: the seed-paired gap to the data-driven baseline and its regression on "
+           r"the corrupted fraction.")
     colspec = "@{}l" + "r" * len(rates) + "r@{}"
     head = (r"\begin{table}[htbp]" "\n"
             r"\centering" "\n"
@@ -504,19 +491,10 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
     L.add(n_seeds, "seeds per backend per split", f"{CSV_NAME}: stage=backend -> count(seed) per split, backend")
     L.add(n_pool, "runs per backend, both splits", f"{CSV_NAME}: stage=backend -> count per backend")
 
-    cap = (r"Two independent implementations of the same strong-form PINN (PyTorch and JAX; "
-           r"identical architecture, data, splits, nominal hyper-parameters and early-stopping rule; "
-           r"the JAX twin applies $\lambda_{\mathrm{phys}}=0.3$ directly, without the gradient-norm "
-           r"calibration of the PyTorch run, and each draws its own initialisation and batch order) on the \texttt{random} and "
-           r"\texttt{extrap:alpha\_max} splits, " + str(n_seeds) + r" seeds each. Accuracy is the "
-           r"macro-RMSE on the held-out cases; cost is the wall time of the full training run, "
-           r"the number of epochs to early stopping and their ratio (mean of the per-run ratio). "
-           r"Mean $\pm$ sd over seeds; $p$ from a two-sided paired $t$-test with the seed as the "
-           r"block. The bottom block pools the cost figures of both splits (" + str(n_pool) + r" runs per backend, "
-           r"paired on split and seed); accuracy is not pooled because the two splits are different "
-           r"tasks. Timings are for CPU, double precision; they are not "
-           r"transferable to GPU or single precision, where JIT compilation may repay itself "
-           r"differently.")
+    cap = (r"The same strong-form PINN implemented twice, in PyTorch and in JAX, on the "
+           r"\texttt{random} and \texttt{extrap:alpha\_max} splits, " + str(n_seeds) +
+           r" seeds each: accuracy (macro-RMSE, MPa) and cost. Mean $\pm$ sd over seeds; "
+           r"$p$ from a seed-paired $t$-test. Timings are for CPU, double precision.")
     head = (r"\begin{table}[htbp]" "\n"
             r"\centering" "\n"
             r"\caption{" + cap + "}\n"

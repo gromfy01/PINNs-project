@@ -3,7 +3,7 @@
 % src: held-out regions — publication/code/splits.py: REGIONS
 \begin{table}[htbp]
 \centering
-\caption{Macro-averaged RMSE of the four stress components on the held-out cases, MPa, mean $\pm$ sd over 5 seeds, for the 13 splits of the main track (input $[Q,k,\alpha,\mu,v,r]$). \texttt{random} is a random hold-out; \texttt{interp:*} removes an interior factor level; \texttt{extrap:*} removes the highest level of one factor; \texttt{extrap\_joint:corner} removes a corner of the joint $(\alpha,Q)$ space (each axis separately stays inside the training range); \texttt{matched:*} is a random hold-out of the same size as the corresponding \texttt{extrap} split, i.e. the control that separates the cost of leaving the range from the cost of a smaller training pool. The three families share the architecture, optimiser, budget, early stopping and seeds and differ only in the composition of the loss.}
+\caption{Macro-averaged RMSE on the held-out cases for the 13 splits of the main track, MPa, mean $\pm$ sd over 5 seeds. Split types are defined in Section~\ref{sec:fem-dataset}.}
 \label{tab:main}
 \small
 \begin{tabular}{@{}llrrrrr@{}}

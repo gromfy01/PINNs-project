@@ -3,7 +3,7 @@
 %      mean/sd(ddof=1) over seeds; scipy.stats.ttest_rel paired by seed (per split) and by (split, seed) (pooled)
 \begin{table}[htbp]
 \centering
-\caption{Two independent implementations of the same strong-form PINN (PyTorch and JAX; identical architecture, data, splits, nominal hyper-parameters and early-stopping rule; the JAX twin applies $\lambda_{\mathrm{phys}}=0.3$ directly, without the gradient-norm calibration of the PyTorch run, and each draws its own initialisation and batch order) on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each. Accuracy is the macro-RMSE on the held-out cases; cost is the wall time of the full training run, the number of epochs to early stopping and their ratio (mean of the per-run ratio). Mean $\pm$ sd over seeds; $p$ from a two-sided paired $t$-test with the seed as the block. The bottom block pools the cost figures of both splits (10 runs per backend, paired on split and seed); accuracy is not pooled because the two splits are different tasks. Timings are for CPU, double precision; they are not transferable to GPU or single precision, where JIT compilation may repay itself differently.}
+\caption{The same strong-form PINN implemented twice, in PyTorch and in JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa) and cost. Mean $\pm$ sd over seeds; $p$ from a seed-paired $t$-test. Timings are for CPU, double precision.}
 \label{tab:backend}
 \small
 \begin{tabular}{@{}llrrrr@{}}
