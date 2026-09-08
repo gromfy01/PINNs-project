@@ -36,6 +36,12 @@ SOURCES = {
     "tab_corrupt": os.path.join(TABLES, "tab_corrupt.tex"),
 }
 
+# Блоки прозы, которые извлекаются из статьи в sections/ (--extract). Выводы живут
+# в manuscript/sec4_conclusions.tex, поэтому их копия кладётся туда же.
+PROSE_ELSEWHERE = {
+    "sec4_conclusions": os.path.abspath(os.path.join(HERE, "..", "sec4_conclusions.tex")),
+}
+
 
 def blocks(text: str) -> dict:
     """{имя: (начало содержимого, конец содержимого)} по маркерам."""
@@ -64,13 +70,13 @@ def main() -> None:
         for name, (lo, hi) in found.items():
             if name in SOURCES:
                 continue
-            dst = os.path.join(SECTIONS, name + ".tex")
+            dst = PROSE_ELSEWHERE.get(name, os.path.join(SECTIONS, name + ".tex"))
             body = text[lo:hi].strip() + "\n"
             if os.path.exists(dst) and open(dst, encoding="utf-8").read() == body:
                 print(f"  {name}: без изменений")
                 continue
             open(dst, "w", encoding="utf-8").write(body)
-            print(f"  {name}: выгружен в sections/{name}.tex")
+            print(f"  {name}: выгружен в {os.path.relpath(dst, HERE)}")
         return
 
     changed = []
