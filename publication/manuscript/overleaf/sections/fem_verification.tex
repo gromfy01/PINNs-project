@@ -1,4 +1,34 @@
-In place of experimental validation, five internal consistency tests were run on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa. % src: VALIDATION.md §7 (5.3 / 167 → 3.2 %)
+\label{sec:res_fem_verification}
+Verification of the simulation results was carried out by comparison with the established
+analytical solutions for the drawing stress, those of Siebel and of Avitzur, and by internal
+consistency tests of the exported fields.
+% REV K17, K18: the section no longer opens with "in place of experimental validation"; it opens
+% with the analytical comparison the review asks for.
+
+The drawing stress cannot be read from the retained runs, whose exported frame is taken after the
+wire has left the die and the section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ of
+5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa). It is recovered instead from the subset of runs
+whose frame is captured while the wire is still engaged in the die: there the drawn part carries
+the pulling load, and $F/A$ is constant along it to 1.4\%. On six independent $(Q,\alpha)$ cells of
+that subset, with the yield stress fixed at the value recovered from the die cone and no fitted
+parameter, the mean absolute deviation of the finite-element drawing stress from the Siebel
+solution is 8.8\% and from the Avitzur upper-bound solution 5.7\%.
+% src: VALIDATION.md §1 (5.3 / 167 MPa; F/A constant to 1.4 % along the drawn part), §4 (six cells,
+% MAPE 8.8 % and 5.7 %, zero fitted parameters)
+The comparison is non-circular in one further respect: the yield stress at which each analytical
+solution best describes the recovered drawing stress is 318~MPa for Siebel and 327~MPa for Avitzur,
+against 316--320~MPa measured independently in the die cone, so two determinations of the same
+quantity agree to within 3\%. The friction derivative has the right sign and magnitude,
+$\mathrm{d}\sigma_d/\mathrm{d}\mu = +754$~MPa per unit against $+866$~MPa predicted by Siebel.
+% src: VALIDATION.md §4 (318 / 327 MPa vs 316-320 measured; +754 vs +866 MPa per unit of friction)
+Two limits of this comparison are stated here rather than left to the reader. The runs from which
+the drawing stress is recovered do not belong to the 1756 cases used for the surrogates, and the
+subset covers only two of the five semi-angle levels, so the dependence on the semi-angle is not
+tested by it.
+% src: VALIDATION.md §5 items 1, 2, 4 (no overlap with the training set; alpha = 12 and 16 only)
+% TODO: the keys TODO-siebel and TODO-avitzur are to be added to the bibliography.
+
+In addition, five internal consistency tests were run on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa. % src: VALIDATION.md §7 (5.3 / 167 → 3.2 %)
 Local equilibrium closes to 2.1\,\% of the sum of the moduli of its terms. % src: VALIDATION.md §7 (2.1 %)
 At the free surface $|\sigma_{rr}|$ is 4.0~MPa against 54.0~MPa in the bulk, i.e.\ 7.4\,\% (a nodal value; the 3.52~MPa quoted below is the median of the outermost bin of the 20-bin profile), % src: VALIDATION.md §7 (4.0 / 54.0 → 7.4 %); RESULTS.md header (3.52 MPa on the binned profile); TODO: confirm the node population and averaging behind the 4.0 MPa of VALIDATION.md §7 (the file does not state them)
 on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%), % src: VALIDATION.md §7 (1.07 MPa → 0.6 %)

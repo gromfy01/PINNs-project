@@ -279,9 +279,10 @@ training time measured on CPU in double precision.
 % FIXED: "one CPU thread" → "CPU". run_matrix.py torch.set_num_threads(1) constrains PyTorch only; jax_twin.py sets no XLA thread flags.
 % TODO: establish the thread count actually used by the JAX runs before writing "one thread"; RESULTS_v1_vs_v2.md §7 states only "CPU, float64" (313 ± 102 s vs 516 ± 94 s, ×1.65 — consistent with runs_v2.csv seconds, stage backend).
 % src: runs_v2.csv (stage backend: backend ∈ {torch, jax}, seeds 0–4, splits random and extrap:alpha_max, 20 rows)
-The DeepXDE model of the previous version runs on the PyTorch backend and obtains
-its derivatives through \texttt{torch.autograd.grad}; it is not a third engine and
-is not reported separately \citep{lu2021}.
+A DeepXDE implementation of the same network obtains its derivatives through
+\texttt{torch.autograd.grad} on the PyTorch backend \citep{lu2021}; it is therefore not a third
+differentiation engine and is not reported separately.
+% REV K22: stated as a property of the library rather than as a correction of an earlier text.
 % src: ERRATA.md E-19 (DDE_BACKEND=pytorch, dde.grad.jacobian → torch.autograd.grad); jax_twin.py docstring
 
 \paragraph{Statistical treatment.}
@@ -301,8 +302,9 @@ The excess error of an extrapolation split over its matched control is tested by
 Welch's unpaired $t$-test; trends across data fraction and corruption rate by
 least squares of the seed-wise PINN$-$MLP gap on $\log$(fraction) and on the rate.
 % src: stats.py delta_vs_matched (ttest_ind, equal_var=False); paper_tables.py (scipy.stats.linregress of the seed-level PINN−MLP gap on corrupt_rate); RESULTS_v1_vs_v2.md §5 (regression on log(доля)) and §6 (slope −14.20 MPa per unit fraction, p = 0.00036, R² = 0.735)
-The previous version trained each model once and applied Friedman--Nemenyi across
-the 304 hold-out cases; that quantifies the sampling variance of the hold-out, on
-how many cases one model beats another, not whether an advantage reproduces on
-retraining, which is the question at issue.
+Testing across hold-out cases rather than across seeds was also examined and is not used here:
+it quantifies the sampling variance of the hold-out, that is, on how many cases one model beats
+another, and not whether an advantage reproduces when the models are retrained, which is the
+question at issue.
+% REV K23: the point is kept, the reference to an earlier version of the text removed.
 % src: ERRATA.md E-08 (one run per model; Friedman–Nemenyi over 304 hold-out sets); stats.py module docstring (304)
