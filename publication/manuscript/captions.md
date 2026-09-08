@@ -14,14 +14,20 @@ Note: the area reductions in the captions are the measured values of the factor 
 
 ## Fig. 2 — `paper/fig2_fem_fields.png`
 
+<!-- REV К4: рисунок берётся из figures/paper/fig2_fem_fields.png — без общего
+заголовка, подписи панелей и осей по-английски; текст, стоявший под цветовыми
+шкалами (обозначение компоненты и единица измерения), перенесён в подпись. -->
+
 **EN**
 
 > **Fig. 2.** Distribution of residual stresses obtained from the FEM
 > simulation at Q = 0.10 (10 % reduction in diameter, 20.1 % in area),
-> k = 0.5, α = 12°, μ = 0.05, v = 10 m/min. Components σ_rr, σ_θθ, σ_zz and
-> τ_rz over the full axial extent of the wire; r is normalised by the billet
-> radius R = 18 mm, z by the model length L = 139.5 mm. Dashed lines mark
-> the axial window 25–75 % of L from which the training data are taken.
+> k = 0.5, α = 12°, μ = 0.05, v = 10 m/min. Panels from left to right:
+> the components σ_rr, σ_θθ, σ_zz and τ_rz over the full axial extent of the
+> wire; the colour scale of each panel is graduated in MPa and is common to
+> that panel only. r is normalised by the billet radius R = 18 mm, z by the
+> model length L = 139.5 mm. Dashed lines mark the axial window 25–75 % of L
+> from which the training data are taken.
 
 **RU (по руководителю)**
 
