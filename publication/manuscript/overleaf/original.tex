@@ -217,7 +217,10 @@ The radial coordinate $r$ is measured from the axis and the axial coordinate $z$
 A series of axisymmetric FEM simulations of the wire-drawing process was carried out in Abaqus CAE. 
 The workpiece was a rectangular longitudinal section discretised with a CAX4RT element mesh. The geometry of the die was described by three parameters: the cross-section reduction ($Q$), the half-angle of the deformation zone ($\alpha$), and the ratio  between the calibration-section length and the outlet radius ($k$). Process parameters varied during the campaign were the Coulomb friction coefficient ($\mu$) and the drawing velocity ($v$). Their ranges are summarised in Table~\ref{tab:fem_params}.
 
-Material behaviour was specified with a Johnson--Cook constitutive model for AISI~1020~\citep{10.1680/jemmr.16.00019,shi2006analytical}. As recovered from the exported stress fields, however, the response over the range covered is effectively elastic--perfectly-plastic with a yield stress of $320\pm10$~MPa, with no detectable strain-rate or temperature sensitivity, consistent with an analysis that is not thermomechanically coupled; the Johnson--Cook hardening and softening constants therefore do not act on the exported result and are not used in the surrogate models. The same constitutive description was used in all simulations, so the resulting dataset reflects pure variation of geometry and process conditions. Spatial coordinates of mesh nodes and the four cylindrical components of the residual stress tensor were exported from the Abaqus Output Database (\texttt{.odb}) files through scripts written against the Abaqus CAE Python API. Only the nodes lying within 25--75\% of the wire cross-section height were retained for surrogate-model training, because this region corresponds to the steady-state deformation regime and is most representative of the residual stress field of interest. Each retained set was downsampled to 20 radial points so that all simulations share the same spatial grid.
+Material behaviour was specified with a Johnson--Cook constitutive model for AISI~1020~\citep{10.1680/jemmr.16.00019,shi2006analytical}. As recovered from the exported stress fields, however, the response over the range covered is effectively elastic--perfectly-plastic with a yield stress of $320\pm10$~MPa, with no detectable strain-rate or temperature sensitivity. The analysis is run with thermally coupled elements, but the temperature field was not among the exported quantities, so its magnitude is not established directly; a work-balance estimate of the adiabatic heating gives a median $\Delta T$ of 26~K, which at typical thermal-softening constants corresponds to about 6~MPa of flow stress against a scatter of 15~MPa in the recovered yield stress, i.e.\ below the resolution of the exported fields. The surrogate models use the recovered response and no constitutive constants.
+% REV: the earlier wording ("an analysis that is not thermomechanically coupled") contradicted the CAX4RT elements declared above; absence of a temperature field in the export is not absence of coupling.
+% src: VALIDATION.md \S3 (\Delta T = 6.6 / 26.4 / 85.4 K; softening 1.76 % median); \S2 (sigma_y = 320 +- 10 MPa, SD 15.2 MPa)
+% TODO: the Johnson-Cook constants actually used are to be taken from an .inp deck; those in the repository (A = 500, B = 300, n = 0.4) give 658 MPa at eps = 0.2 against 316 MPa measured in the die cone, so they are not the constants of these runs. The same constitutive description was used in all simulations, so the resulting dataset reflects pure variation of geometry and process conditions. Spatial coordinates of mesh nodes and the four cylindrical components of the residual stress tensor were exported from the Abaqus Output Database (\texttt{.odb}) files through scripts written against the Abaqus CAE Python API. Only the nodes lying within 25--75\% of the wire cross-section height were retained for surrogate-model training, because this region corresponds to the steady-state deformation regime and is most representative of the residual stress field of interest. Each retained set was downsampled to 20 radial points so that all simulations share the same spatial grid.
 
 
 
@@ -241,18 +244,17 @@ Drawing velocity $v$, m/min & 5, 10, 20, 40, 250 \\
 
 After removing friction-label duplicates, the highest reduction level $Q=0.25$ (at which several runs ceased to be drawing as the billet adhered to the die) and runs that did not complete the draw, the cleaning detailed in Section~\ref{sec:prep-data} leaves 1756 valid simulations for surrogate-model training.
 
-In this study, no direct experimental validation of the finite element model was carried out (i.e. no measurement of the drag force or residual stresses using X-ray diffraction). The modelling approach employed in this study aligns with established practices in the numerical analysis of wire drawing. This approach encompasses the utilisation of finite elements, a contact formulation, and a material description based on the Johnson–Cook model. This practice, as demonstrated in previous independent studies \citep{shin2026accurate,he2003residual,overstam2006influence,selbmann2024residual}, is in good agreement with experimental measurements, which serves as indirect confirmation of the model's reliability. Nevertheless, it should be noted that such an agreement does not constitute direct validation of the specific dataset obtained here. Consequently, it is imperative that the resulting residual stress values are interpreted with this limitation in mind.
+The modelling approach follows established practice in the numerical analysis of wire drawing: an axisymmetric finite-element discretisation, a Coulomb contact formulation at the die interface, and an elastic--plastic material description. Independent studies built on the same ingredients \citep{shin2026accurate,he2003residual,overstam2006influence,selbmann2024residual} report good agreement with measurements, which supports the approach; the present dataset itself was not compared with measurements on drawn wire, and the residual stress values are therefore interpreted with respect to the model that produced them. The internal consistency of that model, and its agreement with the analytical solutions for the drawing stress, are examined in Section~\ref{sec:res_fem_verification}.
+% REV K18, K27: the paragraph no longer opens by declaring the absence of experimental validation; the approach is stated positively, the scope of the conclusions is named once, and the reader is sent to the verification.
 
 
 \subsection{Preparing Data for Machine Learning}
 \label{sec:prep-data}
 
-\begin{figure*}[h!]
-    \centering
-    \includegraphics[width=\linewidth]{pictures/fig_contour_raw.png}
-    \caption{Residual stress components from one finite-element run over the wire cross-section; the dashed lines mark the 25--75\,\% axial window retained for training.}
-    \label{fig:contour-raw}
-\end{figure*}
+% REV K4: the figure pictures/fig_contour_raw.png removed. It duplicated
+% Fig.~\ref{fig:fem-fields} (pictures/fig2_fem_fields.png), was never referred to in the
+% text, and carried the untranslated panel titles and colour-bar notes the review asks to
+% remove. The English version with the notes moved into the caption is the retained figure.
 
 % >>> inlined sections/sec22_body.tex
 \paragraph{Exported fields and their limits.}
@@ -299,7 +301,7 @@ For the extended track the same nodes are binned on an $8\times20$ grid in $(z,r
 Targets stay in MPa; since the components differ by two orders of magnitude (mean $|\sigma|$ about 79~MPa for the normal components against 0.67~MPa for $\tau_{rz}$), per-component errors are always reported next to macro-averaged ones. % src: PLAYBOOK.md §2.4
 
 \paragraph{Filtering.}
-Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=0.25$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels. % src: PLAYBOOK.md §5.2 (six "billet adhered to the die" cases + one convergence artefact, all at Q = 0.25); ERRATA.md E-24 (48 of 275 = 17.5 %); TODO: reconcile with the reason given in the previous version (code/filters.py labels this filter "упругий режим" / elastic regime)
+Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=0.25$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels. % src: PLAYBOOK.md §5.2 (six "billet adhered to the die" cases + one convergence artefact, all at Q = 0.25); ERRATA.md E-24 (48 of 275 = 17.5 %); TODO: one consistent justification for excluding Q = 0.25 is to be agreed with the corresponding author (code/filters.py labels this filter "elastic regime")
 One run with a misspelled friction token is dropped. % src: ERRATA.md E-03
 Cases whose profile is bit-identical to another case differing only in the friction label are dropped, keeping one per group (323 of the 2443 raw cases, 13.2\,\%; 319 of them survive the two preceding filters and are counted in Table~\ref{tab:filtering}). % src: ERRATA.md E-06; audit/RAW_AUDIT.md §5 (323 / 13.2 % on the raw grid); PLAYBOOK.md §5.5 (−319 after Q = 0.25 and μ-typo removal); code/filters.py find_mu_duplicates
 Finally, runs that stopped before the wire had passed through the die are removed: their tail retains the billet radius $R_0$ and the die reference point lies inside the axial extent of the wire (153 of the 159 such runs on the raw grid). % src: ERRATA.md E-24
@@ -661,9 +663,10 @@ training time measured on CPU in double precision.
 % FIXED: "one CPU thread" → "CPU". run_matrix.py torch.set_num_threads(1) constrains PyTorch only; jax_twin.py sets no XLA thread flags.
 % TODO: establish the thread count actually used by the JAX runs before writing "one thread"; RESULTS_v1_vs_v2.md §7 states only "CPU, float64" (313 ± 102 s vs 516 ± 94 s, ×1.65 — consistent with runs_v2.csv seconds, stage backend).
 % src: runs_v2.csv (stage backend: backend ∈ {torch, jax}, seeds 0–4, splits random and extrap:alpha_max, 20 rows)
-The DeepXDE model of the previous version runs on the PyTorch backend and obtains
-its derivatives through \texttt{torch.autograd.grad}; it is not a third engine and
-is not reported separately \citep{lu2021}.
+A DeepXDE implementation of the same network obtains its derivatives through
+\texttt{torch.autograd.grad} on the PyTorch backend \citep{lu2021}; it is therefore not a third
+differentiation engine and is not reported separately.
+% REV K22: stated as a property of the library rather than as a correction of an earlier text.
 % src: ERRATA.md E-19 (DDE_BACKEND=pytorch, dde.grad.jacobian → torch.autograd.grad); jax_twin.py docstring
 
 \paragraph{Statistical treatment.}
@@ -683,10 +686,11 @@ The excess error of an extrapolation split over its matched control is tested by
 Welch's unpaired $t$-test; trends across data fraction and corruption rate by
 least squares of the seed-wise PINN$-$MLP gap on $\log$(fraction) and on the rate.
 % src: stats.py delta_vs_matched (ttest_ind, equal_var=False); paper_tables.py (scipy.stats.linregress of the seed-level PINN−MLP gap on corrupt_rate); RESULTS_v1_vs_v2.md §5 (regression on log(доля)) and §6 (slope −14.20 MPa per unit fraction, p = 0.00036, R² = 0.735)
-The previous version trained each model once and applied Friedman--Nemenyi across
-the 304 hold-out cases; that quantifies the sampling variance of the hold-out, on
-how many cases one model beats another, not whether an advantage reproduces on
-retraining, which is the question at issue.
+Testing across hold-out cases rather than across seeds was also examined and is not used here:
+it quantifies the sampling variance of the hold-out, that is, on how many cases one model beats
+another, and not whether an advantage reproduces when the models are retrained, which is the
+question at issue.
+% REV K23: the point is kept, the reference to an earlier version of the text removed.
 % src: ERRATA.md E-08 (one run per model; Friedman–Nemenyi over 304 hold-out sets); stats.py module docstring (304)
 % <<< end sections/sec23_body.tex
 
@@ -703,7 +707,37 @@ retraining, which is the question at issue.
 \end{figure*}
 
 % >>> inlined sections/fem_verification.tex
-In place of experimental validation, five internal consistency tests were run on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa. % src: VALIDATION.md §7 (5.3 / 167 → 3.2 %)
+\label{sec:res_fem_verification}
+Verification of the simulation results was carried out by comparison with the established
+analytical solutions for the drawing stress, those of Siebel and of Avitzur, and by internal
+consistency tests of the exported fields.
+% REV K17, K18: the section no longer opens with "in place of experimental validation"; it opens
+% with the analytical comparison the review asks for.
+
+The drawing stress cannot be read from the retained runs, whose exported frame is taken after the
+wire has left the die and the section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ of
+5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa). It is recovered instead from the subset of runs
+whose frame is captured while the wire is still engaged in the die: there the drawn part carries
+the pulling load, and $F/A$ is constant along it to 1.4\%. On six independent $(Q,\alpha)$ cells of
+that subset, with the yield stress fixed at the value recovered from the die cone and no fitted
+parameter, the mean absolute deviation of the finite-element drawing stress from the Siebel
+solution is 8.8\% and from the Avitzur upper-bound solution 5.7\%.
+% src: VALIDATION.md §1 (5.3 / 167 MPa; F/A constant to 1.4 % along the drawn part), §4 (six cells,
+% MAPE 8.8 % and 5.7 %, zero fitted parameters)
+The comparison is non-circular in one further respect: the yield stress at which each analytical
+solution best describes the recovered drawing stress is 318~MPa for Siebel and 327~MPa for Avitzur,
+against 316--320~MPa measured independently in the die cone, so two determinations of the same
+quantity agree to within 3\%. The friction derivative has the right sign and magnitude,
+$\mathrm{d}\sigma_d/\mathrm{d}\mu = +754$~MPa per unit against $+866$~MPa predicted by Siebel.
+% src: VALIDATION.md §4 (318 / 327 MPa vs 316-320 measured; +754 vs +866 MPa per unit of friction)
+Two limits of this comparison are stated here rather than left to the reader. The runs from which
+the drawing stress is recovered do not belong to the 1756 cases used for the surrogates, and the
+subset covers only two of the five semi-angle levels, so the dependence on the semi-angle is not
+tested by it.
+% src: VALIDATION.md §5 items 1, 2, 4 (no overlap with the training set; alpha = 12 and 16 only)
+% TODO: the keys TODO-siebel and TODO-avitzur are to be added to the bibliography.
+
+In addition, five internal consistency tests were run on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa. % src: VALIDATION.md §7 (5.3 / 167 → 3.2 %)
 Local equilibrium closes to 2.1\,\% of the sum of the moduli of its terms. % src: VALIDATION.md §7 (2.1 %)
 At the free surface $|\sigma_{rr}|$ is 4.0~MPa against 54.0~MPa in the bulk, i.e.\ 7.4\,\% (a nodal value; the 3.52~MPa quoted below is the median of the outermost bin of the 20-bin profile), % src: VALIDATION.md §7 (4.0 / 54.0 → 7.4 %); RESULTS.md header (3.52 MPa on the binned profile); TODO: confirm the node population and averaging behind the 4.0 MPa of VALIDATION.md §7 (the file does not state them)
 on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%), % src: VALIDATION.md §7 (1.07 MPa → 0.6 %)
@@ -811,7 +845,8 @@ The learning curves (Table~\ref{tab:curves}) do not support the expectation that
 
 % src: RESULTS.md §2 and ERRATA.md E-19 (derivative agreement 8.7e-15 abs, 9.8e-16 rel, jax_twin.py::check_gradient_agreement; DeepXDE configured with DDE_BACKEND=pytorch → two engines, not three);
 % src: RESULTS.md §2 (implementations share everything but draw initial weights and batch order from their own RNGs: torch.manual_seed vs numpy default_rng).
-The strong-form PINN was trained in two independent implementations of the same protocol, in PyTorch and in JAX, on the random split and the semi-angle extrapolation, five seeds each. The engines were checked first: on bit-identical weights and inputs the derivative $\partial\sigma_{rr}/\partial r$ from \texttt{torch.autograd} and from \texttt{jax.grad} agrees to $8.7\times10^{-15}$ absolute ($9.8\times10^{-16}$ relative), i.e.\ to machine precision. The DeepXDE implementation of the previous version \citep{lu2021} runs on the PyTorch backend and differentiates with the same \texttt{torch.autograd.grad}, so this study contains two automatic-differentiation engines, not three. The two implementations share architecture, data, split, nominal hyperparameters and stopping rule; the JAX twin applies $\lambda_{\mathrm{phys}} = 0.3$ directly, without the gradient-norm calibration of Eq.~\eqref{eq:calib} (effective weight 0.3 against $\approx 0.05$ in PyTorch), and draws initial weights and batch order from its own random stream. % src: jax_twin.py JaxTrainer.fit (no _calibrate; lam_p = 0.3); runs_v2.csv stage backend (phys_gain = 1.0 in all 10 jax rows, 0.132–0.215 in the 10 torch rows; 0.3 × 0.165 ≈ 0.05) % EDIT: the calibration confound named explicitly (critic; §2.3 "Backends"). The caption of tab:backend (paper_tables.py) carries the same wording.
+The strong-form PINN was trained in two independent implementations of the same protocol, in PyTorch and in JAX, on the random split and the semi-angle extrapolation, five seeds each. The engines were checked first: on bit-identical weights and inputs the derivative $\partial\sigma_{rr}/\partial r$ from \texttt{torch.autograd} and from \texttt{jax.grad} agrees to $8.7\times10^{-15}$ absolute ($9.8\times10^{-16}$ relative), i.e.\ to machine precision. A DeepXDE implementation \citep{lu2021} of the same network runs on the PyTorch backend and differentiates with the same \texttt{torch.autograd.grad}, so the comparison involves two automatic-differentiation engines, not three.
+% REV K22: reference to an earlier version of the text removed. The two implementations share architecture, data, split, nominal hyperparameters and stopping rule; the JAX twin applies $\lambda_{\mathrm{phys}} = 0.3$ directly, without the gradient-norm calibration of Eq.~\eqref{eq:calib} (effective weight 0.3 against $\approx 0.05$ in PyTorch), and draws initial weights and batch order from its own random stream. % src: jax_twin.py JaxTrainer.fit (no _calibrate; lam_p = 0.3); runs_v2.csv stage backend (phys_gain = 1.0 in all 10 jax rows, 0.132–0.215 in the 10 torch rows; 0.3 × 0.165 ≈ 0.05) % EDIT: the calibration confound named explicitly (critic; §2.3 "Backends"). The caption of tab:backend (paper_tables.py) carries the same wording.
 
 % src: RESULTS_v1_vs_v2.md §7 (JAX 8.12 ± 0.18 vs PyTorch 7.98 ± 0.21, Δ +0.14, p = 0.269; 13.49 ± 0.30 vs 13.05 ± 0.49, Δ +0.43, p = 0.169;
 %      full training 313 ± 102 vs 516 ± 94 s, ×1.65; per epoch 0.575 vs 0.745 s, ×1.30, p = 0.0009; epochs 538 vs 695, ×1.29); all recomputed from runs_v2.csv stage=backend (per-epoch p = 0.00086, unpaired).
@@ -824,7 +859,10 @@ The strong-form PINN was trained in two independent implementations of the same 
 % src: RESULTS_v1_vs_v2.md §7 (agreement; cheaper implementation; two roughly equal contributions; CPU/float64 caveat; JIT amortised on long uniform runs, interrupted by early stopping);
 % src: RESULTS.md §2, ERRATA.md E-19 and PLAYBOOK.md §2.7 (v1 attributed 0.4–0.8 MPa to the backend; the same gap arises between two implementations of one method); MANUSCRIPT.md §4.1.
 The implementations are statistically indistinguishable in accuracy (Table~\ref{tab:backend}): $+0.14$~MPa on the random split ($p=0.27$) and $+0.43$~MPa on the extrapolation ($p=0.17$), with the same sign on both. The second gap is of the order of the seed spread: a difference of this size arises between two implementations of one method that differ in their random streams and, here, in the effective physics weight. % EDIT: "differ only in their random streams" contradicted the calibration confound stated above (critic)
-The previous version attributed differences of 0.4--0.8~MPa between backends to the differentiation engine; that attribution is not supported, and the conclusion ``backend matters'' is withdrawn. Where the results are equivalent the cheaper implementation should be used. Here PyTorch completes a full training run 1.65~times faster ($313\pm102$ against $516\pm94$~s pooled over both splits, paired $p=0.002$; per split, $p=0.028$ on \texttt{random} and $p=0.047$ on \texttt{extrap:alpha\_max}, Table~\ref{tab:backend}), for two roughly equal reasons: JAX needs 30\,\% more time per epoch (paired $p=0.005$, $n=10$) and 29\,\% more epochs before early stopping ($p=0.021$; the 800-epoch cap was reached in two JAX runs and one PyTorch run). % src: tables/all_tables.tex tab:backend (wall time: random p = 0.028, extrap:alpha_max p = 0.047, pooled p = 0.002; s/epoch pooled p = 0.005; epochs pooled p = 0.021) % EDIT: p = 0.0009 (unpaired) → paired 0.005; per-split T4 rows cited instead of the pool alone (critic)
+Differences of a few tenths of a megapascal between backends are of the same order as the
+spread between two implementations of one method and cannot be attributed to the differentiation
+engine, so no conclusion about a preferred backend follows from accuracy.
+% REV K24: stated as a result of the present comparison rather than as a withdrawal. Where the results are equivalent the cheaper implementation should be used. Here PyTorch completes a full training run 1.65~times faster ($313\pm102$ against $516\pm94$~s pooled over both splits, paired $p=0.002$; per split, $p=0.028$ on \texttt{random} and $p=0.047$ on \texttt{extrap:alpha\_max}, Table~\ref{tab:backend}), for two roughly equal reasons: JAX needs 30\,\% more time per epoch (paired $p=0.005$, $n=10$) and 29\,\% more epochs before early stopping ($p=0.021$; the 800-epoch cap was reached in two JAX runs and one PyTorch run). % src: tables/all_tables.tex tab:backend (wall time: random p = 0.028, extrap:alpha_max p = 0.047, pooled p = 0.002; s/epoch pooled p = 0.005; epochs pooled p = 0.021) % EDIT: p = 0.0009 (unpaired) → paired 0.005; per-split T4 rows cited instead of the pool alone (critic)
 The ranking holds for CPU execution in double precision and must not be transferred elsewhere: on a GPU in single precision the just-in-time compilation of JAX is amortised over long uniform runs, whereas here early stopping cuts the runs short.
 
 % =====================================================================
@@ -869,7 +907,8 @@ PINN, full form    & 3.53\,/\,0.994 & 5.97\,/\,0.993 & 20.15\,/\,0.982 & 1.25\,/
 % src: Table above; ratios: 0.115/0.041 = 2.8, 0.064/0.041 and 0.062/0.041 = 1.5–1.6, 0.074/0.091 = 0.82, 0.047/0.091 = 0.51, 3.54/0.78 = 4.5, 3.54/0.56 = 6.3 (RESULTS_v1_vs_v2.md §3, §8); macro spread 10.68 − 10.33 = 0.35; residual_maps.py docstring / captions.md (0.1 = equation fails to close by 10 % of its terms).
 % Figure labels: fig:compare-fields = figures/paper/fig5_compare_fields.png; fig:residual-maps = figures/paper/fig6_residual_maps.png — the replacement for Figs. 11–12 of the previous version (MANUSCRIPT.md §6.2); captions in manuscript/captions.md. % EDIT: labels renamed fig:compare_fields/fig:residual_maps → fig:compare-fields/fig:residual-maps (one label set for the paper/ figures)
 Table~\ref{tab:admissibility} shows where the families part. In accuracy they are equivalent to within 0.35~MPa of macro-RMSE, and their fields are visually alike (Fig.~\ref{fig:compare-fields}, the case with the median error of the full PINN rather than the best). Within each component the colour scale is shared by the FEM reference and all families, so that the panels of one column are directly comparable; in Figs.~\ref{fig:compare-fields} and \ref{fig:residual-maps} $r$ is normalised by the surface radius of the same cross-section and $z$ by the window length, and the radial axis is stretched ($L/R \approx 3.5$). % src: captions.md ("Колорбары и сравнимость", "Нормировка координат"); QA_DATA_AND_Z.md §4 (L/R ≈ 3.5) % EDIT: caption text moved into the body (critic; supervisor's instruction)
-In admissibility they are not (Fig.~\ref{fig:residual-maps}). This figure replaces Figs.~11--12 of the previous version, whose boundary metric was evaluated at $r = 1.5R$, outside the material, on fields with wrong component labels. % src: ERRATA.md E-01 (R_EXTRAP_FREE_SURFACE = 1.5; condition imposed at 1.5R, measured at r = 1), E-18 (component labels); MANUSCRIPT.md §6.2 % EDIT: sentence added (critic)
+In admissibility they are not (Fig.~\ref{fig:residual-maps}). The boundary quantity is evaluated on the material surface, at $r/R = 1$, on the four components of the stress tensor.
+% REV K28: the reference to earlier figures removed; the definition that matters is stated directly. % src: ERRATA.md E-01 (R_EXTRAP_FREE_SURFACE = 1.5; condition imposed at 1.5R, measured at r = 1), E-18 (component labels); MANUSCRIPT.md §6.2 % EDIT: sentence added (critic)
 The MLP violates radial equilibrium 2.8~times more strongly than the finite-element source it was trained on, both PINNs about 1.5~times; a residual of 0.115 means that the radial equation fails to close by 11.5\,\% of the characteristic magnitude of its own terms. The axial equation is improved only by the full form, the one configuration whose loss contains $R_z$: 0.047 against 0.091 for the source and 0.074 for the MLP. The separation is sharpest at the free surface: the MLP satisfies the traction-free condition no better than the source (2.90 against 3.54~MPa), whereas the reduced and full PINNs satisfy it 4.5 and 6.3~times more strictly than the data they were trained on. Since the finite-element field is affected by nodal extrapolation and averaging, a surrogate that violates equilibrium and the boundary condition by less than its source is, in this specific sense, more physically admissible than the data.
 
 % src: RESULTS.md §1.4 (1D physics audit, 5 seeds; random: |R_1| FEM 402, MLP 1351 ± 146, PINN 749 ± 42, VPINN 1071 ± 26 MPa/m; |σ_rr(r=1)| FEM 3.48, MLP 3.41 ± 0.61, PINN 0.87 ± 0.21, VPINN 0.64 ± 0.14;
