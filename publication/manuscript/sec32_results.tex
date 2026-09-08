@@ -158,7 +158,10 @@ The dimensionless residuals of Table~\ref{tab:admissibility} and Fig.~\ref{fig:r
 Medians are taken over the interior grid nodes, where the central difference is second-order accurate; at the edges of the grid it degenerates to a one-sided difference. % src: experiments/residual_maps.py (comment at `inner`); captions.md
 The FEM row is the baseline against which every admissibility figure is read. % src: residual_maps.py ("базовая линия — сам МКЭ"); captions.md ("Базовая линия МКЭ")
 \begin{table}[t]
-\caption{Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases (one training run per family; training pool of 1498 cases, see text). Accuracy: component RMSE (MPa)\,/\,$R^2$ (held-out denominator) and macro-RMSE. Admissibility: median over interior grid nodes and over the test cases of the dimensionless equilibrium residuals $|R_r|$ and $|R_z|$ (definition in the text), and the mean traction-free violation $|\sigma_{rr}(r{=}1)|$. FEM row: the source.} % EDIT: caption made descriptive; definitions moved to the text; R² denominator named — contours.py computes 1 − SS_res/SS_tot over the 261 test cases (critic)
+\caption{Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases. Accuracy: component RMSE (MPa)\,/\,$R^2$ and macro-RMSE; admissibility: the dimensionless equilibrium residuals $|R_r|$, $|R_z|$ and the traction-free violation $|\sigma_{rr}(r{=}1)|$, MPa. Definitions, denominators and the training pool are given in the text.}
+% REV: caption shortened (the review names Tables 8 and 10-13 as too bulky); the single-run
+% training on 1498 cases, the averaging over interior nodes and the role of the FEM row are
+% stated in the paragraphs around the table. % EDIT: caption made descriptive; definitions moved to the text; R² denominator named — contours.py computes 1 − SS_res/SS_tot over the 261 test cases (critic)
 \label{tab:admissibility}
 \centering\small
 \setlength{\tabcolsep}{4pt}
