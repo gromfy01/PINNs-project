@@ -1,0 +1,81 @@
+% REV К25: an introductory paragraph is placed before the list, following the supervisor's outline (a series of
+% wire-drawing simulations was carried out, several machine-learning models were prepared, and several partitions of
+% the preprocessed sample were used for the assessment), expanded here to name the dataset, the three families, the
+% partitions and the auxiliary series, so that the list of conclusions is entered from a statement of what was done.
+% src: RESULTS.md header (1756 cases; 341 training runs); RESULTS_v1_vs_v2.md footer (195 main + 72 curves + 36 corrupt + 20 backend + 18 twod = 341);
+% src: publication/code/splits.py REGIONS (interior level, highest level, joint (alpha, Q) region, size-matched random controls);
+% FIXED (revision check, rule 6): the joint (alpha, Q) partition was described as a region "in which two factors
+% simultaneously leave the range of the training set". The sources state the opposite: code/splits.py make_region_split
+% ("по каждой оси в отдельности test внутри диапазона ... заявлять по ней «выход за диапазон обучения» нельзя"),
+% PLAYBOOK.md §7.1 ("дыра в совместном пространстве") and Section~\ref{sec:fem-dataset}, which says in as many words
+% that along either axis taken separately the test cases remain inside the training range. The sentence now matches
+% Section~\ref{sec:fem-dataset} and Table~\ref{tab:splits} ("gap in the joint (alpha, Q) range"); no number is involved.
+% src: manuscript/sec23_models_protocol.tex (the three families share architecture, optimiser, budget, early stopping and seeds and differ only in the loss).
+In the present work a series of axisymmetric finite-element simulations of cold drawing of AISI~1020 wire was carried out over a factorial grid of process parameters, and the computed residual-stress fields were assembled and filtered into a working dataset of 1756 cases (Section~\ref{sec:fem-dataset}). On this dataset three families of surrogate models were prepared -- a data-driven multilayer perceptron, a strong-form physics-informed network and its weak, variational counterpart -- sharing the architecture, the optimiser, the epoch limit, the early-stopping rule, the mini-batch size and the seeds and differing only in the composition of the loss (Section~\ref{sec:models}). For the comparative assessment several partitions of the preprocessed sample were constructed: a random hold-out, the removal of an interior level of a factor, the removal of the highest level of a single factor, the removal as a whole of a region of the joint space of two factors -- the die semi-angle and the reduction -- left uncovered by the design, the held-out cases of that region still lying inside the training range along each of the two axes taken separately, and random controls of the same size as the corresponding held-out region, which separate the cost of leaving the training range from the cost of a smaller training pool (Section~\ref{sec:results}). Auxiliary series addressed the size of the training pool, the software backend, the two-dimensional formulation with the axial coordinate as an input and the deliberate corruption of the training labels; 341 training runs were performed in total. On the results of the study the following conclusions can be drawn.
+
+% REV К26: the list is shortened from seven items to five, and the items that rested on differences that were not
+% established are restated as observations. In detail:
+%   - the claim of item (1) of the compiled version that the strong-form network is more accurate than the baseline is
+%     moved out of the accuracy conclusion into item (2) and stated there as an observed direction, since the difference
+%     does not survive the Holm correction (Table~\ref{tab:paired});
+%   - item (2) of the compiled version (no benefit of the physics prior under data scarcity) is merged into that same
+%     observation, as it likewise rests on trends that are not significant and are of opposite sign (Table~\ref{tab:curves});
+%   - items (4) and (5) of the compiled version (admissibility; robustness to corrupted labels) are merged into a single
+%     conclusion on the role of the physics term, both being established effects with the same mechanism;
+%   - item (7) of the compiled version is deleted here and treated in the closing paragraph (see % REV К27 below);
+%   - the clause of item (3) withdrawing a conclusion of an earlier text is deleted (see % REV К28 below);
+%   - the cost of extrapolation per factor axis, an established result of Section~\ref{sec:res_extrap} that the compiled
+%     list did not carry, is added to item (1), so that the retained items rest on established results.
+\begin{enumerate}
+
+% src: RESULTS.md §1 and §1.0б (random hold-out: 8.0 MPa macro-RMSE, R²_n = +0.99 for all three families; constant predictor 66.0 MPa);
+% src: RESULTS.md §1.0б "Цена экстраполяции зависит от оси" (ratios ×1.08 for k = 1.0, ×1.64 for alpha = 20°, ×3.15 for Q = 0.20, ×5.93 for v = 250 m/min), reproduced in Table~\ref{tab:axis};
+% src: VALIDATION.md §6 (the speed level coincides one-to-one with the batch of simulations).
+\item On the cleaned dataset of 1756 axisymmetric finite-element simulations, three surrogate families sharing everything but the loss reproduce the reference field to about 8~MPa of macro-RMSE on a random hold-out, with $R^2_{\mathrm{n}} = 0.99$ (global denominator) against 66~MPa for the constant predictor. The cost of prediction outside the training range is governed by the factor withheld rather than by the family: measured against a random control of the same size, the error grows by a factor of 1.08 for the calibration ratio and 1.64 for the die semi-angle, but by 3.15 for the highest reduction and 5.93 for the highest drawing speed, the axis that coincides with the batch of simulations (Table~\ref{tab:axis}).
+
+% src: RESULTS_v1_vs_v2.md §3 and §8 (differences 0.3–1.9 MPa at an error level of 8–16 MPa; PINN below MLP on all 13 splits, established on 4);
+% src: tables/all_tables.tex tab:paired, caption (after a Holm correction over the 13 splits, 0 PINN−MLP and 0 VPINN−MLP differences remain significant);
+% src: tables/numbers_used.json (smallest Holm-adjusted p: 0.079 for PINN−MLP, 0.195 for VPINN−MLP) — these two values are NOT printed in tab:paired, which states only the count; % FIXED (revision check): src attribution corrected, no value used in the text;
+% src: RESULTS.md §2 / tab:curves caption (slope of Δ on log(fraction): +0.20 MPa, p = 0.21 on random; −0.35 MPa, p = 0.070 on extrap:alpha_max).
+\item A difference in accuracy between the three families was not established. The strong-form network has the lower macro-RMSE on all thirteen interpolation and extrapolation splits and the difference is significant on four of them in a seed-paired test, but it amounts to 0.3--1.9~MPa at an error level of 8--16~MPa, is of the order of the spread over seeds, and no difference from the data-driven baseline remains significant under a Holm correction over the thirteen splits (Table~\ref{tab:paired}). A benefit of the physics prior specifically under a reduced training pool was not observed either: the slope of the family difference on the logarithm of the pool fraction is $+0.20$~MPa ($p=0.21$) on the random split and $-0.35$~MPa ($p=0.070$) on the semi-angle extrapolation, of opposite sign and significant on neither (Table~\ref{tab:curves}). Both statements are therefore recorded as observations of a consistent direction and not as an established gain in accuracy. % REV К26: the accuracy advantage, previously stated as a conclusion, is restated as an observation; no number is replaced.
+
+% src: RESULTS_v1_vs_v2.md §7 (backend: accuracy differences not established; full training 313 ± 102 s against 516 ± 94 s, ×1.65), reproduced in Table~\ref{tab:backend}.
+\item The two software backends, PyTorch and JAX, are statistically indistinguishable in accuracy and differ only in cost, PyTorch completing a full training run 1.65~times faster on CPU in double precision (Table~\ref{tab:backend}). The choice of backend is thus a matter of computational cost and not of the result obtained. % REV К28: the clause withdrawing a conclusion of an earlier text is deleted; the statement stands on its own.
+
+% src: RESULTS.md §5 and §1.4 / Table~\ref{tab:admissibility} (dimensionless residuals: FEM 0.041 / 0.091, MLP 0.115 / 0.074, reduced PINN 0.064 / 0.064, full PINN 0.062 / 0.047; traction-free violation 3.54 MPa for the source against 0.78 and 0.56 MPa);
+% src: RESULTS.md §5 / Table~\ref{tab:ablation2d} (the axial residual falls by 33–41 % only with the axial term in the loss);
+% src: RESULTS_v1_vs_v2.md §6 (regression of the gap on the corrupted fraction: −14.20 MPa per unit fraction, p = 0.000363; clean labels Δ = −0.10 MPa, p = 0.718), reproduced in Table~\ref{tab:corrupt}.
+% FIXED (revision check, rule 6): "reduce the radial and axial equilibrium residuals ... well below those of the
+% data-driven baseline" is not carried by Table~\ref{tab:admissibility} for the axial residual of the reduced form
+% (0.064 against 0.074 for the baseline); it contradicted the next clause of the same item and Section~\ref{sec:res_fem}
+% of sec32_results.tex ("the axial equation is improved only by the full form"). The two residuals are now stated
+% separately; no number is changed.
+\item The contribution of the physics term lies in the admissibility of the predicted field and in the resistance to defects of the data source, not in accuracy. At equal accuracy the strong-form and full-form networks reduce the radial equilibrium residual and the violation of the traction-free condition well below those of the data-driven baseline, and, for the boundary condition, below the finite-element source itself (Table~\ref{tab:admissibility}); the axial residual, by contrast, falls markedly only in the configuration whose loss contains the axial equation, so that this part of the gain is traceable to that term and not to the physics term in general (Table~\ref{tab:ablation2d}). As the training labels are corrupted, the gap in favour of the physics-informed model opens monotonically, by 14.2~MPa per unit corrupted fraction ($p=0.00036$), whereas on clean labels the two are indistinguishable (Table~\ref{tab:corrupt}).
+
+% src: QA_DATA_AND_Z.md §4 (τ_rz: share of the in-window variance along z 0.397, mean |τ_rz| 3.22 MPa before the collapse against 0.68 MPa after it, i.e. a loss of 79 %), reproduced in Table~\ref{tab:zshare};
+% src: Table~\ref{tab:admissibility} (τ_rz, held-out denominator: 0.934 MLP, 0.932 reduced PINN, 0.935 full PINN; the 0.94 of the compiled version is the full form, rounded).
+% FIXED (revision check): the src comment gave the range as 0.934–0.935, whereas tab:admissibility carries 0.932 for the reduced form; the figure in the text is unchanged.
+\item The shear component $\tau_{rz}$ cannot be recovered from a one-dimensional, window-averaged representation: it changes sign along the axial coordinate, so that 79\,\% of its magnitude is lost when the field is collapsed along $z$, which is a property of the representation and not of any model. A two-dimensional formulation with $z$ as an input predicts this component with $R^2 = 0.93$--$0.94$ (held-out denominator). % REV К26: the figure of 79 % is the loss incurred by the collapse along $z$ (Table~\ref{tab:zshare}), not the share of the variance along that coordinate, and is now stated as such; the number itself is unchanged.
+
+\end{enumerate}
+
+% REV К27: the separate concluding item on the absence of experimental validation is deleted. In its place the adequacy
+% of the reference solution is tied to the verification of the drawing force against the classical analytical
+% descriptions of the process (Siebel, Avitzur), as the supervisor proposes, and the scope of the conclusions is then
+% stated relative to that comparison, positively and without the formulations "was not validated" / "does not assess".
+% FIXED (revision check, К27): the replacement paragraph reproduced almost word for word the scope sentence of the
+% Limitations paragraph of Section~\ref{sec:results} ("they concern the surrogates with respect to that reference
+% field -- accuracy on it, transferability beyond the training range and robustness to defects of the source"), i.e.
+% it reinstated in the Conclusions exactly the duplication that К27 objects to. The scope is now stated once, by
+% reference to the verified field, and the enumeration is left to Section~\ref{sec:results}.
+% src: VALIDATION.md §4 (Siebel and Avitzur implemented and compared on six independent (Q, α) cells with no fitted
+%      parameters; the flow stress recovered from the two relations, 318 and 327 MPa, agrees with the 316–320 MPa
+%      measured independently in the deformation cone) and §5 items 1 and 4 (the comparison is carried out on a subset
+%      of runs of the same model, disjoint from the 1756 cases, and covers only α = 12° and 16°);
+% src: VALIDATION.md §7 (further work: X-ray diffraction on the surface, layer removal for the through-thickness distribution).
+% TODO К27: the quantitative outcome of that comparison (MAPE 8.8 % for Siebel and 5.7 % for Avitzur, and the agreement
+% of the two independent determinations of the flow stress) is held in VALIDATION.md §4 but is not yet written into
+% Section~\ref{sec:fem-dataset}; the conclusion is kept free of those figures until they are reported in the body,
+% since the Conclusions must not introduce numbers that the results do not carry. The same TODO stands in
+% sec22_fem_dataset.tex, together with the missing bibliography entries for the two relations.
+The reference against which all of the above is measured is the finite-element solution itself. Its adequacy is addressed by the verification described in Section~\ref{sec:fem-dataset}: on a subset of runs of the same model in which the exported frame is captured while the wire is still engaged in the die, the drawing stress obtained from the computed field is compared, with no fitted parameters, with the classical analytical descriptions of the process -- the slab-method relation of Siebel and the upper-bound solution of Avitzur. It is with respect to a reference field verified in this way that the conclusions listed above are to be read. Further work is directed at extending the verification to the influence of the die semi-angle, for which the subset carrying the drawing load is too narrow, and at experimental validation of the residual-stress field, by X-ray diffraction for the surface stress and by layer removal for the through-thickness distribution.

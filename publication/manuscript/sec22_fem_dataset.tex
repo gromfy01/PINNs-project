@@ -1,0 +1,177 @@
+% ASSUMPTION (structure): the full Overleaf source of the resubmission is not available to the writer. Following the supervisor's outline, Section 2.2 is taken to cover the FEM data source and its preparation; Section 2.3 (\ref{sec:models}) covers the surrogate models and the training protocol. All figures below are from the v2 recomputation (1756 cases, 341 runs); v1 numbers must not be reintroduced. Every number carries a "% src:" comment naming the file it was read from.
+% CHECKED 2026-09-07 against publication/{VALIDATION,ERRATA,QA_DATA_AND_Z,RESULTS,RESULTS_v1_vs_v2,PLAYBOOK,MANUSCRIPT}.md, audit/RAW_AUDIT.md, code/{dataset,dataset2d,filters,splits,trainer,raw_probe}.py, experiments/run_matrix.py, results/runs_v2.csv. Corrections are marked "% FIXED:".
+\subsection{FEM dataset and preprocessing}\label{sec:fem-dataset}
+
+\paragraph{Finite-element model.}
+The data source is a parametric axisymmetric finite-element model of cold drawing of AISI~1020 wire through a conical die, built and run in Abaqus~\cite{TODO-abaqus-doc}. % TODO-abaqus-doc: Abaqus Analysis User's Guide (axisymmetric CAX elements, contact)
+The wire is meshed with axisymmetric continuum elements (Abaqus CAX family, component convention $1=r$, $2=z$, $3=\theta$); % src: audit/RAW_AUDIT.md §1; QA_DATA_AND_Z.md §2
+the die enters the exported output only through its reference point, i.e.\ as a single node; % src: ERRATA.md E-24 (die reference point); VALIDATION.md §5 item 5 ("волока выведена одним узлом")
+% FIXED: "the die is rigid" removed — no source states rigidity. TODO: confirm rigid-die modelling (analytical/discrete rigid surface) from an .inp deck before reinstating.
+the billet radius is denoted $R_0$; % REV К3: the numerical value of $R_0$ and the length of the billet are not repeated here; they belong to the description of the geometry. % REV К3 (critic): the claim that those values are "stated in the preceding subsection" was removed — Section 2.1 as it stands gives the notation $D_0$, $D$, $L$ but no numerical values, so the cross-reference asserted something the manuscript does not yet contain. % TODO К3: the supervisor undertook to give the billet radius and the billet length with the geometry in Section 2.1; if they do not appear there, the value has to be reinstated at this point. % src: ERRATA.md E-22 (D0 = 36 mm from the die part name DIE_..._D0_36); code/raw_probe.py billet_radius
+contact obeys Coulomb friction with coefficient $\mu$. % src: overleaf/chapter1.tex l.170 (Coulomb–Amontons law)
+Each run is a drawing step followed by an elastic unloading step; one frame per run is exported. % src: overleaf/chapter2.tex l.101 (steps); QA_DATA_AND_Z.md §5 (exactly one frame per file)
+% TODO: confirm from an .inp deck: element code (CAX4R?), mesh size, explicit vs implicit (ERRATA E-23 calls the runs explicit and reports increment counters of order 1.3e7, consistent with Abaqus/Explicit), rigid-die modelling.
+
+The constitutive law is reported as \emph{measured from the exported fields}, since the input decks are not part of the released data. In the die cone, where the material is flowing, the von Mises stress has a sharp ceiling (99th percentile 333.5~MPa over 115\,239 cone nodes from 122 runs), % src: VALIDATION.md §2 (p95 324.2, p99 333.5, p99.9 336.6)
+and a regression on flowing nodes gives $\sigma_y = 317.4 - 5.1\,\varepsilon$~MPa (median 316.3~MPa, SD 15.2~MPa), the slope being within noise: % src: VALIDATION.md §2 (flowing nodes = Mises ≥ p85)
+the material is elastic--perfectly plastic with $\sigma_y = 320 \pm 10$~MPa. % src: VALIDATION.md §2
+Rate sensitivity is absent (paired shifts of the surface stress across speed levels of $+2.0$, $0.0$ and $-2.7$\,\%, non-monotonic), % src: VALIDATION.md §3 (5→10; 10→20 n=417; 20→40 n=552)
+the volumetric strain is purely elastic ($K = 151.0$~GPa, i.e.\ $\nu = 0.268$ at $E = 210$~GPa; fit on the $v = 250$~m/min batch, see below), and the temperature field was not among the exported quantities, so its magnitude is not established directly; the estimate of the adiabatic heating below places it below the resolution of the exported fields. % src: VALIDATION.md §3 (item 3: fit for the v = 250 batch, ΔT_eq = 0.0 K)
+A work-balance estimate of the adiabatic heating such runs would produce gives $\Delta T = 7$--$85$~K (median 26~K), i.e.\ a 0.7--5.7\,\% drop in flow stress with typical softening constants, below the resolution of the design (one step in $\mu$ shifts the surface $\sigma_{zz}$ by 15.3~MPa, one step in $\alpha$ by 34.6~MPa). % src: VALIDATION.md §3 (6.6 / 26.4 / 85.4 K; softening median 1.76 %, max 5.69 %; wording block "Формулировка для статьи": 7…85 K, 0.7…5.7 %)
+The model has not been validated against measurements on drawn wire, and real AISI~1020 hardens substantially over the strains involved~\cite{TODO-aisi1020-flow-curve}; % src: VALIDATION.md §5 item 6; TODO-aisi1020-flow-curve: experimental flow curve of normalised AISI 1020 (≈210 → 500–600 MPa)
+the surrogates reproduce the stress field of this model, whose internal verification is summarised in the next paragraph. % EDIT: \ref{sec:verification} removed — no such section is written; the five internal tests of VALIDATION.md §7 are given here instead
+
+% EDIT: verification paragraph added in place of the undefined Section~\ref{sec:verification} (critic): five internal consistency tests on the 1756 retained cases, VALIDATION.md §7.
+% REV К17/К18 (сквозное правило 4): the opening of the verification paragraph no longer sets the internal tests against a missing experiment; it opens with the comparison of the simulation results against the classical analytical relations for the drawing stress.
+Verification of the results of the simulation rests on two independent checks. The first is a comparison with the classical analytical descriptions of the process, the slab-method relation of Siebel~\cite{TODO-siebel} and the upper-bound solution of Avitzur~\cite{TODO-avitzur}, which give the drawing stress as a function of the reduction, the die semi-angle and the friction coefficient. Such a comparison can be carried out only on runs of the same finite-element model whose exported frame is captured while the wire is still engaged in the die, because in the retained cases the cross-section is unloaded and carries no drawing load. % src: VALIDATION.md §4 (Siebel and Avitzur implemented, six independent (Q, α) cells, no fitted parameters), §5 item 1 (the comparison is made on a subset of runs of the same model, disjoint from the 1756 cases) % TODO К18: the quantitative outcome of that comparison is not yet written into the manuscript, and the two relations have no bibliography entries yet (TODO-siebel, TODO-avitzur).
+The second check is a set of five internal consistency tests on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa. % src: VALIDATION.md §7 (5.3 / 167 → 3.2 %)
+Local equilibrium closes to 2.1\,\% of the sum of the moduli of its terms. % src: VALIDATION.md §7 (2.1 %)
+At the free surface $|\sigma_{rr}|$ is 4.0~MPa against 54.0~MPa in the bulk, i.e.\ 7.4\,\% (a nodal value; the 3.52~MPa quoted below is the median of the outermost bin of the 20-bin profile), % src: VALIDATION.md §7 (4.0 / 54.0 → 7.4 %); RESULTS.md header (3.52 MPa on the binned profile); TODO: confirm the node population and averaging behind the 4.0 MPa of VALIDATION.md §7 (the file does not state them)
+on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%), % src: VALIDATION.md §7 (1.07 MPa → 0.6 %)
+and the yield condition is violated nowhere: the maximum von Mises stress over the retained cases is 232.6~MPa at $\sigma_y = 320$~MPa. % src: VALIDATION.md §7 (max Mises 232.6 at σ_y = 320)
+Kinematically, the exit radius follows $R_0(1-Q)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
+These tests check the mesh, the contact and the solver of this model, not its correspondence to real wire. % src: VALIDATION.md §5 item 6
+
+\paragraph{Factorial design.}
+Five process factors were varied on a full factorial grid (Table~\ref{tab:factors}). The reduction $Q$ in the job names is a reduction of \emph{diameter}: the drawn radius measured from the mesh follows $1 - R/R_0$ to within 0.007, against 0.105 for the area reading. % src: ERRATA.md E-22
+The corresponding area reduction, measured as $1-(R/R_0)^2$, is 3.2--38.8\,\% over the working range $Q = 0.015$--$0.20$; the identity $Q_A = 1 - (1-Q)^2$ reproduces the measured values to within 0.01--0.03. % src: ERRATA.md E-22 (measured 0.0320 at Q=0.015, 0.3876 at Q=0.20; formula accuracy 0.01–0.03)
+% FIXED: the draft attributed 3.2–38.8 % to the formula; the formula gives 3.0–36.0 %, the measured values give 3.2–38.8 %.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Factor levels of the FE design. $Q$ is the reduction of diameter used in the job names; the measured column gives medians over 20 runs per level. Full grid $7\times6\times5\times3\times5 = 3150$; 2442 on-grid combinations were run (77.5\,\%; the 2443rd file carries the mistyped friction label).} % src: ERRATA.md E-22 (medians over 20 jobs per level); audit/RAW_AUDIT.md §4; PLAYBOOK.md §5.7 (2442 on-grid = 77.5 %); ERRATA.md E-03 (fric_02 file) % EDIT: 2443/3150 = 77.6 %; 77.5 % belongs to the 2442 on-grid combinations (critic)
+\label{tab:factors}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Factor & Levels & Notes \\
+\midrule
+Reduction of diameter $Q$ & 0.015, 0.025, 0.05, 0.10, 0.15, 0.20, 0.25 & measured $1-(R/R_0)^2$: 0.032, 0.054, 0.108, 0.201, 0.291, 0.388, 0.451 \\ % src: PLAYBOOK.md §2.3 (levels); ERRATA.md E-22 (0.0320, 0.0543, 0.1084, 0.2013, 0.2908, 0.3876, 0.4512)
+Bearing-land coefficient $k$ & 0, 0.1, 0.3, 0.5, 0.75, 1.0 & \\ % src: PLAYBOOK.md §2.3; TODO: state the normalisation of the land length L in k
+Die semi-angle $\alpha$, deg & 4, 8, 12, 16, 20 & \\ % src: PLAYBOOK.md §2.3
+Coulomb friction $\mu$ & 0.025, 0.05, 0.10 & a fourth label (0.002) occurs in one file and is a typographic error in the file name, not a design level \\ % REV (сквозное правило 3): reference to the earlier text removed % src: ERRATA.md E-03; PLAYBOOK.md §5.3 (fric_02 instead of fric_025, one file)
+Drawing speed $v$, m/min & 5, 10, 20, 40, 250 & 122 runs at $v=5$ against 554--607 at the other levels \\ % src: audit/RAW_AUDIT.md §4; ERRATA.md E-12
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two properties of the design limit inference. First, the 2443 runs come from seven batches of Abaqus output produced between 2022 and 2026, and drawing speed coincides with batch one-to-one, so $v$ partly encodes batch rather than physics: % src: VALIDATION.md §6
+$v = 10 \to 250$ (different batches) shifts the surface $\sigma_{zz}$ by $+25.6$~MPa, $v = 20 \to 40$ within one family by $-2.7$~MPa, and the volumetric fit gives $K = 151.0$~GPa in the $v=250$ batch but 85.6--122.4~GPa in the others. % src: VALIDATION.md §6
+Conclusions along $v$ are restricted accordingly (Section~\ref{sec:res_extrap}). % EDIT: \ref{sec:results-extrap} → \ref{sec:res_extrap} (label defined in sec32)
+Second, in 158 of the 830 families with at least two $\mu$ levels the numerical block of the report is bit-identical at all three levels, down to the solver increment counter: friction was not actually varied there. % src: ERRATA.md E-23 (158 of 830 = 474 cases; increment 13 410 482 identical)
+These cases are removed as duplicates (one computation under three labels: 13.2\,\% of the raw cases are bit-identical copies of another case differing only in the friction label), but $\mu$ is covered more sparsely than the design suggests and is not used as an extrapolation axis. % src: ERRATA.md E-23; ERRATA.md E-06 and audit/RAW_AUDIT.md §5 (323 of 2443 = 13.2 %); code/splits.py (module docstring) % EDIT: the 13.2 % sentence of the deleted §2.3 splits-table caption moved here (critic)
+
+\paragraph{Exported fields and their limits.}
+Each report holds one frame of nodal values, the last one of the run: coordinates $(r,z)$, logarithmic strains LE11, LE22, LE33, LE12, the von Mises and principal stresses, and the components S11, S22, S33, S12, which in the CAX convention are $\sigma_{rr}$, $\sigma_{zz}$, $\sigma_{\theta\theta}$, $\tau_{rz}$. % src: audit/RAW_AUDIT.md §1; QA_DATA_AND_Z.md §5 (one frame per file)
+% FIXED: "final, unloaded frame" → for the completed runs the frame is unloaded (VALIDATION.md §1: median |∫σzz dA|/A = 5.3 MPa on the 1756 cases); for the 158 unfinished runs the drawn part still carries F/A ≈ 232–237 MPa (VALIDATION.md §1). Those runs are removed below.
+The targets are read directly from these columns (present in 2443 of 2443 files), and the identity of every stored field is verified against all quantities of the report, not only the four expected ones. % src: QA_DATA_AND_Z.md §2; MANUSCRIPT.md §2; code/verify_pkl.py
+The dataset was regenerated from the raw Abaqus reports; the four components $(\sigma_{rr}, \sigma_{\theta\theta}, \sigma_{zz}, \tau_{rz})$ are read from the columns S.S11, S.S33, S.S22 and S.S12 respectively. % src: MANUSCRIPT.md §2 (Data availability); code/raw_probe.py (S.S11 = σ_rr, S.S22 = σ_zz, S.S33 = σ_θθ, S.S12 = τ_rz); code/dataset.py docstring % EDIT: data statement added (critic, E-18)
+Nodal averaging leaves a residual at the free surface: on the final dataset the mean $|\sigma_{rr}|$ at $r=R$ is 3.52~MPa and $|\tau_{rz}|$ 0.24~MPa. % src: RESULTS.md header (1756 cases)
+This is the accuracy with which the source itself satisfies the traction-free condition and is the baseline for every boundary-condition metric in Section~\ref{sec:res_fem}. % EDIT: \ref{sec:results-physics} → \ref{sec:res_fem} (label defined in sec32)
+% REV К1: the enumeration of the quantities absent from the present export, and the reference to a further export, were removed; only the consequence that bears on the present study is kept.
+% REV К1 (critic): the framing "one consequence has to be stated explicitly" was dropped — the comment asks for the point to be made less, not more, emphatically; and the statement is now confined to the retained cases, so that it no longer contradicts the verification paragraph above, where the drawing stress is obtained from the runs whose frame is captured inside the die.
+In the retained runs the exported cross-section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa), so the drawing force is not read from these cases. % src: VALIDATION.md §1 (1756 cases: 5.3 MPa against rms 167 MPa)
+
+\paragraph{Axial window.}
+Only nodes whose axial coordinate lies within 25--75\,\% of the axial extent of the wire are used (median captured fraction 0.4985); the window is the steady-state part of the drawn wire, of median length 57.5~mm at a radius of 16.2~mm ($L/R \approx 3.5$). % src: audit/RAW_AUDIT.md §2; code/raw_probe.py axial_window; QA_DATA_AND_Z.md §4
+% REV К2: the sentence was recast; the shares and the losses are unchanged.
+The adequacy of this choice was examined component by component: for each component the share of the in-window variance attributable to the axial direction was measured, together with the loss incurred when the field is collapsed along $z$ (Table~\ref{tab:zshare}). For the normal components these two quantities amount to 10--12\,\% and 2--4\,\% respectively, whereas for $\tau_{rz}$ they reach 40\,\% and 79\,\%: that component changes sign along $z$ and therefore cancels under averaging. % src: QA_DATA_AND_Z.md §4 (shares 0.098–0.116 → 10–12 %; loss 2–4 %; τ_rz 0.397 → 40 %, 79 %)
+The shear component is thus intrinsically unpredictable from a one-dimensional representation, a property of the data rather than of any model (Fig.~\ref{fig:fem-fields}: inside the window the mean $|\tau_{rz}|$ of the shown run is 1.06~MPa against 11.0~MPa outside). % src: QA_DATA_AND_Z.md §5 (job 1020_2a_24_rd_1000_cal_50_v_10_fric_050); fig:fem-fields = figures/paper/fig2_fem_fields.png (same job: Q = 0.10, k = 0.5, α = 12°, μ = 0.05, v = 10; caption in manuscript/captions.md Fig. 2) % EDIT: fig:contour-raw → fig:fem-fields, the paper version of the same run (critic); TODO (updated): the figure environment is not in this section file; it is set in manuscript/overleaf/original.tex, whose caption still has to be brought into line with captions.md, Fig. 2 % REV К4: Fig.~\ref{fig:fem-fields} is to be set from figures/paper/fig2_fem_fields.png, which carries no overall title and labels the panels in English; the material that used to be printed under the colour scales (component names and the unit, MPa) now belongs to the caption (captions.md, Fig. 2)
+
+% EDIT: coordinate-normalisation note moved from the figure captions into the text (captions.md "Что переезжает в текст"; supervisor's instruction).
+Coordinates in the field plots are dimensionless throughout. In Fig.~\ref{fig:fem-fields} the radius is normalised by the billet radius, written $R$ in the axis label of that figure, so that the drawn part of the wire ends at $r/R = 0.9$, and the axial coordinate by the length of the model; % REV К3: the numerical value of the billet radius is not repeated in the text; it is retained in the caption of the figure. % REV К3 (critic): with the value gone, $R$ was left undefined here and clashed with $R$ = surface radius used elsewhere in this subsection; the sentence now says which radius the axis label of Fig.~\ref{fig:fem-fields} denotes. % src: captions.md Fig. 2 (R = 18 mm; L = 139.5 mm; drawn part ends at r/R = 0.9 at Q = 0.10)
+in Figs.~\ref{fig:compare-fields} and \ref{fig:residual-maps} the radius is normalised by the surface radius of the same cross-section, so that $r/R = 1$ is the free surface at every axial position, and $z$ by the window length. % src: captions.md ("Нормировка координат"); code/dataset2d.py (r = RP / RP[:, :, -1])
+The radial axis is stretched relative to the axial one: at $L/R \approx 3.5$--$7.7$ an equal-aspect panel degenerates into a strip. % src: captions.md ("Нормировка координат": L/R ≈ 3.5–7.7); experiments/contours.py (set_aspect("auto"))
+
+\begin{table}[htbp]
+\centering\small
+\caption{Share of the variance along $z$ inside the axial window and effect of collapsing the field along $z$ by the median (mean absolute value, MPa).} % src: QA_DATA_AND_Z.md §4; TODO: state the population (all 2443 runs or the filtered set) — not stated in the source
+\label{tab:zshare}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Component & Share along $z$ & Before collapse & After collapse \\
+\midrule
+$\sigma_{rr}$           & 0.114 & 47.9  & 46.6  \\ % src: QA_DATA_AND_Z.md §4
+$\sigma_{\theta\theta}$ & 0.116 & 56.6  & 54.4  \\ % src: QA_DATA_AND_Z.md §4
+$\sigma_{zz}$           & 0.098 & 140.2 & 137.6 \\ % src: QA_DATA_AND_Z.md §4
+$\tau_{rz}$             & 0.397 & 3.22  & 0.68  \\ % src: QA_DATA_AND_Z.md §4
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Profiles and grids.}
+For the main track the window nodes are sorted by radius and split into 20 equal-count bins; the bin radius and the four components are the medians within each bin. % src: code/dataset.py (N_R = 20, module docstring); code/raw_probe.py median_bins
+Radii are stored per case, and $r$ is normalised by the outermost bin radius of the same case, so that $r=1$ is the free surface by construction (median ratio of the outermost bin to the wire radius 0.996). % src: code/dataset.py (r = r_phys / r_max); audit/RAW_AUDIT.md §2 (0.9958); PLAYBOOK.md §2.3 (0.996)
+% REV К5: "nodal noise" replaced by an explicit explanation of the numerical origin of the effect; the figures are unchanged.
+Numerical effects inherent in the finite-element treatment of large plastic deformation displace individual nodes in the vicinity of the axis across the axis of symmetry, so that the radial coordinate recovered for them turns out slightly negative ($|r|/R \le 0.054$); in all $1/r$ terms the radius is therefore clipped at $0.05R$. % src: ERRATA.md E-25; code/trainer.py r_clip = 0.05
+For the extended track the same nodes are binned on an $8\times20$ grid in $(z,r)$ by the median; $r$ is normalised by the surface radius of the same axial slice, $z$ by the window ($z=0$ entry, $z=1$ exit). % src: code/dataset2d.py (n_z = 8, n_r = 20 defaults; module docstring); QA_DATA_AND_Z.md §4
+Targets stay in MPa; since the components differ by two orders of magnitude (mean $|\sigma|$ about 79~MPa for the normal components against 0.67~MPa for $\tau_{rz}$), per-component errors are always reported next to macro-averaged ones. % src: PLAYBOOK.md §2.4
+
+\paragraph{Filtering.}
+% REV К6: an explanatory opening sentence was added before the list of the filters.
+In the further preparation of the data a part of the computed results had to be discarded, and this was necessary for several distinct reasons. Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=0.25$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels. % src: PLAYBOOK.md §5.2 (six "billet adhered to the die" cases + one convergence artefact, all at Q = 0.25); ERRATA.md E-24 (48 of 275 = 17.5 %); TODO: reconcile with the label carried by this filter in code/filters.py ("упругий режим" / elastic regime)
+% REV К7: the single run with a mistyped friction label is no longer mentioned in the running text; it is retained as a row of Table~\ref{tab:filtering}. % src: ERRATA.md E-03
+Cases whose profile is bit-identical to another case differing only in the friction label are dropped, keeping one per group (323 of the 2443 raw cases, 13.2\,\%; 319 of them survive the two preceding filters and are counted in Table~\ref{tab:filtering}). % src: ERRATA.md E-06; audit/RAW_AUDIT.md §5 (323 / 13.2 % on the raw grid); PLAYBOOK.md §5.5 (−319 after Q = 0.25 and μ-typo removal); code/filters.py find_mu_duplicates
+Finally, runs that stopped before the wire had passed through the die are removed: their tail retains the billet radius $R_0$ and the die reference point lies inside the axial extent of the wire (153 of the 159 such runs on the raw grid). % src: ERRATA.md E-24
+Where the undrawn part enters the window the surface radius varies along it (spread above 0.1~mm against a median of 0.0026~mm), and what the profile labels as free-surface $\sigma_{rr}$ is contact pressure, down to $-571.3$~MPa against $-19.7$~MPa at worst in clean cases. % src: ERRATA.md E-24 (threshold 0.1 mm → 89 cases; median spread 0.0026 mm; clean 1756 cases min −19.7 MPa)
+These 92 cases (89 detected through the window plus 3 with the tail outside it) are removed before splitting: on the random split of the uncleaned set 73 of the 89 fell into the training pool, where the data term contradicts the traction-free condition. % src: ERRATA.md E-24; code/filters.py unfinished_draw_in_window docstring (73 train / 16 test on the 1571/277 random split of the 1848-case set)
+% FIXED: "73 of the 89 would otherwise enter training" qualified — the 73/16 count is for the random split of the 1848-case set only.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Case-level filtering applied before splitting.}
+\label{tab:filtering}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Step & Removed & Remaining \\
+\midrule
+Raw reports                                            &     & 2443 \\ % src: audit/RAW_AUDIT.md (header)
+Level $Q=0.25$ excluded                                & 275 & 2168 \\ % src: PLAYBOOK.md §5.5; audit/RAW_AUDIT.md §4 (Q = 0.25 → 275)
+Friction label outside the design (file-name typo)     & 1   & 2167 \\ % src: PLAYBOOK.md §5.5; ERRATA.md E-03
+Bit-identical duplicates differing only in $\mu$ label & 319 & 1848 \\ % src: PLAYBOOK.md §5.5
+Runs that did not complete the pass through the die    & 92  & 1756 \\ % src: ERRATA.md E-24; RESULTS_v1_vs_v2.md (1848 → 1756)
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final dataset has 1756 cases: $35\,120$ radial points in the main track and $280\,960$ grid points in the extended track. % src: 1756×20 and 1756×8×20 (arithmetic); results/runs_v2.csv stage twod: n_train + n_test = 1493 + 263 = 1377 + 379 = 1756, i.e. the same cases
+% EDIT: sentence "Removing the last 5.0 % of cases changed the results materially; the comparison with the uncleaned data is given in Section ..." deleted — §3.2 contains no comparison with the uncleaned data and v1 figures are not used (critic)
+
+\paragraph{Group-aware splits.}
+% REV К9: an introductory sentence was placed before the description of the partitions.
+For the training that follows, several scenarios of partitioning the initial sample were considered, each of them addressing a different question about the behaviour of the surrogates.
+% REV К8: the number of points per computation was removed; the uniqueness of the configurations produced by the design and the fact that the partitioning is performed at the level of computations are stated instead.
+The runs carried out according to the design of Table~\ref{tab:factors} yield, once the filtering described above has been applied, configurations of points that are distinct within the window considered: the computations whose fields coincided were removed as duplicates. The partitioning is accordingly performed at the level of whole computations, so that the points belonging to one computation are never distributed between the training and the test set~\cite{TODO-group-cv}. % src: code/splits.py sets_to_rows; code/filters.py (module docstring); TODO-group-cv: reference for grouped/blocked hold-out (e.g. Roberts et al. 2017, Ecography 40:913, or scikit-learn GroupKFold)
+A random 15\,\% hold-out measures interpolation only; to measure transfer beyond the training range, entire factor levels are held out (Table~\ref{tab:splits}). % src: code/splits.py make_random_split (frac = 0.15); PLAYBOOK.md §7.1
+% REV К11: the description of the controls and of the joint-range partition was recast in more formal terms; the content is unchanged.
+Each extrapolation split is accompanied by two controls. The \emph{matched} control withholds a random subset of the same size drawn from the whole pool, so that the difference $\Delta\mathrm{RMSE} = \mathrm{RMSE}(\text{extrap}) - \mathrm{RMSE}(\text{matched})$ separates the cost of leaving the training range from the cost of a smaller training set; % src: code/splits.py make_matched_split, module docstring
+the \emph{interior} control withholds an inner level of the same axis ($\alpha = 12^\circ$, $Q = 0.10$), which separates the cost of a gap inside the factor grid from the cost of leaving its range. % src: code/splits.py REGIONS (alpha_mid, Q_mid); RESULTS.md §1
+% REV К10: the term "corner split" was replaced by a description in terms of a joint departure from the ranges of two factors; $\alpha$ is named the die semi-angle, i.e.\ the half-angle of the deformation zone.
+A further partition, denoted \texttt{extrap\_joint:corner} in the run log, is defined by a joint departure from the ranges of two factors, the die semi-angle $\alpha$, i.e.\ the half-angle of the deformation zone, and the reduction $Q$: the region $\alpha = 20^\circ \wedge Q \ge 0.15$ is withheld as a whole. Along either of the two axes taken separately the test cases of this partition remain inside the training range, so that what is probed is a region of the joint factor space left uncovered by the design, and not extrapolation beyond the range of a single factor. % src: code/splits.py REGIONS corner (kind extrap_joint); PLAYBOOK.md §7.1
+A coverage report states, for each axis, whether the test range leaves the training range; transfer beyond the training range is claimed only for those axes for which it does. % src: code/splits.py coverage_report
+The partitions are fixed (seed 42); the five training seeds of Section~\ref{sec:models} vary the initialisation, the batch order and the 15\,\% early-stopping subset carved from the training pool. % src: code/splits.py defaults (seed = 42); results/runs_v2.csv (seeds 0–4); code/trainer.py (manual_seed, val_frac = 0.15, batch Generator seeded by cfg.seed)
+% FIXED: "validation subset" → "early-stopping subset" to keep the word validation for comparison against experiment (VALIDATION.md: verification, not validation).
+
+\begin{table}[htbp]
+\centering\small
+\caption{The 13 case-level splits of the 1756 cases. $n_\text{train}$ is the training pool, including the early-stopping subset.} % src: results/runs_v2.csv (n_train, n_test, stage main; 13 distinct splits)
+\label{tab:splits}
+\begin{tabular}{@{}lllrr@{}}
+\toprule
+Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
+\midrule
+\texttt{random}              & random 15\,\%                         & interpolation           & 1493 & 263 \\ % src: results/runs_v2.csv
+\texttt{extrap:alpha\_max}   & $\alpha = 20^\circ$                   & extrapolation, $\alpha$ & 1377 & 379 \\ % src: results/runs_v2.csv
+\texttt{extrap:Q\_high}      & $Q = 0.20$                            & extrapolation, $Q$      & 1484 & 272 \\ % src: results/runs_v2.csv
+\texttt{extrap:k\_max}       & $k = 1.0$                             & extrapolation, $k$      & 1466 & 290 \\ % src: results/runs_v2.csv
+\texttt{extrap:v\_max}       & $v = 250$~m/min                       & extrapolation, $v$      & 1255 & 501 \\ % src: results/runs_v2.csv
+\texttt{extrap\_joint:corner}& $\alpha = 20^\circ \wedge Q \ge 0.15$ & gap in the joint $(\alpha, Q)$ range & 1642 & 114 \\ % REV К10: "joint-space gap" named after the two factors involved % src: results/runs_v2.csv
+\texttt{interp:alpha\_mid}   & $\alpha = 12^\circ$                   & interior control        & 1416 & 340 \\ % src: results/runs_v2.csv
+\texttt{interp:Q\_mid}       & $Q = 0.10$                            & interior control        & 1438 & 318 \\ % src: results/runs_v2.csv
+\texttt{matched:alpha\_max}  & random, same size                     & matched control         & 1377 & 379 \\ % src: results/runs_v2.csv
+\texttt{matched:Q\_high}     & random, same size                     & matched control         & 1484 & 272 \\ % src: results/runs_v2.csv
+\texttt{matched:k\_max}      & random, same size                     & matched control         & 1466 & 290 \\ % src: results/runs_v2.csv
+\texttt{matched:v\_max}      & random, same size                     & matched control         & 1255 & 501 \\ % src: results/runs_v2.csv
+\texttt{matched:corner}      & random, same size                     & matched control         & 1642 & 114 \\ % src: results/runs_v2.csv
+\bottomrule
+\end{tabular}
+\end{table}
