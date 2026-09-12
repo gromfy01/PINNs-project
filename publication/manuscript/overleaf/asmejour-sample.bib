@@ -1,0 +1,595 @@
+%% Sample bibliography file for asmejour.bst and asmejour.cls
+%%
+%% Revised: 10 January 2022
+%% Copyright John H. Lienhard, MIT
+%% Offered under the MIT license: https://ctan.org/license/mit 
+
+
+%% Titles should be in title case (first letters capitalized) according to ASME style
+%% Allowable fields are listed after the first use of each entry type.
+%%
+
+%% article supports these fields: 	author, year, title, journal, 
+%%									volume, number, pages OR eid, 
+%%									doi OR url OR eprint with archive, note. 
+%% (The month field is not used in ASME style and will be ignored.)
+	
+
+%% book supports these fields:  author OR editor, year, title, edition, version, 
+%%								series, volume OR number, publisher, address, type,
+%%								doi OR url OR eprint with archive, note.  
+%% type={} field can change "Chap." to something else.
+
+
+%% incollection supports these fields:  author, year, title, booktitle, edition, editor, 
+%%										series, volume OR number, publisher, address, type,
+%%										chapter, pages, doi OR url OR eprint with archive, note.  
+%% type={} field changes "Chap." to something else.
+
+
+%% inproceedings supports these fields: author, year, title, booktitle, edition, editor, series, volume, 
+%%                                      organization OR publisher, address OR venue, eventdate, [paper] number,
+%%										pages, doi, note, url, eprint with archive, url, type.
+%% type = { } changes default "Paper No." 
+%% venue and eventdate are specific to the asmejour.bst style. The "series" field is rarely used.
+%% If there are no pages as such, just omit the pages field and ignore the bibtex warning "missing pages".
+
+
+%% techreport supports these fields: author, year, title, institution, address, number, type, note
+%%                                   doi OR url OR eprint with archive.
+%% ASME's online examples omit institution; however, the ASME journals will include it, e.g.:
+%%   		institution = {Society of Automotive Engineers},
+
+
+%% phdthesis supports these fields: author, year, title, type, school, address, note.
+%% Additional fields are also supported, but don't use them all: doi, eprint with archive, url, urldate, urltype
+%% type = {} can optionally be added to change the style of thesis. Default is "Ph.D. thesis"
+
+
+%% This example shows how to print a doi even though the doi field is hyperlinked to the title. An alternative is:
+%% note = {\url{https://doi.org/10.1055/acprof.oso/97890.0394.000}},
+ 
+
+%% online supports these fields: author OR editor, year, title, version, versiontype, organization, address, 
+%%                               note, url, urldate, urltype
+%% These additional fields are also supported, but are intended as alternatives to url: doi, eprint with archive 
+
+
+%% note use of: eid in place of pages, and use of jht macro for the journal name
+
+
+%% manual supports these fields: 	author, year, title, edition, organization, address, 
+%%									doi, eprint with archive, urldate, url, version, versiontype, note.
+%% You can change "Accessed" with "urltype", e.g., urltype = {retrieved},
+%% You can change "Version" with "versiontype, e.g., versiontype = {Release},
+
+%% Next is an alternative approach to stating the version/release that doesn't use version and versiontype: 
+
+% note={English translation by I.\ Bruce available here at \url{http://www.17centurymaths.com/contents/introductiontoanalysisvol1.htm}},
+
+
+%% Equivalent links for this case: url = {https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980228020.pdf},
+%%                                 url = {https://hdl.handle.net/2060/19980228020}
+
+
+%% This common case is an article in series of edited books where the series title is the same for all volumes.
+%%	  type = {..},   changes chapter to something else
+%%    url  = {..},   can be added if it exists
+%%    edition = {..} can be added if relevant
+
+
+%%  This exotic variant of incollection cites an article in a book series where each volume has a different title.
+%%  In this case, the series field (title of the overall series of books) is used with a volume number to produce
+%%         ...Title (Series, Vol.#), ...
+%%  Series will not appear if the volume number is empty. If you don't have both, use incollection instead.
+%%
+%%  inserialcollection supports these fields: author, year, title, booktitle, edition, editor, series, 
+%%											  volume OR number, publisher, address, chapter, pages, 
+%%											  doi OR url OR eprint with archive, note. type={} changes "Chap."
+%%  This entry type is defined by asmejour.bst
+
+
+%% conference is the same as inproceedings
+
+
+%% misc supports these fields: author, year, title, howpublished, note.
+%% These fields are also supported, but don't use them all: doi, eprint with archive, url, urldate, urltype
+
+
+
+%% mastersthesis supports these fields: author, year, title, type, school, address, note.
+%% These fields are also supported, but don't use them all: doi, eprint with archive, url, urldate, urltype
+%% type={} can optionally be used to change the type of thesis. Default is "Master's thesis"
+
+%% The following example uses type to make an entry for a Bachelor's thesis.
+
+%% proceedings supports these fields: author OR editor, year, title, edition, editor, 
+%%                                    series, volume OR number, organization OR publisher, 
+%%                                    address [of organization or publisher] OR venue, eventdate,
+%%                                    doi OR url OR eprint with archive.
+%% The organization will appear as author/editor if those fields are empty.
+%% If you opt to use the venue and eventdate fields, don't include the address field.
+%% The very uncommon "series" field should be used with number, rather than volume.
+  
+
+%% One book in a series of books
+
+
+%% inbook supports these fields:    author OR editor, year, title, edition, 
+%%									version, versiontype, series, volume OR number, 
+%%									doi OR url OR eprint with archive, publisher, address, note.  
+%% type={} field can change "Chap." to something else.
+
+%1
+@article{burioli2024novel,
+  author    = {Burioli, S. and others},
+  title     = {A novel numerical approach for analyzing experimental data on critical current degradation in Nb$_3$Sn wires caused by transverse deformations preceding heat treatment},
+  journal   = {Superconductor Science and Technology},
+  year      = {2024},
+  volume    = {37},
+  number    = {9},
+  pages     = {095007},
+}
+%2
+@article{lim2026study,
+  author    = {Lim, J. and Lee, J. and Jang, B.},
+  title     = {A Study of Effect of Bidirectional Drawing on the Mechanical Properties of 30MnSi6 Non-Heat-Treated Steel},
+  journal   = {Metals},
+  year      = {2026},
+  volume    = {16},
+  number    = {1},
+  pages     = {118},
+}
+%3
+@article{shin2026accurate,
+  author    = {Shin, Y. and others},
+  title     = {Accurate Finite Element Simulation of Unidirectional and Alternate Multi-Pass Drawings, Focusing on Residual Stresses},
+  journal   = {Applied Sciences},
+  year      = {2026},
+  volume    = {16},
+  number    = {4},
+  pages     = {2154},
+}
+%4
+@article{he2003residual,
+  title={Residual stress determination in cold drawn steel wire by FEM simulation and X-ray diffraction},
+  author={He, Shen and Van Bael, ALSY and Li, SY and Van Houtte, Paul and Mei, F and Sarban, A},
+  journal={Materials Science and Engineering: A},
+  volume={346},
+  number={1-2},
+  pages={101--107},
+  year={2003},
+  publisher={Elsevier}
+}
+%5
+@article{overstam2006influence,
+  title={The influence of bearing geometry on the residual stress state in cold drawn wire, analysed by the FEM},
+  author={{\"O}verstam, Henrik},
+  journal={Journal of Materials Processing Technology},
+  volume={171},
+  number={3},
+  pages={446--450},
+  year={2006},
+  publisher={Elsevier}
+}
+%6
+@article{aghdami2020inverse,
+  title={An inverse analysis to identify the Johnson-Cook constitutive model parameters for cold wire drawing process},
+  author={Aghdami, Ashkan Mahmoud and Davoodi, Behnam},
+  journal={Mechanics \& Industry},
+  volume={21},
+  number={5},
+  pages={527},
+  year={2020},
+  publisher={EDP Sciences}
+}
+%7
+@inproceedings{radionova2022fem,
+  title={FEM simulation analysis of wire drawing process at different angles dies on straight-line drawing machines},
+  author={Radionova, LV and Lisovskiy, RA and Svistun, AS and Gromov, DV and Erdakov, IN},
+  booktitle={International Conference on Industrial Engineering},
+  pages={769--778},
+  year={2022},
+  organization={Springer}
+}
+%8
+@article{delrey2025effect,
+  author    = {del Rey, J. C. and others},
+  title     = {Effect of Die Design and Lubricant on ZnAl15\% Wire Drawing: An Experimental Approach with Pressure/Hydrodynamic and Conventional Drawing Dies},
+  journal   = {Lubricants},
+  year      = {2025},
+  volume    = {13},
+  number    = {11},
+  pages     = {481},
+}
+%9
+@article{delrey2026advances,
+  author    = {Del Rey, J. C. and others},
+  title     = {Advances on the optimization of the thermal treatment and modelization on the multi-stage wire drawing process with ZnAl15\% alloy wires},
+  journal   = {CIRP Journal of Manufacturing Science and Technology},
+  year      = {2026},
+  volume    = {67},
+  pages     = {29--47},
+}
+%10
+@article{selbmann2024residual,
+  author    = {Selbmann, R. and others},
+  title     = {Residual Stress Engineering for Wire Drawing of Austenitic Stainless Steel X5CrNi18-10 by Variation in Die Geometries—Effect of Drawing Speed and Process Temperature},
+  journal   = {Materials},
+  year      = {2024},
+  volume    = {17},
+  number    = {5},
+  pages     = {1174},
+}
+%11
+@article{suliga2024influence,
+  author    = {Suliga, M. and others},
+  title     = {The Influence of Temperature in the Wire Drawing Process on the Wear of Drawing Dies},
+  journal   = {Materials},
+  year      = {2024},
+  volume    = {17},
+  number    = {20},
+  pages     = {4949},
+}
+%12
+@article{ruminski2025effect,
+  author    = {Rumi\'{n}ski, M. and Skubisz, P. and Micek, P.},
+  title     = {Effect of reduction ratio on die fill-out and hardness profile of cold-drawn polygonal rods made of acid resistant steel X6CrNiTi18-10},
+  journal   = {Journal of Mining and Metallurgy, Section B: Metallurgy},
+  year      = {2025},
+  volume    = {61},
+  number    = {2},
+  pages     = {235-250},
+}
+%13
+@article{mozaffar2022mechanistic,
+  author    = {Mozaffar, M. and others},
+  title     = {Mechanistic artificial intelligence (mechanistic-AI) for modeling, design, and control of advanced manufacturing processes: Current state and perspectives},
+  journal   = {Journal of Materials Processing Technology},
+  year      = {2022},
+  volume    = {302},
+  pages     = {117485},
+}
+%14
+@book{goodfellow2016deep,
+  author    = {Goodfellow, I. and Bengio, Y. and Courville, A.},
+  title     = {Deep Learning},
+  publisher = {MIT Press},
+  address   = {Cambridge, MA},
+  year      = {2016},
+}
+%15
+@article{weichert2019review,
+  author  = {Weichert, Dorina and Link, Patrick and Stoll, Anke and R{\"u}ping, Stefan and Ihlenfeldt, Steffen and Wrobel, Stefan},
+  title   = {A review of machine learning for the optimization of production processes},
+  journal = {The International Journal of Advanced Manufacturing Technology},
+  year    = {2019},
+  volume  = {104},
+  number  = {5},
+  pages   = {1889--1902},
+  doi     = {10.1007/s00170-019-03988-5}
+}
+%16
+@inproceedings{gromov2026residual,
+  author    = {Gromov, D. V. and Radionova, L. V. and Lisovskaya, T. A.},
+  title     = {Residual Stress Prediction in Wire Drawing by using Integrated Artificial Neural Networks and Finite Element Analysis},
+  booktitle = {2026 International Russian Smart Industry Conference (SmartIndustryCon)},
+  publisher = {IEEE},
+  year      = {2026},
+  pages     = {1147--1152},
+}
+
+%17
+@article{demin2025forecasting,
+  author    = {Demin, D. and Grebenkin, I. and Barinov, A.},
+  title     = {Forecasting the residual stress components in wires using an artificial neural network},
+  journal   = {The International Journal of Advanced Manufacturing Technology},
+  year      = {2025},
+  pages     = {1--12},
+}
+%18
+@article{demin2024application,
+  author    = {Demin, Dmitriy and Grebenkin, Ilya},
+  title     = {Application of ML methods to predict residual stresses and strains after wire drawing process},
+  journal   = {International Journal of Advanced Manufacturing Technology},
+  year      = {2024},
+  volume    = {133},
+  number    = {7},
+  pages     = {3461--3473},
+}
+%19
+@misc{akiba2019optunanextgenerationhyperparameteroptimization,
+      title={Optuna: A Next-generation Hyperparameter Optimization Framework}, 
+      author={Takuya Akiba and Shotaro Sano and Toshihiko Yanase and Takeru Ohta and Masanori Koyama},
+      year={2019},
+      eprint={1907.10902},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/1907.10902}, 
+}
+%20
+@article{park2026indentation,
+  author    = {Park, M. and others},
+  title     = {Indentation-informed convolutional neural network for simultaneous prediction of non-equibiaxial residual stress and plastic flow},
+  journal   = {International Journal of Plasticity},
+  year      = {2026},
+  pages     = {104606},
+}
+%21
+@article{han2024evaluation,
+  author    = {Han, G. and others},
+  title     = {Evaluation of plastic properties and equi-biaxial residual stress via indentation and ANN},
+  journal   = {Materials \& Design},
+  year      = {2024},
+  volume    = {239},
+  pages     = {112745},
+}
+%22
+@article{wang2025online,
+  author    = {Wang, Y. and others},
+  title     = {An online prediction method of three-dimensional machining residual stress field based on incepu-net},
+  journal   = {Measurement},
+  year      = {2025},
+  volume    = {242},
+  pages     = {115794},
+}
+%23
+@article{tsui2026metrology,
+  author    = {Tsui, H. S. R.},
+  title     = {Metrology-guided estimation and inverse design of drawing force in cold rod drawing using a FEM--ANN--XGBoost hybrid},
+  journal   = {Measurement},
+  year      = {2026},
+  volume    = {269},
+  pages     = {120783},
+}
+%25
+@article{raissi2019physics,
+  author    = {Raissi, M. and Perdikaris, P. and Karniadakis, G. E.},
+  title     = {Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
+  journal   = {Journal of Computational Physics},
+  year      = {2019},
+  volume    = {378},
+  pages     = {686--707},
+}
+%26
+@article{karniadakis2021physics,
+  author    = {Karniadakis, G. E. and Kevrekidis, I. G. and Lu, L. and Perdikaris, P. and Wang, S. and Yang, L.},
+  title     = {Physics-informed machine learning},
+  journal   = {Nature Reviews Physics},
+  year      = {2021},
+  volume    = {3},
+  pages     = {422--440},
+}
+%27
+@article{haghighat2021physics,
+  author    = {Haghighat, E. and Raissi, M. and Moure, A. and Gomez, H. and Juanes, R.},
+  title     = {A physics-informed deep learning framework for inversion and surrogate modeling in solid mechanics},
+  journal   = {Computer Methods in Applied Mechanics and Engineering},
+  year      = {2021},
+  volume    = {379},
+  pages     = {113741},
+}
+%28
+@article{ra2026physics,
+  author    = {Ra, D. and others},
+  title     = {Physics-informed machine learning across manufacturing processes: Recent advances, challenges, and directions},
+  journal   = {Journal of Manufacturing Systems},
+  year      = {2026},
+  volume    = {85},
+  pages     = {72--95},
+}
+%29
+@article{yang2025prediction,
+  author    = {Yang, T. and others},
+  title     = {Prediction of residual stress field of ultrasonic rolling processed 20CrNiMo based on physics-informed neural networks},
+  journal   = {Journal of Manufacturing Processes},
+  year      = {2025},
+  volume    = {149},
+  pages     = {841--851},
+}
+%30
+@article{mehedihasan2026inverse,
+  author    = {Mehedi Hasan, M. and Schoop, J.},
+  title     = {Inverse Parameter Identification of Subsurface Residual Stress in Tractional Sliding Processes Using a Physics-Informed Neural Network},
+  journal   = {Journal of Tribology},
+  year      = {2026},
+  volume    = {148},
+  number    = {6},
+  pages     = {061501},
+}
+%31
+@misc{hasan2025machining,
+  author    = {Hasan, M. M.},
+  title     = {Machining-induced Residual Stress Modeling Using Physics-Informed Neural Networks},
+  year      = {2025},
+}
+%32
+@article{muransky2026application,
+  author    = {Muransky, O. and Tran, M. N. and Payten, W.},
+  title     = {On the application of PINN-style physics-regularised neural networks to high-temperature creep rupture life prediction},
+  journal   = {International Journal of Pressure Vessels and Piping},
+  year      = {2026},
+  volume    = {219},
+}
+%33
+@inproceedings{munzone2024comparative,
+  author    = {Munzone, F. and others},
+  title     = {Comparative study of artificial neural network and physics-informed neural network application in sheet metal forming},
+  booktitle = {27th International ESAFORM Conference on Material Forming (ESAFORM 2024)},
+  publisher = {Association of American Publishers},
+  year      = {2024},
+  pages     = {2278--2288},
+}
+%34
+@article{laakso2024hybrid,
+  author    = {Laakso, S. V. A. and others},
+  title     = {Hybrid FE-ML model for turning of 42CrMo4 steel},
+  journal   = {CIRP Journal of Manufacturing Science and Technology},
+  year      = {2024},
+  volume    = {55},
+  pages     = {333--346},
+}
+%35
+@article{rahman2025physics,
+  author    = {Rahman, A. and others},
+  title     = {Physics-based machine learning framework for predicting structure-property relationships in DED-fabricated low-alloy steels},
+  journal   = {Metals},
+  year      = {2025},
+  volume    = {15},
+  number    = {9},
+  pages     = {965},
+}
+
+@article{10.1680/jemmr.16.00019,
+    author = {Kui, Cui Feng and Fei, Ling Yuan and Xue, Xue Jin and Peng, Han Kun and Ge, Xie Ke and Yu, Wang and Yan, Li},
+    title = {The dynamic characteristics and constitutive model of 1020 steel},
+    journal = {Emerging Materials Research},
+    volume = {6},
+    number = {1},
+    pages = {124-131},
+    year = {2017},
+    month = {01},
+    doi = {10.1680/jemmr.16.00019},
+}
+@inproceedings{shi2006analytical,
+  title={An Analytical Model for the Evaluation of Primary Shear Zone Thickness in Orthogonal Cutting},
+  author={Shi, Bin and Tounsi, Nejah},
+  booktitle={Proceedings of the Third International Symposium on Aerospace Materials and Manufacturing Processes},
+  year={2006}
+}
+@article{watanabe2023tree,
+  title={Tree-structured parzen estimator: Understanding its algorithm components and their roles for better empirical performance},
+  author={Watanabe, Shuhei},
+  journal={arXiv preprint arXiv:2304.11127},
+  year={2023}
+}
+@inproceedings{li2022evaluating,
+  title={Evaluating Hyper-Parameter Optimization On Remote Sensing Object Detection},
+  author={Li, Shuaiheng and Bai, Yang and Zhang, Tong and Wang, Haixin},
+  booktitle={2022 2nd International Conference on Algorithms, High Performance Computing and Artificial Intelligence (AHPCAI)},
+  pages={1--7},
+  year={2022},
+  organization={IEEE}
+}
+
+@article{wang2022,
+  author  = {Wang, Sifan and Yu, Xinling and Perdikaris, Paris},
+  title   = {When and why {PINNs} fail to train: A neural tangent kernel perspective},
+  journal = {Journal of Computational Physics},
+  volume  = {449},
+  pages   = {110768},
+  year    = {2022},
+  doi     = {10.1016/j.jcp.2021.110768}
+}
+@article{lu2021,
+  author  = {Lu, Lu and Meng, Xuhui and Mao, Zhiping and Karniadakis, George Em},
+  title   = {{DeepXDE}: A deep learning library for solving differential equations},
+  journal = {SIAM Review},
+  volume  = {63},
+  number  = {1},
+  pages   = {208--228},
+  year    = {2021},
+  doi     = {10.1137/19M1274067}
+}
+
+@article{kharazmi2021,
+  author  = {Kharazmi, Ehsan and Zhang, Zhongqiang and Karniadakis, George Em},
+  title   = {hp-{VPINNs}: Variational physics-informed neural networks with domain decomposition},
+  journal = {Computer Methods in Applied Mechanics and Engineering},
+  volume  = {374},
+  pages   = {113547},
+  year    = {2021},
+  doi     = {10.1016/j.cma.2020.113547}
+}
+
+@article{friedman1937,
+  author  = {Friedman, Milton},
+  title   = {The use of ranks to avoid the assumption of normality implicit in the analysis of variance},
+  journal = {Journal of the American Statistical Association},
+  volume  = {32},
+  number  = {200},
+  pages   = {675--701},
+  year    = {1937},
+  doi     = {10.1080/01621459.1937.10503522}
+}
+
+@article{demsar2006,
+  author  = {Dem{\v{s}}ar, Janez},
+  title   = {Statistical comparisons of classifiers over multiple data sets},
+  journal = {Journal of Machine Learning Research},
+  volume  = {7},
+  pages   = {1--30},
+  year    = {2006}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Added for the surrogate-model comparison (software, methods, material data)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+@inproceedings{paszke2019pytorch,
+  author    = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and K{\"o}pf, Andreas and Yang, Edward and DeVito, Zachary and Raison, Martin and Tejani, Alykhan and Chilamkurthy, Sasank and Steiner, Benoit and Fang, Lu and Bai, Junjie and Chintala, Soumith},
+  title     = {{PyTorch}: An Imperative Style, High-Performance Deep Learning Library},
+  booktitle = {Advances in Neural Information Processing Systems 32},
+  year      = {2019},
+  pages     = {8024--8035}
+}
+
+@misc{bradbury2018jax,
+  author       = {Bradbury, James and Frostig, Roy and Hawkins, Peter and Johnson, Matthew James and Leary, Chris and Maclaurin, Dougal and Necula, George and Paszke, Adam and VanderPlas, Jake and Wanderman-Milne, Skye and Zhang, Qiao},
+  title        = {{JAX}: Composable Transformations of {Python}+{NumPy} Programs},
+  year         = {2018},
+  howpublished = {\url{http://github.com/google/jax}}
+}
+
+@inproceedings{loshchilov2019adamw,
+  author    = {Loshchilov, Ilya and Hutter, Frank},
+  title     = {Decoupled Weight Decay Regularization},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019}
+}
+
+@inproceedings{tancik2020fourier,
+  author    = {Tancik, Matthew and Srinivasan, Pratul P. and Mildenhall, Ben and Fridovich-Keil, Sara and Raghavan, Nithin and Singhal, Utkarsh and Ramamoorthi, Ravi and Barron, Jonathan T. and Ng, Ren},
+  title     = {Fourier Features Let Networks Learn High Frequency Functions in Low Dimensional Domains},
+  booktitle = {Advances in Neural Information Processing Systems 33},
+  year      = {2020},
+  pages     = {7537--7547}
+}
+
+@article{roberts2017crossvalidation,
+  author  = {Roberts, David R. and Bahn, Volker and Ciuti, Simone and Boyce, Mark S. and Elith, Jane and Guillera-Arroita, Gurutzeta and Hauenstein, Severin and Lahoz-Monfort, Jos{\'e} J. and Schr{\"o}der, Boris and Thuiller, Wilfried and Warton, David I. and Wintle, Brendan A. and Hartig, Florian and Dormann, Carsten F.},
+  title   = {Cross-Validation Strategies for Data with Temporal, Spatial, Hierarchical, or Phylogenetic Structure},
+  journal = {Ecography},
+  volume  = {40},
+  number  = {8},
+  pages   = {913--929},
+  year    = {2017},
+  doi     = {10.1111/ecog.02881}
+}
+
+@manual{abaqus2022,
+  author       = {{Dassault Syst{\`e}mes Simulia}},
+  title        = {Abaqus Analysis User's Guide},
+  organization = {Dassault Syst{\`e}mes},
+  address      = {Providence, RI, USA},
+  year         = {2022}
+}
+
+@book{boyer2002atlas,
+  editor    = {Boyer, Howard E.},
+  title     = {Atlas of Stress-Strain Curves},
+  edition   = {2nd},
+  publisher = {ASM International},
+  address   = {Materials Park, OH, USA},
+  year      = {2002}
+}
+
+@article{holm1979,
+  author  = {Holm, Sture},
+  title   = {A Simple Sequentially Rejective Multiple Test Procedure},
+  journal = {Scandinavian Journal of Statistics},
+  volume  = {6},
+  number  = {2},
+  pages   = {65--70},
+  year    = {1979}
+}
