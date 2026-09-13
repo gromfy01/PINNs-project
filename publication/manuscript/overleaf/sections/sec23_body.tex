@@ -23,7 +23,7 @@ Fig.~\ref{fig:architecture}). In the main track the input is
 $\mathbf{x}=(Q,k,\alpha,\mu,v,r)$, with $r\in[0,1]$ the radius normalised by the
 free-surface radius of the same case ($r=1$ is the free surface).
 % src: trainer.py (Net n_in=6, r last column); dataset.py (r = r_phys / r_phys[:, -1], r[-1] = 1)
-The radius is augmented by a Fourier embedding $[\sin(2\pi k r),\cos(2\pi k r)]$,
+The radius is augmented by a Fourier embedding~\citep{tancik2020fourier} $[\sin(2\pi k r),\cos(2\pi k r)]$,
 $k=1,\dots,4$;
 % src: trainer.py FourierR (k = 1..n, times 2π), Config.n_fourier=4 (default; not logged — see TODO below)
 inputs and targets are standardised with training-set statistics; the body is a
@@ -36,7 +36,7 @@ de-standardised before entering any physical term.
 All arithmetic is in double precision in both backends.
 % src: trainer.py (self.dtype = torch.float64); jax_twin.py (jax.config.update("jax_enable_x64", True))
 Each FEM case contributes 20 radial points, always kept in the same partition
-(group-aware splitting).
+(group-aware splitting~\citep{roberts2017crossvalidation}).
 % src: trainer.py N_R=20; splits.py sets_to_rows (set-major rows)
 
 \paragraph{Two tracks and the role of $z$.}
@@ -234,7 +234,7 @@ composition of the loss, and one launcher writes every run with its
 hyperparameters to a single log.
 % FIXED: the draft cited protocol.py ("held in one module imported by every launcher; any deviation raises an assertion"). protocol.py is NOT imported by run_matrix.py, trainer.py or trainer2d.py (grep over publication/code and publication/experiments finds no import); it describes the legacy six-model/Optuna protocol and its constants contradict the v2 runs (PROTOCOL.max_epochs=400 vs 800 reached; PROTOCOL.patience=30 vs 40 for 1D); assert_conforms checks only optimizer, lr_schedule, n_trials, n_inner_splits, split_seed. Do not cite protocol.py for the v2 protocol.
 % src: trainer.py (module docstring: one net, one optimiser, no scheduler, same epochs/batches/early stopping/seeds; Trainer.fit); trainer2d.py; run_matrix.py (one csv, FIELDS incl. lambda_*, learning_rate, n_units, n_layers, phys_gain); RESULTS.md header
-It is identical for all families: AdamW, learning rate
+It is identical for all families: AdamW~\citep{loshchilov2019adamw}, learning rate
 $3\times10^{-3}$ ($2\times10^{-3}$ in the extended track), no schedule, weight
 decay $10^{-4}$, gradient-norm clipping at 1.0, mini-batches of 64 cases (32),
 at most 800 epochs (300), early stopping on the macro-RMSE of an internal
