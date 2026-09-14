@@ -6,8 +6,8 @@
 \subsection{Surrogate models and training protocol}
 \label{sec:models}
 
-% REV К13: вводная конструкция перед описанием моделей ("При подготовке моделей машинного обучения для последующего сравнительного анализа использовалась ...")
-% REV К13/К12 (правка ревизии): "a single set of training conditions ... for every family" было бы неверно — предел эпох, размер батча, patience и число сидов различаются между основным и расширенным треком (см. "Training protocol": 800 (300), 64 (32), 40 (30), сиды 0–4 / 0–2). Условия равны внутри трека; в перечень разделов добавлен последний абзац (К14).
+% NOTE: вводная конструкция перед описанием моделей ("При подготовке моделей машинного обучения для последующего сравнительного анализа использовалась ...")
+% NOTE:/К12 (правка ревизии): "a single set of training conditions ... for every family" было бы неверно — предел эпох, размер батча, patience и число сидов различаются между основным и расширенным треком (см. "Training protocol": 800 (300), 64 (32), 40 (30), сиды 0–4 / 0–2). Условия равны внутри трека; в перечень разделов добавлен последний абзац (К14).
 In preparing the machine-learning models whose comparative analysis is reported
 below, a single network architecture and a single optimiser were adopted for
 every family, and within each track all families were trained under the same
@@ -19,8 +19,8 @@ treatment of the results and, last, the architecture and hyperparameters held
 fixed throughout.
 
 \paragraph{Network and inputs.}
-% REV К12: термин "training budget" раскрыт (предел числа эпох, критерий ранней остановки с patience, размер мини-батча, сиды) и больше не стоит голым
-% REV К12 (правка ревизии): снято утверждение "all ... under identical conditions ... the same set of random seeds" — оно противоречит абзацу "Training protocol" того же раздела (800 (300) эпох, батчи 64 (32), patience 40 (30), пять сидов 0–4 против трёх 0–2) и абзацу "Backends" (JAX-двойник берёт свой поток случайных чисел). Числа не добавлены и не изменены.
+% NOTE: термин "training budget" раскрыт (предел числа эпох, критерий ранней остановки с patience, размер мини-батча, сиды) и больше не стоит голым
+% NOTE:(правка ревизии): снято утверждение "all ... under identical conditions ... the same set of random seeds" — оно противоречит абзацу "Training protocol" того же раздела (800 (300) эпох, батчи 64 (32), patience 40 (30), пять сидов 0–4 против трёх 0–2) и абзацу "Backends" (JAX-двойник берёт свой поток случайных чисел). Числа не добавлены и не изменены.
 All surrogates share one network and one optimiser, and the families compared
 with one another are trained under the same conditions: the same limit on the
 number of epochs, the same early-stopping criterion with the same patience, the
@@ -49,8 +49,8 @@ Each FEM case contributes 20 radial points, always kept in the same partition
 % src: trainer.py N_R=20; splits.py sets_to_rows (set-major rows)
 
 \paragraph{Two tracks and the role of $z$.}
-% REV К15: абзац переписан по формулировке руководителя — уравнения равновесия вводятся как основа PINN, отмечена зависимость входящих в них величин от r и z, и указано, что при подготовке моделей соотношения (1)–(2) претерпевают ряд изменений
-% TODO К15: подставить конкретные работы вместо \cite{TODO-pinn-source-1,TODO-pinn-source-2} — руководитель имеет в виду источники [17,18] прежнего списка литературы (постановка PINN для уравнений равновесия сплошной среды); в publication/ этих ссылок нет, нужен библиографический список от руководителя
+% NOTE: абзац переписан по согласованной формулировке — уравнения равновесия вводятся как основа PINN, отмечена зависимость входящих в них величин от r и z, и указано, что при подготовке моделей соотношения (1)–(2) претерпевают ряд изменений
+% TODO: подставить конкретные работы вместо \cite{TODO-pinn-source-1,TODO-pinn-source-2} — вычитка имеет в виду источники [17,18] прежнего списка литературы (постановка PINN для уравнений равновесия сплошной среды); в publication/ этих ссылок нет, нужен библиографический список от вычитки
 The physics-informed families are built on the equations of equilibrium of an
 axisymmetric body, which are given below. The quantities entering them depend
 on both coordinates, $r$ and $z$. In preparing the models, however, following
@@ -209,8 +209,8 @@ same derivative, is the substantive difference between the two families.
 % src: trainer.py _physics_weak docstring; PLAYBOOK.md §7.0.1 table
 
 \begin{table}[t]
-% REV К12: "budget" в подписи раскрыт (эпохи, ранняя остановка, батчи)
-% REV К12 (правка ревизии): "All share ... the seeds and the splits" неверно для шести семейств сразу — расширенный трек (mlp2d, pinn2d_*) прогнан на сидах 0–2 и на двух сплитах (runs_v2.csv, stage twod: random, extrap:alpha_max) против сидов 0–4 и тринадцати сплитов основного трека. Область действия ограничена треком.
+% NOTE: "budget" в подписи раскрыт (эпохи, ранняя остановка, батчи)
+% NOTE:(правка ревизии): "All share ... the seeds and the splits" неверно для шести семейств сразу — расширенный трек (mlp2d, pinn2d_*) прогнан на сидах 0–2 и на двух сплитах (runs_v2.csv, stage twod: random, extrap:alpha_max) против сидов 0–4 и тринадцати сплитов основного трека. Область действия ограничена треком.
 \caption{Model families. Within each track all families share the network, the
 optimiser, the training conditions (epoch limit, early-stopping rule,
 mini-batch size), the seeds and the splits; only the loss composition differs. $R_1$: reduced radial residual
@@ -234,7 +234,7 @@ VPINN (weak)            & $(Q,k,\alpha,\mu,v,r)$   & $W_k$, $k\le8$, 32-pt quadr
 \end{table}
 
 \paragraph{Training protocol.}
-% REV К16: добавлена вводная конструкция перед протоколом ("Как отмечено выше, для корректного сравнения моделей необходимо обеспечить равные условия обучения, для чего использован следующий протокол")
+% NOTE: добавлена вводная конструкция перед протоколом ("Как отмечено выше, для корректного сравнения моделей необходимо обеспечить равные условия обучения, для чего использован следующий протокол")
 As noted above, a meaningful comparison between the model families requires
 that they be brought to the training stage under equal conditions; the protocol
 described below was designed to that end.
@@ -248,16 +248,16 @@ It is identical for all families: AdamW \cite{TODO-adamw}, learning rate
 $3\times10^{-3}$ ($2\times10^{-3}$ in the extended track), no schedule, weight
 decay $10^{-4}$, gradient-norm clipping at 1.0, mini-batches of 64 cases (32),
 at most 800 epochs (300), early stopping on the macro-RMSE of an internal
-early-stopping subset of 15\,\% of the training cases with patience 40 (30), and % EDIT: "validation subset" → "early-stopping subset" (critic; keeps "validation" for comparison against experiment, as in §2.2)
+early-stopping subset of 15\,\% of the training cases with patience 40 (30), and % EDIT: "validation subset" → "early-stopping subset"
 restoration of the best state.
 % src: runs_v2.csv (learning_rate 0.003 in all 323 1D rows, 0.002 in all 18 twod rows; epochs reaches 800 in main/curves/backend and exactly 300 in twod → max_epochs 800 / 300 were passed via --max-epochs); trainer.py fit (torch.optim.AdamW, no scheduler, clip_grad_norm_, best_state restored); jax_twin.py (optax.adamw + clip_by_global_norm); run_matrix.py one_run / one_run_2d: patience = job.get('patience', 40) / 30 — jobs never set it and an hp key 'patience' would raise a duplicate-kwarg TypeError (no run has an error), so 40 / 30 is confirmed.
 % TODO (not logged, code defaults only; the --hp JSON is absent from the repository): weight_decay=1e-4, grad_clip=1.0 (Config, Config2D), batch_sets=64 (Config) / 32 (Config2D), val_frac=0.15. Confirm with the run author that --hp overrode only n_layers, n_units, learning_rate and lambda_bc (the four fields whose logged values differ from the Config defaults 4 / 128 / 1e-3 / 0.5).
-% REV К14: утверждение о фиксированной архитектуре и гиперпараметрах перенесено в конец подраздела (см. абзац "Fixed architecture and hyperparameters" ниже)
+% NOTE: утверждение о фиксированной архитектуре и гиперпараметрах перенесено в конец подраздела (см. абзац "Fixed architecture and hyperparameters" ниже)
 Every configuration is trained with five seeds (0--4) on the thirteen splits of
 Table~\ref{tab:splits} and in the backend comparison, and with three seeds (0--2)
 in the learning-curve, label-corruption and extended-track stages;
 % src: runs_v2.csv (seed ∈ {0..4} for stage main and backend; {0,1,2} for curves, corrupt, twod; 13 distinct split values)
-the seed governs initialisation, batch order and the internal early-stopping subset, % EDIT: "validation subset" → "early-stopping subset" (critic)
+the seed governs initialisation, batch order and the internal early-stopping subset, % EDIT: "validation subset" → "early-stopping subset"
 while the test cases of a split are the same for every seed (split seed 42).
 % src: trainer.py (torch.manual_seed(cfg.seed); rng = default_rng(cfg.seed) for the val subset; torch.Generator().manual_seed(cfg.seed) for batch order); splits.py build_split_suite(seed=42) called by run_matrix.py with the default; protocol.py split_seed=42 (legacy, consistent)
 Learning curves use nested group-aware subsamples of 10/25/50/100\,\% of the
@@ -266,7 +266,7 @@ training pool, identical for all families;
 the subsamples are nested but not stratified by $v$ (the launcher uses
 \texttt{nested\_subsamples}, not the stratified variant), so the sparsest level
 $v = 5$~m/min (122 cases) can be under-represented at 10\,\%;
-% EDIT: E-12 caveat added (critic). src: run_matrix.py l.188/202 (from learning_curves import nested_subsamples); learning_curves.py (stratified_nested_subsamples exists, unused by the launcher); ERRATA.md E-12 (122 cases at v = 5)
+% EDIT: E-12 caveat added. src: run_matrix.py l.188/202 (from learning_curves import nested_subsamples); learning_curves.py (stratified_nested_subsamples exists, unused by the launcher); ERRATA.md E-12 (122 cases at v = 5)
 % TODO: report the count of v = 5 cases in the 10 % and 25 % subsamples (not logged in runs_v2.csv)
 label corruption adds $+250$\,MPa to $\sigma_{\theta\theta}$ of 0/1/5/10\,\% of
 the training cases (0\,\% being the clean reference; nested lists shared by all
@@ -275,7 +275,7 @@ source rather than Gaussian noise, which averages out over a profile.
 % FIXED: added the 0 % reference (corruption.DEFAULT_RATES = (0.0, 0.01, 0.05, 0.10); runs_v2.csv corrupt_rate ∈ {0,0.01,0.05,0.1}; RESULTS.md §4)
 % src: corruption.py (DEFAULT_OFFSET_MPA=250.0, DEFAULT_COMPONENT=1 → σ_θθ, make_corruption_plans nested, seed=42; docstring: artefact #439, whole set corrupted, hold-out clean); run_matrix.py (only y_tr corrupted)
 
-% EDIT: the "Evaluation splits" table (a second \label{tab:splits}) deleted — the full 13-split table with n_train/n_test is Table~\ref{tab:splits} in Section~\ref{sec:fem-dataset}; its caption sentence on the 13.2 % friction-label duplicates was moved to §2.2 "Factorial design" (critic).
+% EDIT: the "Evaluation splits" table (a second \label{tab:splits}) deleted — the full 13-split table with n_train/n_test is Table~\ref{tab:splits} in Section~\ref{sec:fem-dataset}; its caption sentence on the 13.2 % friction-label duplicates was moved to §2.2 "Factorial design".
 
 \paragraph{Metrics and physical audit.}
 The primary metric is the macro-RMSE (mean over the four components of the
@@ -296,7 +296,7 @@ condition only approximately.
 The reference implementation is PyTorch (\texttt{torch.autograd}); an independent
 twin in JAX (\texttt{jax.grad}, \texttt{optax.adamw}) shares architecture, data,
 split, the epoch limit and early-stopping rule, and the nominal hyperparameters,
-% REV К12: "training budget" заменён на явное перечисление (предел числа эпох и правило ранней остановки)
+% NOTE: "training budget" заменён на явное перечисление (предел числа эпох и правило ранней остановки)
 but draws initial weights and batch order from its own random stream.
 % src: jax_twin.py module docstring; JaxTrainer.fit (optax.chain(clip_by_global_norm, adamw); batch order default_rng(seed + 10000); same val_frac split rule)
 The twin implements the strong-form loss with the nominal weight
@@ -317,8 +317,8 @@ training time measured on CPU in double precision.
 % FIXED: "one CPU thread" → "CPU". run_matrix.py torch.set_num_threads(1) constrains PyTorch only; jax_twin.py sets no XLA thread flags.
 % TODO: establish the thread count actually used by the JAX runs before writing "one thread"; RESULTS_v1_vs_v2.md §7 states only "CPU, float64" (313 ± 102 s vs 516 ± 94 s, ×1.65 — consistent with runs_v2.csv seconds, stage backend).
 % src: runs_v2.csv (stage backend: backend ∈ {torch, jax}, seeds 0–4, splits random and extrap:alpha_max, 20 rows)
-% REV К17: отсылка к предыдущей версии текста снята; утверждение сформулировано самостоятельно
-% REV К17 (правка ревизии): "DeepXDE ... runs on the same PyTorch backend" как свойство библиотеки источником не подтверждается (DeepXDE поддерживает и другие бэкенды). ERRATA E-19 фиксирует конкретное: models/pinn_model_dde.py задаёт DDE_BACKEND=pytorch, и dde.grad.jacobian вызывает torch.autograd.grad. Формулировка возвращена к тому, что есть в источнике.
+% NOTE: отсылка к предыдущей версии текста снята; утверждение сформулировано самостоятельно
+% NOTE:(правка ревизии): "DeepXDE ... runs on the same PyTorch backend" как свойство библиотеки источником не подтверждается (DeepXDE поддерживает и другие бэкенды). ERRATA E-19 фиксирует конкретное: models/pinn_model_dde.py задаёт DDE_BACKEND=pytorch, и dde.grad.jacobian вызывает torch.autograd.grad. Формулировка возвращена к тому, что есть в источнике.
 The DeepXDE implementation in the same code base \cite{TODO-deepxde} is
 configured with the PyTorch backend and obtains its derivatives through
 \texttt{torch.autograd.grad}; it is therefore not an independent
@@ -342,7 +342,7 @@ The excess error of an extrapolation split over its matched control is tested by
 Welch's unpaired $t$-test; trends across data fraction and corruption rate by
 least squares of the seed-wise PINN$-$MLP gap on $\log$(fraction) and on the rate.
 % src: stats.py delta_vs_matched (ttest_ind, equal_var=False); paper_tables.py (scipy.stats.linregress of the seed-level PINN−MLP gap on corrupt_rate); RESULTS_v1_vs_v2.md §5 (regression on log(доля)) and §6 (slope −14.20 MPa per unit fraction, p = 0.00036, R² = 0.735)
-% REV К17: отсылка к предыдущей версии текста заменена самостоятельным утверждением об отдельном прогоне тестов; числа (304 hold-out случая) не изменены
+% NOTE: отсылка к предыдущей версии текста заменена самостоятельным утверждением об отдельном прогоне тестов; числа (304 hold-out случая) не изменены
 A separate run of the tests, in which each model was trained once and
 Friedman--Nemenyi was applied across the 304 hold-out cases, shows what such a
 design measures: the sampling variance of the hold-out, that is, on how many
@@ -351,8 +351,8 @@ retraining, which is the question at issue here.
 % src: ERRATA.md E-08 (one run per model; Friedman–Nemenyi over 304 hold-out sets); stats.py module docstring (304)
 
 \paragraph{Fixed architecture and hyperparameters.}
-% REV К14: утверждение перенесено сюда из абзаца "Training protocol" (руководитель просил поместить его в более позднюю часть текста)
-% TODO К14: согласовать с руководителем, описывать ли подбор Optuna из предшествующей работы и где. В коде настоящей публикации Optuna не используется (publication/code/trainer.py, protocol.py: protocol.py с полями n_trials/Optuna не импортируется ни run_matrix.py, ни trainer.py, ни trainer2d.py), поэтому приписывать текущим прогонам оптимизацию Optuna нельзя.
+% NOTE: утверждение перенесено сюда из абзаца "Training protocol" (вычитка просил поместить его в более позднюю часть текста)
+% TODO: уточнить, описывать ли подбор Optuna из предшествующей работы и где. В коде настоящей публикации Optuna не используется (publication/code/trainer.py, protocol.py: protocol.py с полями n_trials/Optuna не импортируется ни run_matrix.py, ни trainer.py, ни trainer2d.py), поэтому приписывать текущим прогонам оптимизацию Optuna нельзя.
 % TODO: state how the 3×96 / 3e-3 configuration was chosen — no "tune" stage appears in runs_v2.csv (stages: main 195, curves 72, corrupt 36, backend 20, twod 18); the Config defaults are 4×128 / 1e-3, so the choice was made outside the logged matrix.
 One architecture and one hyperparameter set were fixed before any held-out
 region was evaluated and were not tuned per family or per split, so no search

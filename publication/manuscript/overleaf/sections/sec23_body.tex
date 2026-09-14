@@ -1,6 +1,6 @@
 \label{sec:models}
-% REV K13: introductory construction added before the description of the models.
-% REV K12/K13: the conditions are equal within a track, not across tracks — the epoch limit, mini-batch size, patience and number of seeds differ between the main and the extended track (see ``Training protocol'').
+% NOTE: introductory construction added before the description of the models.
+% NOTE:/K13: the conditions are equal within a track, not across tracks — the epoch limit, mini-batch size, patience and number of seeds differ between the main and the extended track (see ``Training protocol'').
 In preparing the machine-learning models whose comparative analysis is reported
 below, a single network architecture and a single optimiser were adopted for
 every family, and within each track all families were trained under the same
@@ -11,7 +11,7 @@ backends, the statistical treatment of the results and, last, the architecture
 and hyperparameters held fixed throughout.
 
 \paragraph{Network and inputs.}
-% REV K12: ``training budget'' spelled out (epoch limit, early-stopping criterion with its patience, mini-batch size and batch order, seeds); the values differ between the tracks and are given in ``Training protocol''.
+% NOTE: ``training budget'' spelled out (epoch limit, early-stopping criterion with its patience, mini-batch size and batch order, seeds); the values differ between the tracks and are given in ``Training protocol''.
 All surrogates share one network and one optimiser, and the families compared
 with one another are trained under the same conditions: the same limit on the
 number of epochs, the same early-stopping criterion with the same patience, the
@@ -40,8 +40,8 @@ Each FEM case contributes 20 radial points, always kept in the same partition
 % src: trainer.py N_R=20; splits.py sets_to_rows (set-major rows)
 
 \paragraph{Two tracks and the role of $z$.}
-% REV K15: the paragraph opens with the equations of equilibrium as the basis of the physics-informed families, notes that the quantities entering them depend on $r$ and $z$, and states that in preparing the models those relations undergo a number of changes.
-% TODO K15: the supervisor asks for the two references on the PINN formulation for the equilibrium equations of a continuum to be cited here; the keys are not in the bibliography of publication/ and must be supplied by him.
+% NOTE: the paragraph opens with the equations of equilibrium as the basis of the physics-informed families, notes that the quantities entering them depend on $r$ and $z$, and states that in preparing the models those relations undergo a number of changes.
+% TODO: still needed are the two references on the PINN formulation for the equilibrium equations of a continuum to be cited here; the keys are not in the bibliography of publication/ and must be supplied by him.
 The physics-informed families are built on the equations of equilibrium of an
 axisymmetric body, which are given below. The quantities entering them depend
 on both coordinates, $r$ and $z$. In preparing the models, however, relations
@@ -199,7 +199,7 @@ same derivative, is the substantive difference between the two families.
 % src: trainer.py _physics_weak docstring; PLAYBOOK.md §7.0.1 table
 
 \begin{table*}[t]
-% REV K12: ``budget'' in the caption spelled out (epoch limit, early-stopping rule, mini-batch size); the scope is limited to one track, since the extended track uses its own seeds and splits.
+% NOTE: ``budget'' in the caption spelled out (epoch limit, early-stopping rule, mini-batch size); the scope is limited to one track, since the extended track uses its own seeds and splits.
 \caption{Model families. Within each track all families share the network, the
 optimiser, the training conditions (epoch limit, early-stopping rule,
 mini-batch size), the seeds and the splits; only the loss composition differs.
@@ -224,7 +224,7 @@ VPINN (weak)            & $(Q,k,\alpha,\mu,v,r)$   & $W_k$, $k\le8$, 32-pt quadr
 \end{table*}
 
 \paragraph{Training protocol.}
-% REV K16: introductory construction added before the protocol.
+% NOTE: introductory construction added before the protocol.
 As noted above, a meaningful comparison between the model families requires
 that they be brought to the training stage under equal conditions; the protocol
 described below was designed to that end.
@@ -238,16 +238,16 @@ It is identical for all families: AdamW~\citep{loshchilov2019adamw}, learning ra
 $3\times10^{-3}$ ($2\times10^{-3}$ in the extended track), no schedule, weight
 decay $10^{-4}$, gradient-norm clipping at 1.0, mini-batches of 64 cases (32),
 at most 800 epochs (300), early stopping on the macro-RMSE of an internal
-early-stopping subset of 15\,\% of the training cases with patience 40 (30), and % EDIT: "validation subset" → "early-stopping subset" (critic; keeps "validation" for comparison against experiment, as in §2.2)
+early-stopping subset of 15\,\% of the training cases with patience 40 (30), and % EDIT: "validation subset" → "early-stopping subset"
 restoration of the best state.
 % src: runs_v2.csv (learning_rate 0.003 in all 323 1D rows, 0.002 in all 18 twod rows; epochs reaches 800 in main/curves/backend and exactly 300 in twod → max_epochs 800 / 300 were passed via --max-epochs); trainer.py fit (torch.optim.AdamW, no scheduler, clip_grad_norm_, best_state restored); jax_twin.py (optax.adamw + clip_by_global_norm); run_matrix.py one_run / one_run_2d: patience = job.get('patience', 40) / 30 — jobs never set it and an hp key 'patience' would raise a duplicate-kwarg TypeError (no run has an error), so 40 / 30 is confirmed.
 % TODO (not logged, code defaults only; the --hp JSON is absent from the repository): weight_decay=1e-4, grad_clip=1.0 (Config, Config2D), batch_sets=64 (Config) / 32 (Config2D), val_frac=0.15. Confirm with the run author that --hp overrode only n_layers, n_units, learning_rate and lambda_bc (the four fields whose logged values differ from the Config defaults 4 / 128 / 1e-3 / 0.5).
-% REV K14: the statement on the fixed architecture and hyperparameters moved from here to the closing paragraph of the subsection.
+% NOTE: the statement on the fixed architecture and hyperparameters moved from here to the closing paragraph of the subsection.
 Every configuration is trained with five seeds (0--4) on the thirteen splits of
 Table~\ref{tab:splits} and in the backend comparison, and with three seeds (0--2)
 in the learning-curve, label-corruption and extended-track stages;
 % src: runs_v2.csv (seed ∈ {0..4} for stage main and backend; {0,1,2} for curves, corrupt, twod; 13 distinct split values)
-the seed governs initialisation, batch order and the internal early-stopping subset, % EDIT: "validation subset" → "early-stopping subset" (critic)
+the seed governs initialisation, batch order and the internal early-stopping subset, % EDIT: "validation subset" → "early-stopping subset"
 while the test cases of a split are the same for every seed (split seed 42).
 % src: trainer.py (torch.manual_seed(cfg.seed); rng = default_rng(cfg.seed) for the val subset; torch.Generator().manual_seed(cfg.seed) for batch order); splits.py build_split_suite(seed=42) called by run_matrix.py with the default; protocol.py split_seed=42 (legacy, consistent)
 Learning curves use nested group-aware subsamples of 10/25/50/100\,\% of the
@@ -256,7 +256,7 @@ training pool, identical for all families;
 the subsamples are nested but not stratified by $v$ (the launcher uses
 \texttt{nested\_subsamples}, not the stratified variant), so the sparsest level
 $v = 5$~m/min (122 cases) can be under-represented at 10\,\%;
-% EDIT: E-12 caveat added (critic). src: run_matrix.py l.188/202 (from learning_curves import nested_subsamples); learning_curves.py (stratified_nested_subsamples exists, unused by the launcher); ERRATA.md E-12 (122 cases at v = 5)
+% EDIT: E-12 caveat added. src: run_matrix.py l.188/202 (from learning_curves import nested_subsamples); learning_curves.py (stratified_nested_subsamples exists, unused by the launcher); ERRATA.md E-12 (122 cases at v = 5)
 % TODO: report the count of v = 5 cases in the 10 % and 25 % subsamples (not logged in runs_v2.csv)
 label corruption adds $+250$\,MPa to $\sigma_{\theta\theta}$ of 0/1/5/10\,\% of
 the training cases (0\,\% being the clean reference; nested lists shared by all
@@ -265,7 +265,7 @@ source rather than Gaussian noise, which averages out over a profile.
 % FIXED: added the 0 % reference (corruption.DEFAULT_RATES = (0.0, 0.01, 0.05, 0.10); runs_v2.csv corrupt_rate ∈ {0,0.01,0.05,0.1}; RESULTS.md §4)
 % src: corruption.py (DEFAULT_OFFSET_MPA=250.0, DEFAULT_COMPONENT=1 → σ_θθ, make_corruption_plans nested, seed=42; docstring: artefact #439, whole set corrupted, hold-out clean); run_matrix.py (only y_tr corrupted)
 
-% EDIT: the "Evaluation splits" table (a second \label{tab:splits}) deleted — the full 13-split table with n_train/n_test is Table~\ref{tab:splits} in Section~\ref{sec:prep-data}; its caption sentence on the 13.2 % friction-label duplicates was moved to §2.2 "Factorial design" (critic).
+% EDIT: the "Evaluation splits" table (a second \label{tab:splits}) deleted — the full 13-split table with n_train/n_test is Table~\ref{tab:splits} in Section~\ref{sec:prep-data}; its caption sentence on the 13.2 % friction-label duplicates was moved to §2.2 "Factorial design".
 
 \paragraph{Metrics and physical audit.}
 The primary metric is the macro-RMSE (mean over the four components of the
@@ -283,7 +283,7 @@ condition only approximately.
 % src: trainer.py equilibrium_audit (np.gradient, median |res| over interior points, then median over cases; r_clip 0.05), bc_audit; run_matrix.py (bc_audit at predict_at(r=1.0)); RESULTS.md §1.4 (FEM baseline rows: |σ_rr| 3.52, |τ_rz| 0.24 MPa overall)
 
 \paragraph{Backends.}
-% REV K12: "training budget" replaced by an explicit statement of what the twin shares (the epoch limit and the early-stopping rule).
+% NOTE: "training budget" replaced by an explicit statement of what the twin shares (the epoch limit and the early-stopping rule).
 The reference implementation is PyTorch (\texttt{torch.autograd}); an independent
 twin in JAX (\texttt{jax.grad}, \texttt{optax.adamw}) shares architecture, data,
 split, the epoch limit and early-stopping rule, and the nominal hyperparameters,
@@ -310,7 +310,7 @@ training time measured on CPU in double precision.
 A DeepXDE implementation of the same network obtains its derivatives through
 \texttt{torch.autograd.grad} on the PyTorch backend \citep{lu2021}; it is therefore not a third
 differentiation engine and is not reported separately.
-% REV K22: stated as a property of the library rather than as a correction of an earlier text.
+% NOTE: stated as a property of the library rather than as a correction of an earlier text.
 % src: ERRATA.md E-19 (DDE_BACKEND=pytorch, dde.grad.jacobian → torch.autograd.grad); jax_twin.py docstring
 
 \paragraph{Statistical treatment.}
@@ -334,12 +334,12 @@ Testing across hold-out cases rather than across seeds was also examined and is 
 it quantifies the sampling variance of the hold-out, that is, on how many cases one model beats
 another, and not whether an advantage reproduces when the models are retrained, which is the
 question at issue.
-% REV K23: the point is kept, the reference to an earlier version of the text removed.
+% NOTE: the point is kept, the reference to an earlier version of the text removed.
 % src: ERRATA.md E-08 (one run per model; Friedman–Nemenyi over 304 hold-out sets); stats.py module docstring (304)
 
 \paragraph{Fixed architecture and hyperparameters.}
-% REV K14: the statement is placed here, in a later part of the text, rather than inside "Training protocol".
-% TODO K14: agree with the supervisor whether the Optuna search of the preceding work is to be described here at all. Optuna is not used in the code of the present publication (protocol.py, which carries the n_trials/Optuna fields, is imported neither by run_matrix.py nor by trainer.py or trainer2d.py), so the runs reported here cannot be credited with it.
+% NOTE: the statement is placed here, in a later part of the text, rather than inside "Training protocol".
+% TODO: agree with the review whether the Optuna search of the preceding work is to be described here at all. Optuna is not used in the code of the present publication (protocol.py, which carries the n_trials/Optuna fields, is imported neither by run_matrix.py nor by trainer.py or trainer2d.py), so the runs reported here cannot be credited with it.
 % TODO: state how the 3×96 / 3e-3 configuration was chosen — no "tune" stage appears in runs_v2.csv (stages: main 195, curves 72, corrupt 36, backend 20, twod 18); the Config defaults are 4×128 / 1e-3, so the choice was made outside the logged matrix.
 One architecture and one hyperparameter set were fixed before any held-out
 region was evaluated and were not tuned per family or per split, so no search

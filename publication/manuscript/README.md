@@ -8,14 +8,14 @@
 |---|---|---|
 | `sec22_fem_dataset.tex` | §2.2 «FEM dataset and preprocessing»: постановка МКЭ, факторный план, экспорт полей, осевое окно, фильтрация, 13 сплитов | вместо текущего §2.2 |
 | `sec23_models_protocol.tex` | §2.3 «Surrogate models and training protocol»: архитектура, два трека и роль z, полное/редуцированное равновесие, лосс, VPINN, протокол, бэкенды, статистика | вместо §2.3 (и старого §2.2.4 «Adam + LBFGS, cosine» — E-05) |
-| `sec32_results.tex` | §3.2 «Results» ровно в трёх подразделах руководителя: (1) extrapolation vs interpolation, (2) backend comparison, (3) PINN, MLP and FEM; в конце — абзац Limitations | вместо §3.2 |
+| `sec32_results.tex` | §3.2 «Results» ровно в трёх подразделах вычитки: (1) extrapolation vs interpolation, (2) backend comparison, (3) PINN, MLP and FEM; в конце — абзац Limitations | вместо §3.2 |
 | `tables/tab_main.tex` | аналог **Table 2**: macro-RMSE mean ± sd, 13 сплитов × 3 семейства | §3.2(1) |
 | `tables/tab_paired.tex` | **таблица статистических тестов**: парный t-тест по сидам, Δ, t, p, поправка Холма | §3.2(1) |
 | `tables/tab_corrupt.tex` | порча меток: доля × семейство, регрессия разрыва | §3.2(3) |
 | `tables/tab_backend.tex` | PyTorch vs JAX: точность, время, эпохи, парные p | §3.2(2) |
 | `tables/all_tables.tex` | все четыре в одном файле | — |
 | `tables/numbers_used.json` | каждое напечатанное число с фильтром по `runs_v2.csv` | аудит |
-| `captions.md` | подписи к рис. 2, 5, 6 (EN + RU по формулировкам руководителя) и блок «что переезжает в текст» | подписи |
+| `captions.md` | подписи к рис. 2, 5, 6 (EN + RU по формулировкам вычитки) и блок «что переезжает в текст» | подписи |
 | `../figures/paper/fig2_fem_fields.png` | Рис. 2 (МКЭ, Q = 0.10, k = 0.5, α = 12°, μ = 0.05, v = 10) | `\label{fig:fem-fields}` |
 | `../figures/paper/fig5_compare_fields.png` | Рис. 5 (FEM / MLP / PINN reduced / PINN full) | `\label{fig:compare-fields}` |
 | `../figures/paper/fig6_residual_maps.png` | Рис. 6 (невязки R_r, R_z, traction-free) — аналог **Figs 11–12** | `\label{fig:residual-maps}` |

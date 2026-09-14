@@ -208,8 +208,8 @@ def table_main(df: pd.DataFrame, L: Ledger) -> str:
                          ("15", "random hold-out fraction, percent")]:
         L.add(val, meaning, REGION_SRC if val != "15" else "publication/code/splits.py: make_random_split(frac=0.15)")
 
-    # Caption deliberately short (supervisor's review, comment K19 on bulky captions):
-    # the definition of the split types and of the matched controls is given in the body text.
+    # Caption deliberately short: the definition of the split types and of the matched
+    # controls is given in the body text.
     cap = (r"Macro-averaged RMSE on the held-out cases for the " + str(len(splits)) +
            r" splits of the main track, MPa, mean $\pm$ sd over " + str(n_seeds) +
            r" seeds. Split types are defined in Section~\ref{sec:fem-dataset}.")
@@ -281,7 +281,7 @@ def table_paired(df: pd.DataFrame, L: Ledger) -> str:
         L.add(f"{adj.min():.3f}", f"smallest Holm-adjusted p, {FAMILY_LABEL[f]}-MLP",
               f"{CSV_NAME}: stage=main -> Holm-Bonferroni over the {len(ps)} paired p-values, {FAMILY_LABEL[f]}-MLP")
     # The consequence of the Holm correction is stated in the body text; the caption keeps
-    # only the counts (supervisor's review: captions of Tables 8 and 10-13 are too bulky).
+    # only the counts.
     holm_txt = (r" After a Holm correction over the " + str(len(splits)) + r" splits, "
                 + str(holm["pinn"]) + r" PINN $-$ MLP and " + str(holm["vpinn"])
                 + r" VPINN $-$ MLP differences remain significant.")

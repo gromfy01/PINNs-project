@@ -1,12 +1,12 @@
 # Подписи к рисункам для новой версии статьи
 
 Рисунки в режиме статьи лежат в `publication/figures/paper/`. По указанию
-руководителя: подписи переведены, числа на осях чёрные, `R_0 → R`, общий
+вычитки: подписи переведены, числа на осях чёрные, `R_0 → R`, общий
 заголовок перенесён в подрисуночную подпись, пояснения из-под рисунка — в текст
 статьи (см. §«Что переезжает в текст» внизу).
 
 Нумерация — по расстановке в Overleaf (Рис. 2, 5, 6). Английский вариант —
-основной; русский — как сформулировал руководитель, для сверки смысла.
+основной; русский — как сформулировал вычитка, для сверки смысла.
 
 Note: the area reductions in the captions are the measured values of the factor table (Section 2.2, tab:factors: Q = 0.10 → 20.1 %, Q = 0.025 → 5.4 %), not the identity 1 − (1 − Q)², for consistency with that table. <!-- src: sec22 tab:factors; ERRATA.md E-22 (0.2013, 0.0543) -->
 
@@ -29,7 +29,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 > model length L = 139.5 mm. Dashed lines mark the axial window 25–75 % of L
 > from which the training data are taken.
 
-**RU (по руководителю)**
+**RU (по вычитке)**
 
 > Рис. 2. Распределение остаточных напряжений, полученных в результате
 > расчётов МКЭ, при параметрах Q = 10 % (по диаметру; 20,1 % по площади),
@@ -58,7 +58,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 > same cross-section (r/R = 1 is the free surface), z by the window length.
 > The case shown has the median test error of the full PINN.
 
-**RU (по руководителю)**
+**RU (по вычитке)**
 
 > Рис. 5. Результаты распределения компонент тензора остаточных напряжений
 > по исследуемой области для МКЭ, MLP и PINN в полной и упрощённой
@@ -85,7 +85,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 > the traction-free violation |σ_rr| at r/R = 1, mean marked. The FEM column
 > is the reference: the source itself does not satisfy the equations exactly.
 
-**RU (по руководителю)**
+**RU (по вычитке)**
 
 > Рис. 6. Сравнение распределения невязок R_z и R_r по исследуемой области
 > для МКЭ, MLP и PINN в полной и упрощённой постановке при параметрах
@@ -101,7 +101,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 
 ## Что переезжает в текст (снято с рисунков)
 
-Это пояснения, которые раньше стояли под рисунками. По указанию руководителя
+Это пояснения, которые раньше стояли под рисунками. По указанию вычитки
 они должны быть в тексте §3.2, а не в подписях. Английские формулировки — для
 вставки.
 
