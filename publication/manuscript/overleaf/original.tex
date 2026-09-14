@@ -816,6 +816,50 @@ The discrepancy therefore lies in the form of the friction term rather than in t
 the flow stress, which enters as a multiplier and shifts every prediction together.
 % src: publication/reexport/flow_stress.py; lens_analyt/analytical.py (siebel, avitzur)
 
+The comparison can be closed completely, with no quantity taken from the finite-element model. The
+homogeneous strain is $2\ln(R_0/R_f)$ and the total strain follows from Backofen's excess-work
+factor $\Phi = 0.8 + \Delta/4.4$; the strain rate is obtained from the time to traverse the cone at
+constant volume flow, $\dot\varepsilon = 6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)/(R_0^3-R_f^3)$; and the
+flow stress is the work-weighted mean of the constitutive equation over that path. The temperature
+does not need a separate source, because it closes on the drawing stress itself: the drawing work
+per unit volume equals $\sigma_d$, a fraction $\beta$ of which becomes heat, so the mean rise is
+$\Delta T = \beta\,\sigma_d/(\rho c)$; since $\sigma_d$ depends on the flow stress and the flow
+stress on the temperature, this is a fixed point, reached in five iterations. For the four runs it
+returns a flow stress of 330--338~MPa, consistent with the value derived from the constitutive
+equation (Section~\ref{sec:prep-data}), and a drawing stress that departs from the finite-element
+value by 14.3\,\% on average, again over-predicting at $\mu = 0.025$ and under-predicting at
+$\mu = 0.1$; the friction term, not the flow stress, is the source of the discrepancy.
+% src: publication/reexport/analytic_sigma_f.py (--Q 0.0164 --v 40; alpha 12/8, mu 0.025/0.05/0.1):
+% eps_hom = 0.033, Phi = 6.5, eps_eff = 0.215 (alpha 12) / 0.153 (alpha 8), edot = 15.6 / 10.3 s^-1,
+% sigma_f = 338.2/338.1/337.9/330.1 MPa; the self-consistent temperature is used below.
+
+The temperature closure can be checked directly, since the dedicated export also carries the
+temperature history. The self-consistent estimate reproduces the cross-section-averaged rise
+measured in the model to within 11\,\% (Table~\ref{tab:deltaT}); the heating can therefore be taken
+from the drawing work itself, with this comparison as its justification, rather than from an assumed
+thermal boundary condition.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Mean temperature rise during the pass: the self-consistent analytical estimate, in which
+the drawing stress and the temperature close on each other and nothing is read from the model,
+against the cross-section average of the exported temperature history. Reduction 1.6\,\%, land
+ratio unity.}
+\label{tab:deltaT}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+$\alpha$ & $\mu$ & $\Delta T$ analytical, K & $\Delta T$ measured, K \\
+\midrule
+$12^\circ$ & 0.025 & 16.4 & 14.7 \\
+$12^\circ$ & 0.050 & 16.7 & 16.3 \\
+$12^\circ$ & 0.100 & 17.3 & 20.2 \\
+$8^\circ$  & 0.100 & 13.2 & 15.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+% src: publication/reexport/analytic_sigma_f.py (analytical); publication/reexport/read_history.py
+% (measured, cross-section-averaged rise over the steady window).
+
 Three properties of the exported histories support the extraction independently of the analytical
 comparison. The friction coefficient is recovered from the data rather than read from the file
 name: once the cone has left the wire and only the land remains in contact, the ratio of the axial
