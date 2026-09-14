@@ -1,0 +1,61 @@
+\label{sec:res_fem_verification}
+Verification of the simulation results was carried out by comparison with the established
+analytical solutions for the drawing stress, those of Siebel and of Avitzur, and by internal
+consistency tests of the exported fields.
+% NOTE:, K18: the section no longer opens with "in place of experimental validation"; it opens
+% with the analytical comparison the review asks for.
+
+The drawing stress cannot be read from the cases used for the surrogates, whose exported frame is
+taken after the wire has left the die and the section is unloaded (median
+$|\int\sigma_{zz}\,\mathrm{d}A|/A$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa).
+% src: VALIDATION.md §1 (5.3 / 167 MPa on the 1756 retained cases)
+It is obtained instead from a dedicated export, in which the reaction at the die reference point,
+the temperature and the equivalent plastic strain are written as histories in time for four runs
+at a reduction of 1.6\,\% and a land ratio of unity. The axial reaction is averaged over the
+steady phase of the pass, defined by a die travel of 20 to 100~mm; the signal there is not a
+plateau but a stick--slip sawtooth whose relative spread is 13.6\,\% at $\mu = 0.025$ and
+4.5\,\% at $\mu = 0.1$, so the time average is used, the quantity an energy method estimates.
+Divided by the area actually reached in the model, 985~mm$^2$, this gives a drawing stress of
+54.1, 62.0 and 78.3~MPa at $\alpha = 12^\circ$ for $\mu = 0.025$, 0.05 and 0.1, and 62.3~MPa at
+$\alpha = 8^\circ$.
+% src: publication/reexport/read_history.py on publication/reexport/history/; the median over the
+% same window would give 59.1 / 65.4 / 77.4 / 62.2 MPa, the upper edge of the estimator band.
+
+Evaluated with the representative flow stress derived from the constitutive equation
+(Section~\ref{sec:prep-data}), 300--305~MPa for these runs, and with no fitted parameter, the
+Siebel solution deviates from the finite-element drawing stress by 17.3\,\% on average and the
+Avitzur upper-bound solution by 13.0\,\%. The two cannot be ranked on four points: the difference
+between them is smaller than the 260--324~MPa spread of the flow stress across the section.
+More informative than the magnitude is the sign, which changes with friction: at $\mu = 0.025$
+the Avitzur solution is 11\,\% above the computed value and at $\mu = 0.1$ it is 18\,\% below.
+The discrepancy therefore lies in the form of the friction term rather than in the calibration of
+the flow stress, which enters as a multiplier and shifts every prediction together.
+% src: publication/reexport/flow_stress.py; lens_analyt/analytical.py (siebel, avitzur)
+
+Three properties of the exported histories support the extraction independently of the analytical
+comparison. The friction coefficient is recovered from the data rather than read from the file
+name: once the cone has left the wire and only the land remains in contact, the ratio of the axial
+to the radial reaction returns 0.02500, 0.05000 and 0.10000. The mean contact pressure is 122~MPa
+and is insensitive to both the semi-angle and the friction, as it must be when a cylindrical land
+dominates the contact. And the flow stress recovered from the heat alone, over the core of the
+section where friction contributes none, is 306--320~MPa, in agreement with the value derived from
+the constitutive equation.
+
+The region of the design covered by these runs limits what the comparison establishes. All four
+lie at a reduction of 1.6\,\%, where the inhomogeneity parameter is 25.5 at $\alpha = 12^\circ$ and
+17.1 at $\alpha = 8^\circ$, against the range of 1 to 3 for which upper-bound solutions were
+derived; the ideal work accounts for 13 to 19\,\% of the answer and the total work exceeds it by a
+factor of 5.3 to 7.5. The agreement to within 13 to 17\,\% therefore characterises the accuracy of
+the closed-form solutions in this corner, not the accuracy of the finite-element model, and does
+not transfer to the industrial range of reductions.
+% TODO: the keys TODO-siebel and TODO-avitzur are to be added to the bibliography.
+
+In addition, five internal consistency tests were run on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa. % src: VALIDATION.md §7 (5.3 / 167 → 3.2 %)
+Local equilibrium closes to 2.1\,\% of the sum of the moduli of its terms. % src: VALIDATION.md §7 (2.1 %)
+At the free surface $|\sigma_{rr}|$ is 4.0~MPa against 54.0~MPa in the bulk, i.e.\ 7.4\,\% (a nodal value; the 3.52~MPa quoted below is the median of the outermost bin of the 20-bin profile), % src: VALIDATION.md §7 (4.0 / 54.0 → 7.4 %); RESULTS.md header (3.52 MPa on the binned profile); TODO: confirm the node population and averaging behind the 4.0 MPa of VALIDATION.md §7 (the file does not state them)
+on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%), % src: VALIDATION.md §7 (1.07 MPa → 0.6 %)
+and the residual field stays below the flow stress everywhere: the maximum von Mises stress over the retained cases is 232.6~MPa, against the 300--305~MPa that the constitutive equation returns for the deformation histories of this pass (Section~\ref{sec:prep-data}).
+% REV: the comparison is now made against the flow stress derived from the constitutive equation,
+% not against a postulated yield stress of 320 MPa. % src: VALIDATION.md §7 (max Mises 232.6 at σ_y = 320)
+Kinematically, the exit radius follows $R_0(1-Q)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
+These tests check the mesh, the contact and the solver of this model, not its correspondence to real wire. % src: VALIDATION.md §5 item 6
