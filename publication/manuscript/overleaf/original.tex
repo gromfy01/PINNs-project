@@ -805,6 +805,26 @@ $\alpha = 8^\circ$.
 % src: publication/reexport/read_history.py on publication/reexport/history/; the median over the
 % same window would give 59.1 / 65.4 / 77.4 / 62.2 MPa, the upper edge of the estimator band.
 
+The two solutions used are, in the slab-method form of Siebel,
+\begin{equation}
+\sigma_d = \sigma_f\left[\ln\frac{1}{1-r}\,(1+\mu\cot\alpha) + \frac{2}{3}\,\alpha\right],
+\label{eq:siebel}
+\end{equation}
+with $r = 1-(R_f/R_0)^2$ the reduction in area, $\alpha$ the die semi-angle and $\sigma_f$ the flow
+stress, and, in the upper-bound form of Avitzur,
+\begin{equation}
+\sigma_d = \sigma_f\left[\,2f(\alpha)\ln\frac{R_0}{R_f}
+  + \frac{2}{\sqrt3}\,\frac{\alpha-\sin\alpha\cos\alpha}{\sin^2\alpha}
+  + \frac{2}{\sqrt3}\,m\cot\alpha\ln\frac{R_0}{R_f}
+  + \frac{2}{\sqrt3}\,m\,\frac{L}{R_f}\right],
+\label{eq:avitzur}
+\end{equation}
+whose four terms are the ideal deformation work, the redundant shear, the friction on the cone and
+the friction on the land; $f(\alpha)$ is the closed form of the deformation integral (verified
+against direct numerical integration to eight digits and reducing to $\ln[1/(1-r)]$ as
+$\alpha\to0$), $m$ is the friction factor and $L$ the land length.
+% TODO: keys TODO-siebel, TODO-avitzur to be added to the bibliography for Eqs. (\ref{eq:siebel}), (\ref{eq:avitzur}).
+
 Evaluated with the representative flow stress derived from the constitutive equation
 (Section~\ref{sec:prep-data}), 300--305~MPa for these runs, and with no fitted parameter, the
 Siebel solution deviates from the finite-element drawing stress by 17.3\,\% on average and the
@@ -816,11 +836,48 @@ The discrepancy therefore lies in the form of the friction term rather than in t
 the flow stress, which enters as a multiplier and shifts every prediction together.
 % src: publication/reexport/flow_stress.py; lens_analyt/analytical.py (siebel, avitzur)
 
+\begin{table}[htbp]
+\centering\small
+\caption{Drawing stress $\sigma_d$ (MPa): the finite-element value against the Siebel,
+Eq.~(\ref{eq:siebel}), and Avitzur, Eq.~(\ref{eq:avitzur}), solutions, evaluated with the flow
+stress derived from the constitutive equation and no fitted parameter. Reduction 1.6\,\%, land
+ratio unity. The Avitzur column awaits the revised friction term; with the provisional factor
+$m=\sqrt3\,\mu\,p/\sigma_f$ at the measured contact pressure $p=122$~MPa it gives 65.1, 71.9, 85.9
+and 69.5~MPa.}
+\label{tab:drawstress}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+$\alpha$ & $\mu$ & FEM & Siebel & Avitzur \\
+\midrule
+$12^\circ$ & 0.025 & 54.1 & 53.0 & --- \\
+$12^\circ$ & 0.050 & 62.0 & 54.3 & --- \\
+$12^\circ$ & 0.100 & 78.3 & 57.5 & --- \\
+$8^\circ$  & 0.100 & 62.3 & 44.9 & --- \\
+\midrule
+\multicolumn{3}{@{}l}{mean absolute deviation} & 17.3\,\% & 13.0\,\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+% src: publication/reexport/flow_stress.py (FEM sigma_d, sigma_f); publication/code/analytical.py
+% siebel(r,alpha,mu,sigma_f) -> 53.0/54.3/57.5/44.9 MPa, MAPE 17.3 %; Avitzur MAPE 13.0 % from the
+% section prose (parallel session) — the revised friction term replaces the "---" column.
+
 The comparison can be closed completely, with no quantity taken from the finite-element model. The
 homogeneous strain is $2\ln(R_0/R_f)$ and the total strain follows from Backofen's excess-work
 factor $\Phi = 0.8 + \Delta/4.4$; the strain rate is obtained from the time to traverse the cone at
 constant volume flow, $\dot\varepsilon = 6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)/(R_0^3-R_f^3)$; and the
-flow stress is the work-weighted mean of the constitutive equation over that path. The temperature
+flow stress is the work-weighted mean of the constitutive equation over that path:
+\begin{align}
+\varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
+\Phi = 0.8 + \frac{\Delta}{4.4}, \qquad
+\varepsilon_{\mathrm{eff}} = \Phi\,\varepsilon_{\mathrm{hom}}, \label{eq:closed-strain}\\
+\dot\varepsilon &= \frac{6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)}{R_0^3-R_f^3}, \qquad
+\langle\sigma_f\rangle = A + \frac{B\,\varepsilon_{\mathrm{eff}}^{\,n}}{n+1}, \qquad
+\Delta T = \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
+\end{align}
+where $\Delta$ is the inhomogeneity parameter and $\langle\sigma_f\rangle$ the plastic-work-weighted
+mean of the strain term of the constitutive equation, taken before its rate and temperature
+multipliers. The temperature
 does not need a separate source, because it closes on the drawing stress itself: the drawing work
 per unit volume equals $\sigma_d$, a fraction $\beta$ of which becomes heat, so the mean rise is
 $\Delta T = \beta\,\sigma_d/(\rho c)$; since $\sigma_d$ depends on the flow stress and the flow
@@ -832,6 +889,29 @@ $\mu = 0.1$; the friction term, not the flow stress, is the source of the discre
 % src: publication/reexport/analytic_sigma_f.py (--Q 0.0164 --v 40; alpha 12/8, mu 0.025/0.05/0.1):
 % eps_hom = 0.033, Phi = 6.5, eps_eff = 0.215 (alpha 12) / 0.153 (alpha 8), edot = 15.6 / 10.3 s^-1,
 % sigma_f = 338.2/338.1/337.9/330.1 MPa; the self-consistent temperature is used below.
+
+\begin{table*}[htbp]
+\centering\small
+\caption{Intermediate quantities of the closed self-consistent estimate, Eqs.~(\ref{eq:closed-strain})--(\ref{eq:closed-rest}),
+for the four runs: inhomogeneity parameter $\Delta$, Backofen excess-work factor $\Phi$, effective
+strain $\varepsilon_{\mathrm{eff}}$, mean strain rate $\dot\varepsilon$, flow stress $\sigma_f$ from
+the constitutive equation at the fixed-point temperature, and the resulting drawing stress
+$\sigma_d$. Nothing is taken from the finite-element model; $\varepsilon_{\mathrm{hom}}=0.033$ and
+$R_f=17.705$~mm throughout.}
+\label{tab:closed}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+$\alpha$ & $\mu$ & $\Delta$ & $\Phi$ & $\varepsilon_{\mathrm{eff}}$ & $\dot\varepsilon$, s$^{-1}$ & $\sigma_f$, MPa & $\sigma_d$, MPa \\
+\midrule
+$12^\circ$ & 0.025 & 25.1 & 6.52 & 0.215 & 15.6 & 338.2 & 67.4 \\
+$12^\circ$ & 0.050 & 25.1 & 6.52 & 0.215 & 15.6 & 338.1 & 68.7 \\
+$12^\circ$ & 0.100 & 25.1 & 6.52 & 0.215 & 15.6 & 337.9 & 71.2 \\
+$8^\circ$  & 0.100 & 16.8 & 4.63 & 0.153 & 10.3 & 330.1 & 54.3 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+% src: publication/reexport/analytic_sigma_f.py --Q 0.0164 --v 40 (alpha 12/8, mu 0.025/0.05/0.1);
+% sigma_d 67.4/68.7/71.2/54.3 MPa against FEM 54.1/62.0/78.3/62.3 (mean absolute deviation 14.3 %).
 
 The temperature closure can be checked directly, since the dedicated export also carries the
 temperature history. The self-consistent estimate reproduces the cross-section-averaged rise
