@@ -38,7 +38,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from analytical import avitzur, delta_param, siebel                     # noqa: E402
 from vega_avitzur import (bearing_pressure, mu_effective, mu_of_temperature,  # noqa: E402
-                          vega, vega_exact_land, vega_measured_land, vega_terms)
+                          sticking_limit, vega, vega_exact_land, vega_measured_land,
+                          vega_terms)
 
 from drawing_force import measure                                        # noqa: E402
 from flow_stress import representative                                   # noqa: E402
@@ -92,7 +93,17 @@ def build() -> list:
             share_shear=t["shear"] / t["sigma_d"],
             share_cone=t["cone"] / t["sigma_d"],
             share_land=t["land"] / t["sigma_d"],
+            # давление на пояске падает по его длине от p на входе до p на выходе;
+            # уравнение (1) линеаризовано по входному значению
+            p_along=(bearing_pressure(lnR, a, mu, s0, k)
+                     + (s0 - t["sigma_d"])) / 2.0 / 1e6,
+            tau_assumed=mu * bearing_pressure(lnR, a, mu, s0, k) / 1e6,
+            tau_measured=mu * p_meas / 1e6,
+            k_shear=s0 / math.sqrt(3.0) / 1e6,
+            sticks=not sticking_limit(mu, bearing_pressure(lnR, a, mu, s0, k), s0),
+            T_pass=20.0 + fem["dT_mean_C"] / 2.0,
             dT_mean=fem["dT_mean_C"], dT_peak=fem["dT_peak_C"],
+            sigma_f_heat=(fem["sigma_f_heat_min_MPa"], fem["sigma_f_heat_max_MPa"]),
         ))
     return rows
 
@@ -119,10 +130,36 @@ def main() -> None:
     print(f"{'среднее отклонение':>21} "
           + " ".join(f"{'':>22}" if k == "fem" else f"{mape(rows, k):21.1f}%" for _, k in cols))
 
-    print("\nдавление на пояске, МПа: принято решением / измерено в расчёте")
+    print("\nдавление на пояске, МПа: принято решением (на входе / в среднем по длине) "
+          "против измеренного")
     for r in rows:
         print(f"  alpha {r['alpha']:2.0f}, mu {r['mu']:5.3f}:  {r['p_assumed']:6.1f} / "
-              f"{r['p_measured']:6.1f}   отношение {r['p_assumed'] / r['p_measured']:.2f}")
+              f"{r['p_along']:6.1f}  против {r['p_measured']:6.1f}   отношение по входу "
+              f"{r['p_assumed'] / r['p_measured']:.2f}, по средней {r['p_along'] / r['p_measured']:.2f}")
+
+    print("\nнаклон d sigma_d / d mu при alpha = 12, МПа на единицу mu")
+    lo = next(r for r in rows if r["alpha"] == 12 and r["mu"] < 0.03)
+    hi = next(r for r in rows if r["alpha"] == 12 and r["mu"] > 0.09)
+    dmu = hi["mu"] - lo["mu"]
+    for name, key in cols:
+        print(f"  {name:24s} {(hi[key] - lo[key]) / dmu:7.0f}")
+
+    print("\nкасательное напряжение на пояске против предела текучести на сдвиг, МПа")
+    for r in rows:
+        print(f"  alpha {r['alpha']:2.0f}, mu {r['mu']:5.3f}:  при принятом давлении "
+              f"{r['tau_assumed']:5.1f}, при измеренном {r['tau_measured']:5.1f}, "
+              f"k = {r['k_shear']:5.1f}" + ("  ПРИЛИПАНИЕ" if r["sticks"] else ""))
+
+    print("\nтемпературная поправка уравнения (2) при средней за проход температуре")
+    for r in rows:
+        print(f"  alpha {r['alpha']:2.0f}, mu {r['mu']:5.3f}:  T = {r['T_pass']:4.1f} C, "
+              f"(T/20)^2.68 = {(r['T_pass'] / 20.0) ** 2.68:4.2f}, "
+              f"(T/15.6)^2.68 = {(r['T_pass'] / 15.6) ** 2.68:4.2f}")
+
+    print("\nпредел текучести: из уравнения состояния по путям и независимо из тепла по ядру")
+    for r in rows:
+        print(f"  alpha {r['alpha']:2.0f}, mu {r['mu']:5.3f}:  {r['sigma_f']:5.1f} МПа против "
+              f"{r['sigma_f_heat'][0]:.0f}-{r['sigma_f_heat'][1]:.0f} МПа из тепла")
 
     print("\nдоли слагаемых уравнения (1) и обращение по трению")
     for r in rows:
