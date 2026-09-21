@@ -93,31 +93,29 @@ their work terms; the flow stress enters as a multiplier and shifts every predic
 
 \begin{table*}[htbp]
 \centering\small
-\caption{Drawing stress $\sigma_d$ (MPa) for the four runs: the finite-element value against the
-Siebel relation, Eq.~\eqref{eq:siebel}, the Avitzur upper bound in its friction-factor form,
-Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$, and the same bound in the Coulomb form of
-Eq.~\eqref{eq:avitzur-vega}. All columns use the flow stress derived from the constitutive
-equation, 300--305~MPa, and no fitted parameter. The last column repeats
-Eq.~\eqref{eq:avitzur-vega} with one change, the pressure on the land taken from the contact
-reaction of the model, 122~MPa, instead of from the yield condition; it is a diagnostic of the
-bearing assumption, not an independent prediction. The last row is the secant slope between the
-$\mu = 0.025$ and $\mu = 0.1$ rows, so it carries the 1\,\% run-to-run change in the flow stress;
-the finite-element value over the same two points is 323~MPa. Reduction 1.6\,\% in diameter
-(3.2\,\% in area), land ratio unity, drawing speed 40~m/min.}
+\caption{Drawing stress (MPa) for the four runs: the finite-element value against the Siebel
+relation, Eq.~\eqref{eq:siebel}, the Avitzur upper bound in its friction-factor form,
+Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$, and the modified Avitzur relation in the Coulomb
+form of Eq.~\eqref{eq:avitzur-vega}. All three use the flow stress derived from the constitutive
+equation, 300--305~MPa, and no fitted parameter. Reduction $Q$ is nominal, in diameter; the
+achieved outlet radius is 17.71~mm in every run. The last two rows are the mean absolute
+deviation from the finite-element value and the secant slope $\mathrm{d}\sigma_d/\mathrm{d}\mu$
+between the $\mu=0.025$ and $\mu=0.1$ rows at $\alpha=12^\circ$, for which the finite-element
+value is 323~MPa.}
 \label{tab:drawstress}
-\begin{tabular}{@{}llrrrrr@{}}
+\begin{tabular}{@{}ccccc rrr r@{}}
 \toprule
- & & & & & \multicolumn{2}{c}{Eq.~\eqref{eq:avitzur-vega}} \\
-\cmidrule(l){6-7}
-$\alpha$ & $\mu$ & FEM & Siebel & Avitzur & as published & land at 122~MPa \\
+\multicolumn{5}{c}{Parameters} & \multicolumn{3}{c}{Analytical} & Simulation \\
+\cmidrule(r){1-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
+$Q$ & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod & FEM \\
 \midrule
-$12^\circ$ & 0.025 & 54.1 & 53.2 & 75.1 & 71.5 & 66.1 \\
-$12^\circ$ & 0.050 & 62.0 & 54.2 & 91.1 & 82.8 & 73.1 \\
-$12^\circ$ & 0.100 & 78.3 & 57.4 & 125.4 & 104.4 & 88.8 \\
-$8^\circ$  & 0.100 & 62.3 & 44.7 & 109.0 & 90.8 & 73.3 \\
+0.015 & $12^\circ$ & 40 & 1.0 & 0.025 & 53.2 & 75.1 & 71.5 & 54.1 \\
+0.015 & $12^\circ$ & 40 & 1.0 & 0.050 & 54.2 & 91.1 & 82.8 & 62.0 \\
+0.015 & $12^\circ$ & 40 & 1.0 & 0.100 & 57.4 & 125.4 & 104.4 & 78.3 \\
+0.015 & $8^\circ$  & 40 & 1.0 & 0.100 & 44.7 & 109.0 & 90.8 & 62.3 \\
 \midrule
-\multicolumn{3}{@{}l}{mean absolute deviation} & 17.3\,\% & 55.2\,\% & 36.2\,\% & 17.8\,\% \\
-\multicolumn{3}{@{}l}{$\mathrm{d}\sigma_d/\mathrm{d}\mu$ at $\alpha=12^\circ$, MPa} & 57 & 670 & 439 & 303 \\
+\multicolumn{5}{@{}l}{mean absolute deviation} & 17.3\,\% & 55.2\,\% & 36.2\,\% & --- \\
+\multicolumn{5}{@{}l}{$\mathrm{d}\sigma_d/\mathrm{d}\mu$ at $\alpha=12^\circ$, MPa} & 57 & 670 & 439 & 323 \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -150,8 +148,9 @@ diagnosis independently of the magnitudes: from
 $\mu = 0.025$ to $\mu = 0.1$ at $\alpha = 12^\circ$ the computed drawing stress rises by 323~MPa
 per unit $\mu$, against 439 for Eq.~\eqref{eq:avitzur-vega}, 670 for Eq.~\eqref{eq:avitzur} and 57
 for Siebel, whose insensitivity to friction is the other face of its missing land term.
-Substituting the computed contact pressure into the bearing term and changing nothing else brings
-the mean deviation to 17.8\,\% and the slope to 303~MPa per unit $\mu$, 6.1\,\% below the
+Substituting the computed contact pressure into the bearing term of Eq.~\eqref{eq:avitzur-vega}
+and changing nothing else gives 66.1, 73.1, 88.8 and 73.3~MPa for the four runs: a mean deviation
+of 17.8\,\% instead of 36.2\,\%, and a slope of 303~MPa per unit $\mu$, 6.1\,\% below the
 322.7~MPa of the model.
 The exports say directly that the yield closure does not hold there: on the land the measured
 pressure and the axial stress sum to 176--200~MPa against a flow stress of 300--305~MPa, so the
