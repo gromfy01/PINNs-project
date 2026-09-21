@@ -1,7 +1,8 @@
 \label{sec:res_fem_verification}
 Verification of the simulation results was carried out by comparison with the established
-analytical solutions for the drawing stress, those of Siebel and of Avitzur, and by internal
-consistency tests of the exported fields.
+analytical solutions for the drawing stress, those of Siebel and of Avitzur and the modification
+of the latter due to Vega and co-workers \citep{vega2009temperature}, and by internal consistency
+tests of the exported fields.
 % NOTE:, K18: the section no longer opens with "in place of experimental validation"; it opens
 % with the analytical comparison the review asks for.
 
@@ -15,9 +16,14 @@ at a reduction of 1.6\,\% in diameter (3.2\,\% in area) and a land ratio of unit
 steady phase of the pass, defined by a die travel of 20 to 100~mm; the signal there is not a
 plateau but a stick--slip sawtooth whose relative spread is 13.6\,\% at $\mu = 0.025$ and
 4.5\,\% at $\mu = 0.1$, so the time average is used, the quantity an energy method estimates.
-Divided by the area actually reached in the model, 985~mm$^2$ at an outlet radius of
-17.71~mm, this gives a drawing stress of 54.1, 62.0 and 78.3~MPa at $\alpha = 12^\circ$ for
-$\mu = 0.025$, 0.05 and 0.1, and 62.3~MPa at $\alpha = 8^\circ$.
+The drawing stress is then
+\begin{equation}
+\sigma_d = \frac{F}{S}, \qquad S = \pi R_f^2,
+\label{eq:sigma-d}
+\end{equation}
+and with the area actually reached in the model, $S = 985$~mm$^2$ at an outlet radius of
+17.71~mm, this gives 54.1, 62.0 and 78.3~MPa at $\alpha = 12^\circ$ for $\mu = 0.025$, 0.05 and
+0.1, and 62.3~MPa at $\alpha = 8^\circ$.
 % src: publication/reexport/drawing_force.py on publication/reexport/history/; the median over the
 % same window would give 59.2 / 65.5 / 77.6 / 62.4 MPa, above the time mean at mu = 0.025 and 0.05
 % and below it at mu = 0.1, which is the sawtooth changing shape with friction.
