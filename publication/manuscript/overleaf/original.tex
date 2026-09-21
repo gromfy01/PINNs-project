@@ -88,7 +88,7 @@
 \hypersetup{%
 	pdfauthor={John H. Lienhard},                       		   	% <=== change to YOUR name[s]!
 	pdftitle={ASME Journal Paper LaTeX Template},                  	% <=== change to YOUR pdf file title
-	pdfkeywords={wire drawing, residual stress, Optuna, machine learning},% <=== change to YOUR pdf keywords
+	pdfkeywords={physics-informed neural networks, wire drawing, residual stresses, variational PINN, finite element simulation, surrogate modelling},
 	pdfsubject = {Describes the asmejour LaTeX template},			% <=== change to YOUR subject
 %	pdfurl={https://ctan.org/pkg/asmejour},% may delete
 	pdflicenseurl={https://ctan.org/pkg/asmejour},% may delete
@@ -137,7 +137,7 @@ email: Georgii.v.romanenko@gmail.com
 %%% Change these to your keywords.  Keywords are automatically printed at the end of the abstract.
 %%% This command must come BEFORE the end of the abstract.
 %%% If you don't want keywords, omit the \keyword{..} command.
-\keywords{physics-informed neural networks \sep wire drawing \sep residual stresses \sep variational PINN \sep finite element simulation \sep surrogate modelling}
+\keywords{physics-informed neural networks, wire drawing, residual stresses, variational PINN, finite element simulation, surrogate modelling}
 
    
 %% Abstract should be no more than 250 words
@@ -198,17 +198,10 @@ The half-angle of the working cone of the die is denoted $\alpha$; $D_0$ and $D$
 The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction $Q=(r_0-r_1)/r_0$ follows from $D_0$ and $D$, the deformation-zone half-angle is $\alpha$, and the calibration ratio $k$ relates the land length $L$ to the outlet radius.
 
 \begin{figure*}[t]
-\begin{subfigure}[t]{0.5\textwidth}
-\vbox{
-\vspace*{1.7em}%
-\centering{
-\includegraphics[width=\textwidth]{pictures/scheme.png}
-}%
-%\vspace*{1.7em}
-}%
+\centering
+\includegraphics[width=0.5\textwidth]{pictures/scheme.png}
 \caption{Axisymmetric wire-drawing process. $S_1$~--~axis of symmetry; $S_2$~--~outlet face of the finished product; $S_3$~--~free lateral surface; $S_4$~--~contact surface with the die; $S_5$~--~entry face of the billet; $\alpha$~--~half-angle of the working cone of the die; $D_0$ and $D$~--~diameters of the billet and of the drawn wire; $L$~--~length of the calibration land}
 \label{fig:scheme}
-\end{subfigure}%
 \end{figure*}
 
 
@@ -1659,13 +1652,16 @@ In the present work a series of axisymmetric finite-element simulations of cold 
 % Section~\ref{sec:fem-dataset}; the conclusion is kept free of those figures until they are reported in the body,
 % since the Conclusions must not introduce numbers that the results do not carry. The same TODO stands in
 % sec22_fem_dataset.tex, together with the missing bibliography entries for the two relations.
-The reference against which all of the above is measured is the finite-element solution itself. Its adequacy is addressed by the verification described in Section~\ref{sec:fem-dataset}: on a subset of runs of the same model in which the exported frame is captured while the wire is still engaged in the die, the drawing stress obtained from the computed field is compared, with no fitted parameters, with the classical analytical descriptions of the process -- the slab-method relation of Siebel and the upper-bound solution of Avitzur. It is with respect to a reference field verified in this way that the conclusions listed above are to be read. Further work is directed at extending the verification to the influence of the die semi-angle, for which the subset carrying the drawing load is too narrow, and at experimental validation of the residual-stress field, by X-ray diffraction for the surface stress and by layer removal for the through-thickness distribution.
+The reference against which all of the above is measured is the finite-element solution itself. Its adequacy is addressed by the verification described in Section~\ref{sec:res_fem_verification}: on a subset of runs of the same model in which the exported frame is captured while the wire is still engaged in the die, the drawing stress obtained from the computed field is compared, with no fitted parameters, with the classical analytical descriptions of the process -- the slab-method relation of Siebel and the upper-bound solution of Avitzur. It is with respect to a reference field verified in this way that the conclusions listed above are to be read. Further work is directed at extending the verification to the influence of the die semi-angle, for which the subset carrying the drawing load is too narrow, and at experimental validation of the residual-stress field, by X-ray diffraction for the surface stress and by layer removal for the through-thickness distribution.
 % <<< end sections/sec4_conclusions.tex
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section*{Acknowledgment} %% ASME requests this exact spelling, singular.
-
-Acknowledge individuals, institutions, or companies that supported the authors in preparing the work. Those mentioned might have provided technical support, insightful comments or conversations, materials used in the work, or access to facilities.
+% TODO: заполнить или удалить раздел целиком. Пока стоял шаблонный текст ASME,
+% и он попадал в собранный PDF; до подачи здесь должен быть либо настоящий текст
+% благодарности, либо ничего.
+%\section*{Acknowledgment} %% ASME requests this exact spelling, singular.
+%
+%Acknowledge individuals, institutions, or companies that supported the authors in preparing the work. Those mentioned might have provided technical support, insightful comments or conversations, materials used in the work, or access to facilities.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1690,13 +1686,28 @@ Acknowledge individuals, institutions, or companies that supported the authors i
 \entry{$k$}{calibration ratio (land length over outlet radius)}
 \entry{$L$}{length of the calibration land (m)}
 \entry{$r,z$}{radial and axial coordinates (m)}
-\entry{$R$}{billet radius (Fig.~2) or surface radius of the cross-section (Figs.~5--6)}
+\entry{$R$}{billet radius (Fig.~\ref{fig:fem-fields}) or surface radius of the cross-section (Figs.~\ref{fig:compare-fields}--\ref{fig:residual-maps})}
 \entry{$\sigma_{rr},\sigma_{\theta\theta},\sigma_{zz}$}{normal residual stress components (MPa)}
 \entry{$\tau_{rz}$}{shear residual stress component (MPa)}
 \entry{$R_r,R_z$}{radial and axial equilibrium residuals}
+\entry{$R_0,R_f$}{radius of the billet and of the drawn wire (m)}
+\entry{$v$}{drawing velocity (m/min)}
+\entry{$p$}{normal pressure on the die contact (MPa)}
+\entry{$m$}{friction factor, ratio of the interface shear stress to the shear yield stress}
+\entry{$f(\alpha)$}{die-angle function of the Avitzur velocity field}
+\entry{$c$}{specific heat (J\,kg$^{-1}$K$^{-1}$)}
+\entry{$T$}{temperature ($^\circ$C)}
 \EntryHeading{Greek Letters}
 \entry{$\alpha$}{half-angle of the die working cone (deg)}
 \entry{$\mu$}{Coulomb friction coefficient}
+\entry{$\sigma_d$}{drawing stress (MPa)}
+\entry{$\sigma_f$}{flow stress (MPa)}
+\entry{$\varepsilon_{\mathrm{hom}},\varepsilon_{\mathrm{eff}}$}{homogeneous and effective strain}
+\entry{$\dot\varepsilon$}{mean strain rate over the pass (s$^{-1}$)}
+\entry{$\Delta$}{inhomogeneity parameter of the deformation zone}
+\entry{$\Phi$}{excess-work factor}
+\entry{$\beta$}{fraction of plastic work converted to heat}
+\entry{$\rho$}{density (kg\,m$^{-3}$)}
 \EntryHeading{Abbreviations}
 \entry{MLP}{multilayer perceptron (data-driven surrogate)}
 \entry{PINN}{physics-informed neural network (strong form)}
@@ -1732,7 +1743,7 @@ Acknowledge individuals, institutions, or companies that supported the authors i
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\section{Language Support}
 
-A%SME publishes in English, but the \texttt{babel} package is loaded for users who may wish to include other languages. 
+%ASME publishes in English, but the \texttt{babel} package is loaded for users who may wish to include other languages. 
 %For example, an author might wish to include an appendix that provides the abstract in another language.
 
 %When more than one language option is included in %\verb|\documentclass[..]{asmejour}|, English will be 
