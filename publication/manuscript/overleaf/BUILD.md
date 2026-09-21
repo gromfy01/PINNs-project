@@ -29,6 +29,21 @@
 3. Шрифты TeX Gyre Heros Condensed (`qhvc`) нужны для заголовка и блока авторов;
    без пакета `tex-gyre` они подменяются, и титул выглядит иначе.
 
+## Сборка на macOS без прав администратора
+
+TinyTeX ставится в домашнюю папку, sudo не нужен:
+
+    curl -sL "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+    export PATH=$PATH:$HOME/Library/TinyTeX/bin/universal-darwin
+    tlmgr install extsizes collection-latexrecommended collection-latexextra \
+                  collection-fontsrecommended collection-mathscience
+
+На TeX Live 2026 ни одна из трёх правок выше не нужна: класс собирается как есть,
+включая pdf-a и исходный порядок hyperxmp/hyperref. Расхождения касаются только
+TeX Live 2023.
+
 ## Что должно получиться
 
 19 страниц, ноль ошибок, ноль неразрешённых ссылок и цитат.
+Полный цикл (pdflatex, bibtex, pdflatex, pdflatex) занимает около 4 секунд,
+так что таймаут сборки на стороне Overleaf этим документом не объясняется.
