@@ -82,6 +82,9 @@
 %% Class options are described above.
 \documentclass[subscriptcorrection,upint,varvw,barcolor=Goldenrod3,mathalfa=cal=euler,balance,hyphenate,french,pdf-a]{asmejour} %
 
+%% Класс подтягивает array и booktabs, но не tabularx, а Таблица 1 набрана им.
+\usepackage{tabularx}
+
 
 %%%%  pdf metadata  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -111,7 +114,7 @@
 % Use title case (upper and lower case letters)
 % Note usage below for corresponding author.
 
-\SetAuthorBlock{\fnm{Dmitriy} \sur{Demin}\CorrespondingAuthor}{
+\SetAuthorBlock{Dmitriy Demin\CorrespondingAuthor}{
 HSE University,\\
    11 Pokrovsky Boulevard,\\
    Moscow, Russia \\
@@ -124,7 +127,7 @@ HSE University,\\
 % Can also include multiple emails and use the command more than once for multiple corresponding authors,
 %      "Name\CorrespondingAuthor{write@to.him, write@to.her}"
 
-\SetAuthorBlock{\fnm{Georgii} \sur{Romanenko}}{HSE University,\\
+\SetAuthorBlock{Georgii Romanenko}{HSE University,\\
    11 Pokrovsky Boulevard,\\
    Moscow, Russia \\
 email: Georgii.v.romanenko@gmail.com
@@ -249,7 +252,7 @@ The same constitutive description was used in all simulations, so the resulting 
 \caption{Ranges of process parameters in the FEM campaign.}
 \label{tab:fem_params}
 \small
-\begin{tabularx}{\columnwidth}%{@{}l X@{}}
+\begin{tabularx}{\columnwidth}{@{}lX@{}}
 \toprule
 Parameter & Values \\
 \midrule
@@ -401,15 +404,21 @@ Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
 
 \begin{figure*}[h!]
     \centering
-    \includegraphics[width=\linewidth]{pictures/mlp_optuna_schematic.png}
-    \caption{Architecture of the data-driven MLP surrogate.}
+    \includegraphics[width=\linewidth]{pictures/mlp_schematic.pdf}
+    \caption{Training of the data-driven MLP surrogate. The architecture and every
+    hyperparameter are fixed before any held-out region is evaluated; the loop shown
+    is the training loop of a single run, and no hyperparameter search surrounds it.}
     \label{fig:architecture}
 \end{figure*}
 
 \begin{figure*}[h!]
     \centering
-    \includegraphics[width=\linewidth]{pictures/pinn_optuna_schematic.png}
-    \caption{Architecture of the physics-informed surrogate: shared trunk, physics residual and boundary-condition terms in the loss.}
+    \includegraphics[width=\linewidth]{pictures/pinn_schematic.pdf}
+    \caption{Training of the physics-informed surrogate: shared trunk, equilibrium
+    residual and traction-free boundary term in the loss. The loss weights are fixed
+    a priori; the only quantity read from the data is the gradient-norm calibration
+    $g$ of Eq.~\eqref{eq:calib}, set once on the first mini-batch.}
+    \label{fig:architecture-pinn}
 \end{figure*}
 
 % >>> inlined sections/sec23_body.tex
@@ -434,7 +443,7 @@ same mini-batch size and batch-ordering rule, and the same seeds; the values,
 which differ between the main and the extended track, are stated in full in
 ``Training protocol'' below. The
 families differ only in the composition of the loss (Table~\ref{tab:families},
-Fig.~\ref{fig:architecture}). In the main track the input is
+Figs.~\ref{fig:architecture} and~\ref{fig:architecture-pinn}). In the main track the input is
 $\mathbf{x}=(Q,k,\alpha,\mu,v,r)$, with $r\in[0,1]$ the radius normalised by the
 free-surface radius of the same case ($r=1$ is the free surface).
 % src: trainer.py (Net n_in=6, r last column); dataset.py (r = r_phys / r_phys[:, -1], r[-1] = 1)

@@ -19,7 +19,7 @@ same mini-batch size and batch-ordering rule, and the same seeds; the values,
 which differ between the main and the extended track, are stated in full in
 ``Training protocol'' below. The
 families differ only in the composition of the loss (Table~\ref{tab:families},
-Fig.~\ref{fig:architecture}). In the main track the input is
+Figs.~\ref{fig:architecture} and~\ref{fig:architecture-pinn}). In the main track the input is
 $\mathbf{x}=(Q,k,\alpha,\mu,v,r)$, with $r\in[0,1]$ the radius normalised by the
 free-surface radius of the same case ($r=1$ is the free surface).
 % src: trainer.py (Net n_in=6, r last column); dataset.py (r = r_phys / r_phys[:, -1], r[-1] = 1)
