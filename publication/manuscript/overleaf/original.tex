@@ -85,6 +85,23 @@
 %% Класс подтягивает array и booktabs, но не tabularx, а Таблица 1 набрана им.
 \usepackage{tabularx}
 
+%% Подвал первой страницы. Класс ставит в одну строку название журнала слева,
+%% копирайт по центру и номер страницы справа. При \@JourName = "Manufacturing
+%% Science and Engineering" левый элемент занимает 290 pt из 492, и копирайт
+%% налезает на него. Ни один кегль не спасает: сумма трёх элементов шире строки.
+%% Копирайт опускается на отдельную строку под подвалом.
+\makeatletter
+\fancypagestyle{title}{%
+    \fancyhf{}%
+    \renewcommand{\headrulewidth}{0pt}%
+    \renewcommand{\footrulewidth}{0pt}%
+    \fancyfoot[LO]{\large\bfseries\sffamily Journal of \@JourName}%
+    \fancyfoot[RO]{\large\sffamily \@PreprintStringR\space\space\bfseries/\space\space\@PaperNumber\thepage}%
+    \fancyfoot[CO]{\raisebox{-1.35\baselineskip}[0pt][0pt]{%
+        \normalsize\bfseries\sffamily Copyright \textcopyright\ \@PaperYear\ by ASME}}%
+}
+\makeatother
+
 
 %%%%  pdf metadata  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -149,8 +166,9 @@ Residual stresses left by cold wire drawing govern the fatigue life and dimensio
 \end{abstract}
 
 
-\date{Version \versionno, \today}%% You can modify this information as desired. 
-							%% Putting \date{} will suppress any date.  
+%% Шаблон ставил сюда \date{Version \versionno, \today}, то есть версию КЛАССА
+%% (1.18) и дату сборки; в сноске первой страницы это выглядело как версия статьи.
+\date{}  
 							%% If this command is omitted, date defaults to \today
 							%% This command must come somewhere before \maketitle
 
@@ -203,7 +221,7 @@ The radial coordinate $r$ is measured from the axis and the axial coordinate $z$
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.5\textwidth]{pictures/scheme.png}
-\caption{Axisymmetric wire-drawing process. $S_1$~--~axis of symmetry; $S_2$~--~outlet face of the finished product; $S_3$~--~free lateral surface; $S_4$~--~contact surface with the die; $S_5$~--~entry face of the billet; $\alpha$~--~half-angle of the working cone of the die; $D_0$ and $D$~--~diameters of the billet and of the drawn wire; $L$~--~length of the calibration land}
+\caption[Axisymmetric wire-drawing process and its boundaries]{Axisymmetric wire-drawing process. $S_1$~--~axis of symmetry; $S_2$~--~outlet face of the finished product; $S_3$~--~free lateral surface; $S_4$~--~contact surface with the die; $S_5$~--~entry face of the billet; $\alpha$~--~half-angle of the working cone of the die; $D_0$ and $D$~--~diameters of the billet and of the drawn wire; $L$~--~length of the calibration land}
 \label{fig:scheme}
 \end{figure*}
 
@@ -317,7 +335,7 @@ The radial axis is stretched relative to the axial one: at $L/R \approx 3.5$--$7
 
 \begin{table*}[htbp]
 \centering\small
-\caption{Share of the variance along $z$ inside the axial window and effect of collapsing the field along $z$ by the median (mean absolute value, MPa).} % src: QA_DATA_AND_Z.md §4; TODO: state the population (all 2443 runs or the filtered set) — not stated in the source
+\caption[Variance along $z$ and the effect of collapsing the field]{Share of the variance along $z$ inside the axial window and effect of collapsing the field along $z$ by the median (mean absolute value, MPa).} % src: QA_DATA_AND_Z.md §4; TODO: state the population (all 2443 runs or the filtered set) — not stated in the source
 \label{tab:zshare}
 \begin{tabular}{@{}lccc@{}}
 \toprule
@@ -386,7 +404,7 @@ The partitions are fixed (seed 42); the five training seeds of Section~\ref{sec:
 
 \begin{table*}[htbp]
 \centering\small
-\caption{The 13 case-level splits of the 1756 cases. $n_\text{train}$ is the training pool, including the early-stopping subset.} % src: results/runs_v2.csv (n_train, n_test, stage main; 13 distinct splits)
+\caption[The 13 case-level splits of the 1756 cases]{The 13 case-level splits of the 1756 cases. $n_\text{train}$ is the training pool, including the early-stopping subset.} % src: results/runs_v2.csv (n_train, n_test, stage main; 13 distinct splits)
 \label{tab:splits}
 \begin{tabular}{@{}lllrr@{}}
 \toprule
@@ -416,7 +434,7 @@ Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
 \begin{figure*}[h!]
     \centering
     \includegraphics[width=\linewidth]{pictures/mlp_schematic.pdf}
-    \caption{Training of the data-driven MLP surrogate. The architecture and every
+    \caption[Training of the data-driven MLP surrogate]{Training of the data-driven MLP surrogate. The architecture and every
     hyperparameter are fixed before any held-out region is evaluated; the loop shown
     is the training loop of a single run, and no hyperparameter search surrounds it.}
     \label{fig:architecture}
@@ -425,7 +443,7 @@ Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
 \begin{figure*}[h!]
     \centering
     \includegraphics[width=\linewidth]{pictures/pinn_schematic.pdf}
-    \caption{Training of the physics-informed surrogate: shared trunk, equilibrium
+    \caption[Training of the physics-informed surrogate]{Training of the physics-informed surrogate: shared trunk, equilibrium
     residual and traction-free boundary term in the loss. The loss weights are fixed
     a priori; the only quantity read from the data is the gradient-norm calibration
     $g$ of Eq.~\eqref{eq:calib}, set once on the first mini-batch.}
@@ -635,7 +653,7 @@ same derivative, is the substantive difference between the two families.
 
 \begin{table*}[t]
 % NOTE: ``budget'' in the caption spelled out (epoch limit, early-stopping rule, mini-batch size); the scope is limited to one track, since the extended track uses its own seeds and splits.
-\caption{Model families. Within each track all families share the network, the
+\caption[Model families and the composition of their loss]{Model families. Within each track all families share the network, the
 optimiser, the training conditions (epoch limit, early-stopping rule,
 mini-batch size), the seeds and the splits; only the loss composition differs.
 $R_1$: reduced radial residual
@@ -790,7 +808,7 @@ could leak a held-out region.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{pictures/fig2_fem_fields.png}
-    \caption{Distribution of residual stresses obtained from the FEM simulation at $Q = 0.10$ (10\,\% reduction in diameter, 20.1\,\% in area), $k = 0.5$, $\alpha = 12^\circ$, $\mu = 0.05$, $v = 10$~m/min. Panels from left to right: the components $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$ and $\tau_{rz}$ over the full axial extent of the wire, each with its own colour scale graduated in MPa. The radius is normalised by the billet radius $R = 18$~mm and the axial coordinate by the model length $L = 139.5$~mm; dashed lines mark the axial window 25--75\,\% of $L$ from which the training data are taken.}
+    \caption[Residual stress fields from the finite-element simulation]{Distribution of residual stresses obtained from the FEM simulation at $Q = 0.10$ (10\,\% reduction in diameter, 20.1\,\% in area), $k = 0.5$, $\alpha = 12^\circ$, $\mu = 0.05$, $v = 10$~m/min. Panels from left to right: the components $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$ and $\tau_{rz}$ over the full axial extent of the wire, each with its own colour scale graduated in MPa. The radius is normalised by the billet radius $R = 18$~mm and the axial coordinate by the model length $L = 139.5$~mm; dashed lines mark the axial window 25--75\,\% of $L$ from which the training data are taken.}
     \label{fig:fem-fields}
 \end{figure*}
 
@@ -896,7 +914,7 @@ their work terms; the flow stress enters as a multiplier and shifts every predic
 
 \begin{table*}[htbp]
 \centering\small
-\caption{Drawing stress (MPa) for the four runs: the finite-element value against the Siebel
+\caption[Drawing stress: finite element against the three closed-form relations]{Drawing stress (MPa) for the four runs: the finite-element value against the Siebel
 relation, Eq.~\eqref{eq:siebel}, the Avitzur upper bound in its friction-factor form,
 Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$, and the modified Avitzur relation in the Coulomb
 form of Eq.~\eqref{eq:avitzur-vega}. All three use the flow stress derived from the constitutive
@@ -1038,7 +1056,7 @@ Table~\ref{tab:drawstress} uses it.
 
 \begin{table*}[htbp]
 \centering\small
-\caption{Intermediate quantities of the closed self-consistent estimate,
+\caption[Intermediate quantities of the closed self-consistent estimate]{Intermediate quantities of the closed self-consistent estimate,
 Eqs.~(\ref{eq:closed-strain})--(\ref{eq:closed-rest}),
 for the four runs: inhomogeneity parameter $\Delta$, Backofen excess-work factor $\Phi$, effective
 strain $\varepsilon_{\mathrm{eff}}$, mean strain rate $\dot\varepsilon$, flow stress $\sigma_f$ from
@@ -1081,7 +1099,7 @@ Eq.~\eqref{eq:mu-temperature} is calibrated on the Celsius scale.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Mean temperature rise during the pass and the resulting pass-mean temperature: the
+\caption[Mean temperature rise and pass-mean temperature]{Mean temperature rise during the pass and the resulting pass-mean temperature: the
 self-consistent analytical estimate, in which the deformation work and the temperature close on
 each other and nothing is read from the model, against the cross-section average of the exported
 temperature history. Every run starts at 20~$^\circ$C, and the pass-mean temperature is formed from
@@ -1170,7 +1188,7 @@ Table~\ref{tab:main} gives the macro-RMSE on all thirteen splits. On the random 
 
 % src: RESULTS.md §1.0б "Цена экстраполяции зависит от оси" table (family-averaged RMSE outside / control / ratio / R²_n / null model) — all 25 entries verified.
 \begin{table*}[t]
-\caption{Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the matched control of the same size, their ratio, $R^2_{\mathrm{n}}$ (global denominator) on the held-out region, and the constant predictor (MPa).} % EDIT: denominator named
+\caption[Cost of holding out a whole factor level]{Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the matched control of the same size, their ratio, $R^2_{\mathrm{n}}$ (global denominator) on the held-out region, and the constant predictor (MPa).} % EDIT: denominator named
 \label{tab:axis}
 \centering\small
 \begin{tabular}{@{}lrrrrr@{}}
@@ -1212,7 +1230,7 @@ The VPINN is established better than the MLP on two splits (\texttt{interp:Q\_mi
 % src: RESULTS.md §3 (learning curves, macro-RMSE at 10/25/50/100 %) — all 24 entries verified; RESULTS_v1_vs_v2.md §5 (gaps, slopes on log fraction, p-values);
 % src: runs_v2.csv stage=curves (n_train 149/373/746/1493 random, 138/344/688/1377 alpha_max; 3 seeds); paired p-values recomputed from the csv: 0.317/0.099/0.048/0.718 and 0.498/0.033/0.886/0.238; slopes +0.197 (p = 0.211) and −0.355 (p = 0.070).
 \begin{table*}[t]
-\caption{Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}.}
+\caption[Learning curves against the fraction of the training pool]{Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}.}
 \label{tab:curves}
 \centering\small
 \begin{tabular}{@{}lrrrrrrr@{}}
@@ -1285,7 +1303,7 @@ The dimensionless residuals of Table~\ref{tab:admissibility} and Fig.~\ref{fig:r
 Medians are taken over the interior grid nodes, where the central difference is second-order accurate; at the edges of the grid it degenerates to a one-sided difference. % src: experiments/residual_maps.py (comment at `inner`); captions.md
 The FEM row is the baseline against which every admissibility figure is read. % src: residual_maps.py ("базовая линия — сам МКЭ"); captions.md ("Базовая линия МКЭ")
 \begin{table*}[t]
-\caption{Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases. Accuracy: component RMSE (MPa)\,/\,$R^2$ and macro-RMSE; admissibility: the dimensionless equilibrium residuals $|R_r|$, $|R_z|$ and the traction-free violation $|\sigma_{rr}(r{=}1)|$, MPa. Definitions, denominators and the training pool are given in the text.}
+\caption[Accuracy and physical admissibility of the two-dimensional families]{Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases. Accuracy: component RMSE (MPa)\,/\,$R^2$ and macro-RMSE; admissibility: the dimensionless equilibrium residuals $|R_r|$, $|R_z|$ and the traction-free violation $|\sigma_{rr}(r{=}1)|$, MPa. Definitions, denominators and the training pool are given in the text.}
 % REV: caption shortened (the review names Tables 8 and 10-13 as too bulky); the single-run
 % training on 1498 cases, the averaging over interior nodes and the role of the FEM row are
 % stated in the paragraphs around the table. % EDIT: caption made descriptive; definitions moved to the text; R² denominator named — contours.py computes 1 − SS_res/SS_tot over the 261 test cases
@@ -1322,7 +1340,7 @@ The ordering is the same with seed statistics on the one-dimensional track. On t
 % NOTE: RESULTS_v1_vs_v2.md §4/§8 quote −38…−49 % for the radial residual — those are computed from the REDUCED-form residual columns; the text and tab:ablation2d use the full-form columns of RESULTS.md §5 consistently. These residuals are evaluated by the trainer on the 1756-case splits (n_train 1493 / 1377, n_test 263 / 379) and are NOT numerically comparable to the dimensionless medians of tab:admissibility.
 % src: QA_DATA_AND_Z.md §4 (dropped axial term = 68 % of retained terms; radial 1.3 %).
 \begin{table*}[t]
-\caption{Ablation on the extended track ($z$ as input, $8\times20$ grid), three seeds: macro-RMSE (MPa) and median full-form equilibrium residuals (MPa/m) on the held-out cases; in brackets, change relative to the MLP with the same input. The three configurations differ only in the physics terms of the loss.} % EDIT: the sentence on non-comparability with tab:admissibility moved from the caption into the text
+\caption[Ablation on the extended track]{Ablation on the extended track ($z$ as input, $8\times20$ grid), three seeds: macro-RMSE (MPa) and median full-form equilibrium residuals (MPa/m) on the held-out cases; in brackets, change relative to the MLP with the same input. The three configurations differ only in the physics terms of the loss.} % EDIT: the sentence on non-comparability with tab:admissibility moved from the caption into the text
 \label{tab:ablation2d}
 \centering\small
 \begin{tabular}{@{}llrrr@{}}
@@ -1362,14 +1380,14 @@ The shear component $\tau_{rz}$ is essentially not predicted from the one-dimens
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{pictures/fig5_compare_fields.png}
-    \caption{Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 0.025$ (2.5\,\% in diameter, 5.4\,\% in area), $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min. Rows: FEM reference and the three model families; columns: $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$, $\tau_{rz}$. The colour scale is common to all rows within a component. $r$ is normalised by the surface radius in the same cross-section ($r/R = 1$ is the free surface), $z$ by the window length. The case shown has the median test error of the full PINN.}
+    \caption[Residual stress components: finite element against the three families]{Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 0.025$ (2.5\,\% in diameter, 5.4\,\% in area), $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min. Rows: FEM reference and the three model families; columns: $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$, $\tau_{rz}$. The colour scale is common to all rows within a component. $r$ is normalised by the surface radius in the same cross-section ($r/R = 1$ is the free surface), $z$ by the window length. The case shown has the median test error of the full PINN.}
     \label{fig:compare-fields}
 \end{figure*}
 
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{pictures/fig6_residual_maps.png}
-    \caption{Comparison of the equilibrium residual distributions $R_r$ and $R_z$ over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 0.025$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min (same case as Fig.~\ref{fig:compare-fields}). (a) radial residual $R_r$, (b) axial residual $R_z$, both made dimensionless by the characteristic magnitude of the terms entering the respective equation; the panel titles give the median $|R|$ over all 261 test cases. (c) distribution over the test cases of the traction-free violation $|\sigma_{rr}|$ at $r/R = 1$, mean marked. The FEM column is the reference: the source itself does not satisfy the equations exactly.}
+    \caption[Equilibrium residuals and the traction-free violation]{Comparison of the equilibrium residual distributions $R_r$ and $R_z$ over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 0.025$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min (same case as Fig.~\ref{fig:compare-fields}). (a) radial residual $R_r$, (b) axial residual $R_z$, both made dimensionless by the characteristic magnitude of the terms entering the respective equation; the panel titles give the median $|R|$ over all 261 test cases. (c) distribution over the test cases of the traction-free violation $|\sigma_{rr}|$ at $r/R = 1$, mean marked. The FEM column is the reference: the source itself does not satisfy the equations exactly.}
     \label{fig:residual-maps}
 \end{figure*}
 
@@ -1469,9 +1487,9 @@ The shear component $\tau_{rz}$ is essentially not predicted from the one-dimens
 % T1 generated by publication/experiments/paper_tables.py from runs_v2.csv
 % src: runs_v2.csv: stage==main; macro_rmse mean/sd(ddof=1) over seeds per split×family
 % src: held-out regions — publication/code/splits.py: REGIONS
-\begin{table}[htbp]
+\begin{table*}[t]
 \centering
-\caption{Macro-averaged RMSE on the held-out cases for the 13 splits of the main track, MPa, mean $\pm$ sd over 5 seeds. Split types are defined in Section~\ref{sec:fem-dataset}.}
+\caption[Macro-averaged RMSE on the 13 splits of the main track]{Macro-averaged RMSE on the held-out cases for the 13 splits of the main track, MPa, mean $\pm$ sd over 5 seeds. Split types are defined in Section~\ref{sec:fem-dataset}.}
 \label{tab:main}
 \small
 \begin{tabular}{@{}llrrrrr@{}}
@@ -1497,14 +1515,14 @@ Split & Held-out region & $n_\mathrm{train}$ & $n_\mathrm{test}$ & MLP & PINN & 
 \texttt{matched:corner} & random, $n_\mathrm{test}$ of \texttt{extrap\_joint:corner} & 1642 & 114 & 7.50 $\pm$ 0.16 & 7.17 $\pm$ 0.38 & 7.34 $\pm$ 0.14 \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 % <<< end sections/tab_main.tex
 % >>> inlined sections/tab_paired.tex
 % T2 generated by publication/experiments/paper_tables.py from runs_v2.csv
 % src: runs_v2.csv: stage==main; per-seed macro_rmse differences, scipy.stats.ttest_rel, alpha=0.05
-\begin{table}[htbp]
+\begin{table*}[t]
 \centering
-\caption{Seed-paired comparison of the physics-informed families with the data-driven baseline on every split of Table~\ref{tab:main}. $\Delta$ is the mean over seeds of the per-seed difference in macro-RMSE, MPa; negative favours the physics-informed model. Two-sided paired $t$-test, $n = 5$ pairs, $\alpha = 0.05$. After a Holm correction over the 13 splits, 0 PINN $-$ MLP and 0 VPINN $-$ MLP differences remain significant.}
+\caption[Seed-paired comparison with the data-driven baseline]{Seed-paired comparison of the physics-informed families with the data-driven baseline on every split of Table~\ref{tab:main}. $\Delta$ is the mean over seeds of the per-seed difference in macro-RMSE, MPa; negative favours the physics-informed model. Two-sided paired $t$-test, $n = 5$ pairs, $\alpha = 0.05$. After a Holm correction over the 13 splits, 0 PINN $-$ MLP and 0 VPINN $-$ MLP differences remain significant.}
 \label{tab:paired}
 \small
 \begin{tabular}{@{}lrrrlrrrl@{}}
@@ -1532,15 +1550,15 @@ Split & $\Delta$, MPa & $t$ & $p$ & verdict & $\Delta$, MPa & $t$ & $p$ & verdic
 \texttt{matched:corner} & $-0.33$ & $-1.59$ & 0.186 & n.s. & $-0.16$ & $-1.56$ & 0.195 & n.s. \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 % <<< end sections/tab_paired.tex
 % >>> inlined sections/tab_backend.tex
 % T4 generated by publication/experiments/paper_tables.py from runs_v2.csv
 % src: runs_v2.csv: stage==backend (family pinn); macro_rmse, seconds, epochs, seconds/epochs;
 %      mean/sd(ddof=1) over seeds; scipy.stats.ttest_rel paired by seed (per split) and by (split, seed) (pooled)
-\begin{table}[htbp]
+\begin{table*}[t]
 \centering
-\caption{The same strong-form PINN implemented twice, in PyTorch and in JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa) and cost. Mean $\pm$ sd over seeds; $p$ from a seed-paired $t$-test. Timings are for CPU, double precision.}
+\caption[The strong-form PINN in PyTorch and in JAX]{The same strong-form PINN implemented twice, in PyTorch and in JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa) and cost. Mean $\pm$ sd over seeds; $p$ from a seed-paired $t$-test. Timings are for CPU, double precision.}
 \label{tab:backend}
 \small
 \begin{tabular}{@{}llrrrr@{}}
@@ -1561,15 +1579,15 @@ both splits & PyTorch & --- & 313 $\pm$ 102 & 538 $\pm$ 134 & 0.575 $\pm$ 0.078 
  & paired $p$ ($n = 10$) & --- & $p = 0.002$ & $p = 0.021$ & $p = 0.005$ \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 % <<< end sections/tab_backend.tex
 % >>> inlined sections/tab_corrupt.tex
 % T3 generated by publication/experiments/paper_tables.py from runs_v2.csv
 % src: runs_v2.csv: stage==corrupt & split==random; macro_rmse mean/sd(ddof=1) over seeds per family×corrupt_rate;
 %      paired ttest_rel by seed; linregress of seed-level PINN−MLP gap on corrupt_rate
-\begin{table}[htbp]
+\begin{table*}[t]
 \centering
-\caption{Robustness to label corruption on the \texttt{random} split: macro-RMSE on the clean hold-out, MPa, mean $\pm$ sd over 3 seeds. Below the rule: the seed-paired gap to the data-driven baseline and its regression on the corrupted fraction.}
+\caption[Robustness to label corruption]{Robustness to label corruption on the \texttt{random} split: macro-RMSE on the clean hold-out, MPa, mean $\pm$ sd over 3 seeds. Below the rule: the seed-paired gap to the data-driven baseline and its regression on the corrupted fraction.}
 \label{tab:corrupt}
 \small
 \begin{tabular}{@{}lrrrrr@{}}
@@ -1590,7 +1608,7 @@ $p$ (paired, 3 seeds) & 0.478 & 0.747 & 0.123 & 0.253 & --- \\
 \multicolumn{6}{@{}l@{}}{Regression of the seed-level gap $\Delta$(PINN $-$ MLP) on the corruption fraction ($n = 12$ points): slope $= -14.20$ MPa per unit fraction ($-1.42$ MPa per 10 percentage points), $p = 0.00036$, $R^2 = 0.735$.} \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
 % <<< end sections/tab_corrupt.tex
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

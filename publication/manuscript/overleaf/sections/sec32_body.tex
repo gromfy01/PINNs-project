@@ -21,7 +21,7 @@ Table~\ref{tab:main} gives the macro-RMSE on all thirteen splits. On the random 
 
 % src: RESULTS.md §1.0б "Цена экстраполяции зависит от оси" table (family-averaged RMSE outside / control / ratio / R²_n / null model) — all 25 entries verified.
 \begin{table*}[t]
-\caption{Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the matched control of the same size, their ratio, $R^2_{\mathrm{n}}$ (global denominator) on the held-out region, and the constant predictor (MPa).} % EDIT: denominator named
+\caption[Cost of holding out a whole factor level]{Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the matched control of the same size, their ratio, $R^2_{\mathrm{n}}$ (global denominator) on the held-out region, and the constant predictor (MPa).} % EDIT: denominator named
 \label{tab:axis}
 \centering\small
 \begin{tabular}{@{}lrrrrr@{}}
@@ -63,7 +63,7 @@ The VPINN is established better than the MLP on two splits (\texttt{interp:Q\_mi
 % src: RESULTS.md §3 (learning curves, macro-RMSE at 10/25/50/100 %) — all 24 entries verified; RESULTS_v1_vs_v2.md §5 (gaps, slopes on log fraction, p-values);
 % src: runs_v2.csv stage=curves (n_train 149/373/746/1493 random, 138/344/688/1377 alpha_max; 3 seeds); paired p-values recomputed from the csv: 0.317/0.099/0.048/0.718 and 0.498/0.033/0.886/0.238; slopes +0.197 (p = 0.211) and −0.355 (p = 0.070).
 \begin{table*}[t]
-\caption{Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}.}
+\caption[Learning curves against the fraction of the training pool]{Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}.}
 \label{tab:curves}
 \centering\small
 \begin{tabular}{@{}lrrrrrrr@{}}
@@ -136,7 +136,7 @@ The dimensionless residuals of Table~\ref{tab:admissibility} and Fig.~\ref{fig:r
 Medians are taken over the interior grid nodes, where the central difference is second-order accurate; at the edges of the grid it degenerates to a one-sided difference. % src: experiments/residual_maps.py (comment at `inner`); captions.md
 The FEM row is the baseline against which every admissibility figure is read. % src: residual_maps.py ("базовая линия — сам МКЭ"); captions.md ("Базовая линия МКЭ")
 \begin{table*}[t]
-\caption{Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases. Accuracy: component RMSE (MPa)\,/\,$R^2$ and macro-RMSE; admissibility: the dimensionless equilibrium residuals $|R_r|$, $|R_z|$ and the traction-free violation $|\sigma_{rr}(r{=}1)|$, MPa. Definitions, denominators and the training pool are given in the text.}
+\caption[Accuracy and physical admissibility of the two-dimensional families]{Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases. Accuracy: component RMSE (MPa)\,/\,$R^2$ and macro-RMSE; admissibility: the dimensionless equilibrium residuals $|R_r|$, $|R_z|$ and the traction-free violation $|\sigma_{rr}(r{=}1)|$, MPa. Definitions, denominators and the training pool are given in the text.}
 % REV: caption shortened (the review names Tables 8 and 10-13 as too bulky); the single-run
 % training on 1498 cases, the averaging over interior nodes and the role of the FEM row are
 % stated in the paragraphs around the table. % EDIT: caption made descriptive; definitions moved to the text; R² denominator named — contours.py computes 1 − SS_res/SS_tot over the 261 test cases
@@ -173,7 +173,7 @@ The ordering is the same with seed statistics on the one-dimensional track. On t
 % NOTE: RESULTS_v1_vs_v2.md §4/§8 quote −38…−49 % for the radial residual — those are computed from the REDUCED-form residual columns; the text and tab:ablation2d use the full-form columns of RESULTS.md §5 consistently. These residuals are evaluated by the trainer on the 1756-case splits (n_train 1493 / 1377, n_test 263 / 379) and are NOT numerically comparable to the dimensionless medians of tab:admissibility.
 % src: QA_DATA_AND_Z.md §4 (dropped axial term = 68 % of retained terms; radial 1.3 %).
 \begin{table*}[t]
-\caption{Ablation on the extended track ($z$ as input, $8\times20$ grid), three seeds: macro-RMSE (MPa) and median full-form equilibrium residuals (MPa/m) on the held-out cases; in brackets, change relative to the MLP with the same input. The three configurations differ only in the physics terms of the loss.} % EDIT: the sentence on non-comparability with tab:admissibility moved from the caption into the text
+\caption[Ablation on the extended track]{Ablation on the extended track ($z$ as input, $8\times20$ grid), three seeds: macro-RMSE (MPa) and median full-form equilibrium residuals (MPa/m) on the held-out cases; in brackets, change relative to the MLP with the same input. The three configurations differ only in the physics terms of the loss.} % EDIT: the sentence on non-comparability with tab:admissibility moved from the caption into the text
 \label{tab:ablation2d}
 \centering\small
 \begin{tabular}{@{}llrrr@{}}
