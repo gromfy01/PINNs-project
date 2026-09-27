@@ -168,12 +168,12 @@ Table~\ref{tab:drawstress} uses it.
 \toprule
 \multicolumn{5}{c}{Parameters} & \multicolumn{3}{c}{Analytical, MPa} & Simulation, MPa \\
 \cmidrule(r){1-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
-$Q$ & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod & FEM \\
+$Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod & FEM \\
 \midrule
-0.015 & $12^\circ$ & 40 & 1.0 & 0.025 & 53.2 & 75.1 & 71.5 & 54.1 \\
-0.015 & $12^\circ$ & 40 & 1.0 & 0.050 & 54.2 & 91.1 & 82.8 & 62.0 \\
-0.015 & $12^\circ$ & 40 & 1.0 & 0.100 & 57.4 & 125.4 & 104.4 & 78.3 \\
-0.015 & $8^\circ$  & 40 & 1.0 & 0.100 & 44.7 & 109.0 & 90.8 & 62.3 \\
+1.5 & $12^\circ$ & 40 & 1.0 & 0.025 & 53.2 & 75.1 & 71.5 & 54.1 \\
+1.5 & $12^\circ$ & 40 & 1.0 & 0.050 & 54.2 & 91.1 & 82.8 & 62.0 \\
+1.5 & $12^\circ$ & 40 & 1.0 & 0.100 & 57.4 & 125.4 & 104.4 & 78.3 \\
+1.5 & $8^\circ$  & 40 & 1.0 & 0.100 & 44.7 & 109.0 & 90.8 & 62.3 \\
 \midrule
 \multicolumn{5}{@{}l}{mean absolute deviation} & 17.3\,\% & 55.2\,\% & 36.2\,\% & --- \\
 \multicolumn{5}{@{}l}{$\mathrm{d}\sigma_d/\mathrm{d}\mu$ at $\alpha=12^\circ$, MPa} & 57 & 670 & 439 & 323 \\
@@ -305,7 +305,7 @@ check that the core is the right place to take it.
 % carries a different value: the export is one run at mu = 0.1 (ERRATA E-23).
 
 The region of the design covered by these runs limits what the comparison establishes. All four
-lie at a reduction of 1.6\,\% with a land as long as the outlet radius, a combination in which the
+lie at a nominal reduction of 1.5\,\% in diameter, 1.6\,\% as reached in the model, with a land as long as the outlet radius, a combination in which the
 inhomogeneity parameter is 25.6 at $\alpha = 12^\circ$ and 17.1 at $\alpha = 8^\circ$, against the
 range of 1 to 3 in which these solutions are normally applied and against which they have been
 validated; they remain valid outside it but become progressively loose, because the assumed
