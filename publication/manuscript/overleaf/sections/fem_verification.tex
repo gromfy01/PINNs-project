@@ -217,6 +217,7 @@ factor $\Phi = 0.8 + \Delta/4.4$; the strain rate is obtained from the time to t
 constant volume flow, $\dot\varepsilon = 6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)/(R_0^3-R_f^3)$; and the
 flow stress is the work-weighted mean of the constitutive equation over that path:
 \begin{align}
+\Delta &= \frac{R_0+R_f}{R_0-R_f}\,\sin\alpha, \label{eq:delta}\\
 \varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
 \Phi = 0.8 + \frac{\Delta}{4.4}, \qquad
 \varepsilon_{\mathrm{eff}} = \Phi\,\varepsilon_{\mathrm{hom}}, \label{eq:closed-strain}\\
@@ -224,8 +225,9 @@ flow stress is the work-weighted mean of the constitutive equation over that pat
 \langle\sigma_f\rangle = A + \frac{B\,\varepsilon_{\mathrm{eff}}^{\,n}}{n+1}, \qquad
 \Delta T = \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
 \end{align}
-where $\Delta$ is the inhomogeneity parameter of the deformation zone and
-$\langle\sigma_f\rangle$ the plastic-work-weighted mean of the strain term of the constitutive
+where $\Delta$ is the inhomogeneity parameter of the deformation zone, the ratio of its mean
+diameter to the length of contact along the die cone, set by the die semi-angle and the entry and
+exit radii, and $\langle\sigma_f\rangle$ the plastic-work-weighted mean of the strain term of the constitutive
 equation, taken before its rate and temperature multipliers \citep{backofen1972deformation}. The
 excess-work correlation is quoted in the literature in more than one form; replacing
 $\Phi = 0.8+\Delta/4.4$ by the alternative $\Phi = 0.88+0.12\,\Delta$ changes $\Phi$ by a factor of
