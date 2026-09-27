@@ -73,11 +73,15 @@ build their modification on it, it reads
 \label{eq:avitzur-vega}
 \end{equation}
 written here for zero back tension and with the flow stress in place of the yield stress of the
-original. The denominator is not a correction: the axial balance on a cylindrical land,
-$\mathrm{d}\sigma_z/\mathrm{d}z = 2\mu p/R_f$ closed by the yield condition $p = \sigma_f-\sigma_z$,
-integrates to $\sigma_z(L) = \sigma_f-[\sigma_f-\sigma_z(0)]\exp(-2\mu L/R_f)$, of which
-Eq.~\eqref{eq:avitzur-vega} is the linearisation; the exact form lies above it by at most
-4.0\,\% at the present parameters, so the linearised relation, if anything, understates the
+original. The denominator is Avitzur's treatment of the land
+\citep{avitzur1964large,avitzur1968metal}. It is what the axial force balance on a cylindrical
+land under Coulomb friction gives when the normal pressure follows from the yield condition,
+$p = \sigma_f-\sigma_z$, and is evaluated at the exit stress:
+$\sigma_z(L) = \sigma_z(0) + 2\mu\,(L/R_f)\,[\sigma_f-\sigma_z(L)]$, which rearranges to the form
+of Eq.~\eqref{eq:avitzur-vega}. Integrating the same balance along the land instead gives
+$\sigma_z(L) = \sigma_f-[\sigma_f-\sigma_z(0)]\exp(-2\mu L/R_f)$. The two agree to first order in
+$2\mu L/R_f$, and at the present parameters the integrated form lies above
+Eq.~\eqref{eq:avitzur-vega} by at most 4.0\,\%, so the relation, if anything, understates the
 bearing term it assumes. Equation~\eqref{eq:avitzur-vega} therefore carries an explicit
 assumption about the pressure on the land, $p = \sigma_f-\sigma_z$, which the exported contact data
 can test.
