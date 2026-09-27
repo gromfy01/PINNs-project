@@ -839,10 +839,13 @@ The drawing stress is then
 \sigma_d = \frac{F}{S}, \qquad S = \pi R_f^2,
 \label{eq:sigma-d}
 \end{equation}
-and with the area actually reached in the model, $S = 985$~mm$^2$ at an outlet radius of
-17.71~mm, this gives 54.1, 62.0 and 78.3~MPa at $\alpha = 12^\circ$ for $\mu = 0.025$, 0.05 and
-0.1, and 62.3~MPa at $\alpha = 8^\circ$.
-% src: publication/reexport/drawing_force.py on publication/reexport/history/; the median over the
+where $F$ is the time-averaged axial reaction and $S$ the cross-section of the drawn wire, with
+the outlet radius $R_f$ taken as reached in the model rather than from the nominal reduction. For
+a typical run, at a reduction of 1.5\,\% in diameter, a die semi-angle of $12^\circ$, a land
+ratio of unity, a drawing speed of 40~m/min and $\mu = 0.05$, the drawing stress is 62.0~MPa;
+the values for all runs are given in Table~\ref{tab:drawstress}.
+% src: publication/reexport/drawing_force.py on publication/reexport/history/ (54.1 / 62.0 / 78.3 /
+% 62.3 MPa; S = 985 mm^2 at R_f = 17.71 mm in every run); the median over the
 % same window would give 59.2 / 65.5 / 77.6 / 62.4 MPa, above the time mean at mu = 0.025 and 0.05
 % and below it at mu = 0.1, which is the sawtooth changing shape with friction.
 
