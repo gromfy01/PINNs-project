@@ -932,6 +932,9 @@ and temperature histories exported for that run (Section~\ref{sec:materials}); i
 multiplies each relation as a whole, so the columns of Table~\ref{tab:drawstress} differ only in
 the bracketed work terms, and an error in $\sigma_f$ would shift all three predictions of that
 run by the same factor.
+Below the four runs, Table~\ref{tab:drawstress} gives for each relation the mean absolute deviation
+from the finite-element value and the secant slope $\mathrm{d}\sigma_d/\mathrm{d}\mu$ between the
+runs at $\mu = 0.025$ and $\mu = 0.1$ at $\alpha = 12^\circ$.
 % src: publication/reexport/verification_table.py (all columns); flow_stress.py (sigma_f);
 % code/analytical.py (siebel, avitzur); code/vega_avitzur.py (Eq. avitzur-vega, Eq. mu-temperature)
 
@@ -980,19 +983,11 @@ Table~\ref{tab:drawstress} uses it.
 
 \begin{table*}[htbp]
 \centering\small
-\caption[Drawing stress: finite element against the three closed-form relations]{Drawing stress (MPa) for the four runs: the finite-element value against the Siebel
-relation, Eq.~\eqref{eq:siebel}, the Avitzur upper bound in its friction-factor form,
-Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$, and the modified Avitzur relation in the Coulomb
-form of Eq.~\eqref{eq:avitzur-vega}. All three use the flow stress derived from the constitutive
-equation, 300--305~MPa, and no fitted parameter. Reduction $Q$ is nominal, in diameter; the
-achieved outlet radius is 17.71~mm in every run. The last two rows are the mean absolute
-deviation from the finite-element value and the secant slope $\mathrm{d}\sigma_d/\mathrm{d}\mu$
-between the $\mu=0.025$ and $\mu=0.1$ rows at $\alpha=12^\circ$, for which the finite-element
-value is 323~MPa.}
+\caption{Wire drawing stresses calculated using analytical and FEM models}
 \label{tab:drawstress}
 \begin{tabular}{@{}ccccc rrr r@{}}
 \toprule
-\multicolumn{5}{c}{Parameters} & \multicolumn{3}{c}{Analytical} & Simulation \\
+\multicolumn{5}{c}{Parameters} & \multicolumn{3}{c}{Analytical, MPa} & Simulation, MPa \\
 \cmidrule(r){1-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
 $Q$ & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod & FEM \\
 \midrule
