@@ -1059,19 +1059,17 @@ scale in which the constitutive model is defined, with a transition temperature 
 20~$^\circ$C equal to the initial temperature of every run; a rise in degrees Celsius and a rise in
 kelvin are the same number, but the absolute values are not, and
 Eq.~\eqref{eq:mu-temperature} is calibrated on the Celsius scale.
+The pass-mean temperature in the last column of Table~\ref{tab:deltaT} is the initial 20~$^\circ$C
+plus half the measured rise. The rise is largest at the surface, 45.7--74.8~$^\circ$C, three to
+four times the section mean.
 
 \begin{table}[htbp]
 \centering\small
-\caption[Mean temperature rise and pass-mean temperature]{Mean temperature rise during the pass and the resulting pass-mean temperature: the
-self-consistent analytical estimate, in which the deformation work and the temperature close on
-each other and nothing is read from the model, against the cross-section average of the exported
-temperature history. Every run starts at 20~$^\circ$C, and the pass-mean temperature is formed from
-the measured rise. The peak rise, reached at the surface, is 45.7--74.8~$^\circ$C, three to four
-times the section mean. Reduction 1.6\,\% in diameter (3.2\,\% in area), land ratio unity.}
+\caption{Wire drawing temperatures calculated using analytical and FEM models}
 \label{tab:deltaT}
 \begin{tabular}{@{}llrrr@{}}
 \toprule
-$\alpha$ & $\mu$ & $\Delta T$ analytical, $^\circ$C & $\Delta T$ measured, $^\circ$C & $T$ pass mean, $^\circ$C \\
+$\alpha$ & $\mu$ & $\Delta T$ analytical, $^\circ$C & $\Delta T$ FEM, $^\circ$C & $T$ pass mean, $^\circ$C \\
 \midrule
 $12^\circ$ & 0.025 & 16.3 & 15.0 & 27.5 \\
 $12^\circ$ & 0.050 & 16.6 & 16.9 & 28.4 \\
