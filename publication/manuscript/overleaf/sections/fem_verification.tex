@@ -214,14 +214,14 @@ supply.
 The comparison can be closed completely, with no quantity taken from the finite-element model. The
 homogeneous strain is $2\ln(R_0/R_f)$ and the total strain follows from an excess-work
 factor $\Phi = 0.8 + \Delta/4.4$; the strain rate is obtained from the time to traverse the cone at
-constant volume flow, $\dot\varepsilon = 6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)/(R_0^3-R_f^3)$; and the
+constant volume flow, $\edot = 6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)/(R_0^3-R_f^3)$; and the
 flow stress is the work-weighted mean of the constitutive equation over that path:
 \begin{align}
 \Delta &= \frac{R_0+R_f}{R_0-R_f}\,\sin\alpha, \label{eq:delta}\\
 \varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
 \Phi = 0.8 + \frac{\Delta}{4.4}, \qquad
 \varepsilon_{\mathrm{eff}} = \Phi\,\varepsilon_{\mathrm{hom}}, \label{eq:closed-strain}\\
-\dot\varepsilon &= \frac{6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)}{R_0^3-R_f^3}, \qquad
+\edot &= \frac{6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)}{R_0^3-R_f^3}, \qquad
 \langle\sigma_f\rangle = A + \frac{B\,\varepsilon_{\mathrm{eff}}^{\,n}}{n+1}, \qquad
 \Delta T = \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
 \end{align}
@@ -246,7 +246,7 @@ would raise the estimated rise by 25 to 120\,\% and break the agreement with the
 Table~\ref{tab:deltaT}. For the four runs the fixed point returns a flow stress of 330--338~MPa.
 This is 10\,\% above the 300--305~MPa used in Table~\ref{tab:drawstress}, and the difference is not
 a disagreement: the fixed point evaluates the constitutive equation once, at
-$\varepsilon_{\mathrm{eff}} = 0.215$ and 0.152, $\dot\varepsilon = 15.6$ and 10.3~s$^{-1}$ and the
+$\varepsilon_{\mathrm{eff}} = 0.215$ and 0.152, $\edot = 15.6$ and 10.3~s$^{-1}$ and the
 pass-mean temperature, whereas the representative value of Section~\ref{sec:materials} averages the
 same equation along the deformation path of every material point, most of which lies at lower
 strain. The closed estimate is quoted with its own value throughout, and no column of
@@ -261,7 +261,7 @@ Table~\ref{tab:drawstress} uses it.
 \caption[Intermediate quantities of the closed self-consistent estimate]{Intermediate quantities of the closed self-consistent estimate,
 Eqs.~(\ref{eq:closed-strain})--(\ref{eq:closed-rest}),
 for the four runs: inhomogeneity parameter $\Delta$, Backofen excess-work factor $\Phi$, effective
-strain $\varepsilon_{\mathrm{eff}}$, mean strain rate $\dot\varepsilon$, flow stress $\sigma_f$ from
+strain $\varepsilon_{\mathrm{eff}}$, mean strain rate $\edot$, flow stress $\sigma_f$ from
 the constitutive equation at the fixed-point temperature, and the deformation part of the drawing
 stress, $\sigma_d^{\mathrm{def}}$, being the ideal work, the redundant shear and the friction on the
 cone, with the friction on the land excluded for the reason given in the text. Nothing is taken
@@ -271,7 +271,7 @@ geometry; evaluated instead at the outlet radius measured in each run it is 25.2
 \label{tab:closed}
 \begin{tabular}{@{}llrrrrrr@{}}
 \toprule
-$\alpha$ & $\mu$ & $\Delta$ & $\Phi$ & $\varepsilon_{\mathrm{eff}}$ & $\dot\varepsilon$, s$^{-1}$ & $\sigma_f$, MPa & $\sigma_d^{\mathrm{def}}$, MPa \\
+$\alpha$ & $\mu$ & $\Delta$ & $\Phi$ & $\varepsilon_{\mathrm{eff}}$ & $\edot$, s$^{-1}$ & $\sigma_f$, MPa & $\sigma_d^{\mathrm{def}}$, MPa \\
 \midrule
 $12^\circ$ & 0.025 & 25.6 & 6.62 & 0.215 & 15.6 & 338.2 & 67.1 \\
 $12^\circ$ & 0.050 & 25.6 & 6.62 & 0.215 & 15.6 & 338.1 & 68.4 \\
