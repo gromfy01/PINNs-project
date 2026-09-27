@@ -159,6 +159,8 @@ Table~\ref{tab:drawstress} uses it.
 % eps_hom = 0.032, Phi = 6.62 / 4.70, eps_eff = 0.215 (alpha 12) / 0.152 (alpha 8),
 % edot = 15.6 / 10.3 s^-1, sigma_f = 338.2/338.1/337.9/330.1 MPa. The land term is excluded from
 % this closure (L/Rf = 0 in the solver), which is now stated in the text rather than left implicit.
+% Deformation part of the drawing stress (ideal work + redundant shear + cone friction, no land):
+% 67.1 / 68.4 / 70.9 / 53.9 MPa; Delta at the measured outlet radius 25.2-25.7 (12 deg) and 17.0 (8 deg).
 
 \begin{table*}[htbp]
 \centering\small
@@ -221,34 +223,6 @@ Table~\ref{tab:deltaT} and move every prediction further from the computed value
 % 1.81 in the case of Vega et al., R_i = 2.62e-4 m, R_f = 2.25e-4 m, alpha = 7.9 deg, where the
 % ideal work carries 74 % of the frictionless drawing stress; pass-mean temperature 27.5-30.6 C,
 % multipliers (T/20)^2.68 = 2.35-3.14 and (T/15.6)^2.68 = 4.56-6.11)
-
-\begin{table*}[htbp]
-\centering\small
-\caption[Intermediate quantities of the closed self-consistent estimate]{Intermediate quantities of the closed self-consistent estimate,
-Eqs.~(\ref{eq:closed-strain})--(\ref{eq:closed-rest}),
-for the four runs: inhomogeneity parameter $\Delta$, Backofen excess-work factor $\Phi$, effective
-strain $\varepsilon_{\mathrm{eff}}$, mean strain rate $\edot$, flow stress $\sigma_f$ from
-the constitutive equation at the fixed-point temperature, and the deformation part of the drawing
-stress, $\sigma_d^{\mathrm{def}}$, being the ideal work, the redundant shear and the friction on the
-cone, with the friction on the land excluded for the reason given in the text. Nothing is taken
-from the finite-element model. The nominal geometry is used throughout,
-$\varepsilon_{\mathrm{hom}}=0.032$ at $R_f=17.71$~mm, so $\Delta$ here is the value for that
-geometry; evaluated instead at the outlet radius measured in each run it is 25.2--25.7 and 17.0.}
-\label{tab:closed}
-\begin{tabular}{@{}llrrrrrr@{}}
-\toprule
-$\alpha$ & $\mu$ & $\Delta$ & $\Phi$ & $\varepsilon_{\mathrm{eff}}$ & $\edot$, s$^{-1}$ & $\sigma_f$, MPa & $\sigma_d^{\mathrm{def}}$, MPa \\
-\midrule
-$12^\circ$ & 0.025 & 25.6 & 6.62 & 0.215 & 15.6 & 338.2 & 67.1 \\
-$12^\circ$ & 0.050 & 25.6 & 6.62 & 0.215 & 15.6 & 338.1 & 68.4 \\
-$12^\circ$ & 0.100 & 25.6 & 6.62 & 0.215 & 15.6 & 337.9 & 70.9 \\
-$8^\circ$  & 0.100 & 17.1 & 4.70 & 0.152 & 10.3 & 330.1 & 53.9 \\
-\bottomrule
-\end{tabular}
-\end{table*}
-% src: publication/reexport/analytic_sigma_f.py --Q 0.0161 --v 40 (alpha 12/8, mu 0.025/0.05/0.1).
-% The column is the deformation part only; the full drawing stress with the land is the
-% "as published" column of Table tab:drawstress.
 
 The temperature closure can be checked directly, since the dedicated export also carries the
 temperature history. The self-consistent estimate reproduces the cross-section-averaged rise
