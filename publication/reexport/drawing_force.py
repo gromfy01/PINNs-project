@@ -63,6 +63,10 @@ RHO, CP, BETA = 7870.0, 470.0, 0.9      # плотность, теплоёмко
 CORE = 0.5                              # ядро сечения: r <= CORE * R0
 
 
+def Frad_plateau(rf1: np.ndarray, win: np.ndarray) -> float:
+    return float(np.nanmean(rf1[win]))
+
+
 def _cols(names, needle):
     flat = [n.replace(" ", "") for n in names]
     return [i for i, n in enumerate(flat) if needle in n]
@@ -82,7 +86,49 @@ def _by_node(names, needle):
     return out
 
 
-def measure(path: str) -> dict:
+def steady_window(travel: np.ndarray, rf2: np.ndarray, tol: float = 0.05,
+                  smooth: float = 0.010, margin: float = 0.005):
+    """Установившийся участок, найденный по самому сигналу.
+
+    Уровень полки — медиана |RF2| на ходе от 35 до 55 % полного, где волочение
+    заведомо установилось. От середины прохода окно расширяется в обе стороны, пока
+    скользящее среднее |RF2| по 10 мм хода остаётся в пределах 5 % от уровня полки,
+    и затем сужается на 5 мм с каждой стороны. Возвращает (начало, конец) в метрах
+    или None, если окно короче 30 мм: так бывает на пиле прилипания-проскальзывания
+    при малом трении, и тогда берётся фиксированное окно.
+    """
+    ok = np.isfinite(travel) & np.isfinite(rf2)
+    tr, f = travel[ok], rf2[ok]
+    order = np.argsort(tr)
+    tr, f = tr[order], f[order]
+    T = float(tr.max())
+    mid = (tr >= 0.35 * T) & (tr <= 0.55 * T)
+    if mid.sum() < 5:
+        return None
+    level = float(np.median(f[mid]))
+    grid = np.arange(0.0, T, 0.001)
+    sm = np.full(grid.size, np.nan)
+    for i, g in enumerate(grid):
+        m = (tr >= g - smooth / 2) & (tr < g + smooth / 2)
+        if m.any():
+            sm[i] = f[m].mean()
+    good = np.abs(sm / level - 1.0) <= tol
+    ic = int(np.argmin(np.abs(grid - 0.45 * T)))
+    if not good[ic]:
+        return None
+    lo = hi = ic
+    while lo > 0 and good[lo - 1]:
+        lo -= 1
+    while hi < grid.size - 1 and good[hi + 1]:
+        hi += 1
+    a, b = grid[lo] + margin, grid[hi] - margin
+    return (float(a), float(b)) if b - a >= 0.030 else None
+
+
+def measure(path: str, window="fixed") -> dict:
+    """window: "fixed" — окно 20-100 мм, по которому считались четыре прогона при
+    обжатии 1.5 %; "auto" — окно по самому сигналу (steady_window), с откатом на
+    фиксированное, если полка не найдена."""
     job = os.path.basename(path).replace(".rpt.gz", "").replace(".rpt", "")
     p = job_params(job)
     names, M = parse(path)
@@ -99,7 +145,12 @@ def measure(path: str) -> dict:
     z_die = M[:, i_z_die[0]]
     travel = np.abs(z_die - z_die[np.isfinite(z_die)][0])
 
-    win = np.isfinite(rf2) & (travel >= TRAVEL_LO) & (travel <= TRAVEL_HI)
+    lo_w, hi_w, how = TRAVEL_LO, TRAVEL_HI, "fixed"
+    if window == "auto":
+        found = steady_window(travel, rf2)
+        if found is not None:
+            (lo_w, hi_w), how = found, "auto"
+    win = np.isfinite(rf2) & (travel >= lo_w) & (travel <= hi_w)
     F = float(np.nanmean(rf2[win]))
     spread = float(np.nanstd(rf2[win]) / F)
 
@@ -116,15 +167,32 @@ def measure(path: str) -> dict:
     p_contact = Frad / (A_land + A_cone)
 
     # трение по фазе «только поясок»: конус вышел, в контакте цилиндр
-    late = (np.isfinite(rf1) & np.isfinite(rf2) & (rf1 > 1e3)
-            & (travel >= LAND_LO) & (travel <= LAND_HI))
+    if how == "auto":
+        # после полки: радиальная реакция ещё не меньше четверти установившейся,
+        # последние 60 % таких точек — конус уже вышел, в контакте один поясок
+        after = (np.isfinite(rf1) & np.isfinite(rf2) & (travel > hi_w)
+                 & (rf1 > 0.25 * Frad_plateau(rf1, win)))
+        idx = np.flatnonzero(after)
+        late = np.zeros_like(after)
+        if idx.size:
+            late[idx[int(0.4 * idx.size):]] = True
+        if p["k"] == 0:
+            late[:] = False
+    else:
+        late = (np.isfinite(rf1) & np.isfinite(rf2) & (rf1 > 1e3)
+                & (travel >= LAND_LO) & (travel <= LAND_HI))
     mu_data = (float(np.nanmedian(rf2[late] / rf1[late]))
                if late.sum() > 5 else float("nan"))
 
     # средний по сечению разогрев: узловые максимумы по радиусу с весом площади
+    # начальная температура: в выгрузке 28.09.2026 модель считает в кельвинах
+    # (293.15), в прежней — в градусах Цельсия (20.0); разогрев от неё не зависит
+    t0 = np.array([c[np.isfinite(c)][0] for c in M[:, sorted(temp_by_node.values())].T
+                   if np.isfinite(c).any()])
+    T_init = float(np.median(t0)) if t0.size else T_INIT
     shared = sorted(set(temp_by_node) & set(r_by_node) - {1})
     rr = np.array([np.nanmax(M[:, r_by_node[n]]) for n in shared])
-    dd = np.array([np.nanmax(M[:, temp_by_node[n]]) for n in shared]) - T_INIT
+    dd = np.array([np.nanmax(M[:, temp_by_node[n]]) for n in shared]) - T_init
     order = np.argsort(rr)
     rr, dd = rr[order], dd[order]
     dT_mean = float(np.trapezoid(dd * rr, rr) * 2.0 / rr[-1] ** 2)
@@ -137,10 +205,11 @@ def measure(path: str) -> dict:
         rad = np.nanmax(M[:, r_by_node[n]])
         eps = np.nanmax(M[:, peeq_by_node[n]])
         if rad <= CORE * R0 and eps > 1e-3:
-            core.append(RHO * CP * (np.nanmax(M[:, temp_by_node[n]]) - T_INIT) / (BETA * eps))
+            core.append(RHO * CP * (np.nanmax(M[:, temp_by_node[n]]) - T_init) / (BETA * eps))
 
     return dict(
-        job=job, alpha=p["alpha"], mu_label=p["mu"], k=p["k"], v=p["v"],
+        job=job, alpha=p["alpha"], mu_label=p["mu"], k=p["k"], v=p["v"], Q=p["Q"],
+        window_mm=(round(lo_w * 1e3, 1), round(hi_w * 1e3, 1)), window_how=how,
         n_window=int(win.sum()), travel_total_mm=round(float(np.nanmax(travel)) * 1e3, 1),
         Rf_mm=round(Rf * 1e3, 4), area_mm2=round(area * 1e6, 2),
         F_kN=round(F / 1e3, 2), sigma_d_MPa=round(F / area / 1e6, 1),
@@ -148,7 +217,8 @@ def measure(path: str) -> dict:
         p_contact_MPa=round(p_contact / 1e6, 1),
         mu_from_data=round(mu_data, 4),
         dT_mean_C=round(dT_mean, 1),
-        dT_peak_C=round(float(np.nanmax(temp) - T_INIT), 1),
+        dT_peak_C=round(float(np.nanmax(temp) - T_init), 1),
+        T_init=round(T_init, 2), kelvin=bool(T_init > 200.0),
         sigma_f_heat_min_MPa=round(min(core) / 1e6, 0) if core else float("nan"),
         sigma_f_heat_max_MPa=round(max(core) / 1e6, 0) if core else float("nan"),
         n_core=len(core),

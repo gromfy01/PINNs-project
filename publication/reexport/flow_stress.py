@@ -63,6 +63,11 @@ def representative(path: str) -> dict:
     i_r = [i for i, n in enumerate(names) if "COORD:COOR1" in n.replace(" ", "")][1:]
 
     peeq, temp = M[:, i_peeq], M[:, i_temp]
+    # карта материала задана в градусах Цельсия; выгрузка 28.09.2026 идёт в
+    # кельвинах (старт 293.15), её температуры переводятся перед подстановкой
+    first = [c[np.isfinite(c)][0] for c in temp.T if np.isfinite(c).any()]
+    if first and float(np.median(first)) > 200.0:
+        temp = temp - 273.15
     radius = np.array([np.nanmax(M[:, j]) for j in i_r])[:peeq.shape[1]]
 
     sig_node, w_node, eps_f, ed95, t_max = [], [], [], [], []

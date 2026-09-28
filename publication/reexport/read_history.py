@@ -40,6 +40,32 @@ def _open(path: str):
     return gzip.open(path, "rt", errors="ignore") if path.endswith(".gz") else open(path, errors="ignore")
 
 
+LABEL_W = 19  # ширина подписи колонки в отчёте X-Y Abaqus
+
+
+def _fixed_width_names(head: list, width: int):
+    """Подписи колонок по фиксированной ширине заголовка.
+
+    Заголовок отчёта разбит на три строки, и подпись каждой колонки занимает в них
+    одну и ту же полосу шириной 19 символов. Числа в строках данных выровнены иначе,
+    и в выгрузке 28.09.2026 границы по данным съезжают на полколонки: подписи
+    перемешиваются, и номер узла у PEEQ и TEMP читается неверно. Поэтому полосы
+    отсчитываются от первой подписи COORD:COOR1, которая стоит во второй колонке.
+    """
+    i = head[0].find("COORD:COOR1")
+    if i < LABEL_W:
+        return None
+    off = i - LABEL_W
+    names = ["X"]
+    for k in range(1, width):
+        a, b = off + LABEL_W * k, off + LABEL_W * (k + 1)
+        names.append(" ".join("".join(h[a:b] for h in head).split()))
+    flat = [n.replace(" ", "") for n in names]
+    if not any("RF:RF2" in n for n in flat):
+        return None
+    return names
+
+
 def parse(path: str):
     """-> (имена колонок, матрица значений со столбцом времени первым)."""
     raw = _open(path).read().split("\n")
@@ -54,10 +80,13 @@ def parse(path: str):
     head = raw[1:4]
     pad = max(len(x) for x in head) + 5
     head = [x.ljust(pad) for x in head]
-    names, prev = [], 0
-    for e in col_end:
-        names.append(" ".join("".join(h[prev:e + 2] for h in head).split()))
-        prev = e
+    names = _fixed_width_names(head, width)
+    if names is None:
+        # запасной путь: границы колонок по концам чисел в строках данных
+        names, prev = [], 0
+        for e in col_end:
+            names.append(" ".join("".join(h[prev:e + 2] for h in head).split()))
+            prev = e
     M = np.full((len(data), width), np.nan)
     for i, line in enumerate(data):
         for j, tok in enumerate(line.split()[:width]):
@@ -76,7 +105,7 @@ def job_params(job: str) -> dict:
         Q=int(re.search(r"re?d_(\d+)", job).group(1)) / 10000,
         k=int(re.search(r"cal_(\d+)", job).group(1)) / 100,
         v=int(re.search(r"ve?l?_(\d+)_f", job).group(1)),
-        mu=int(re.search(r"fric_(\d+)", job).group(1)) / 1000,
+        mu=int(re.search(r"_f(?:ric)?_(\d+)", job).group(1)) / 1000,
     )
 
 
