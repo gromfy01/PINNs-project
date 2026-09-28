@@ -72,11 +72,13 @@ def build() -> list:
         mu = fem["mu_from_data"]
         k = fem["k"]
         s0 = flow["sigma_f_MPa"] * 1e6
-        p_meas = fem["p_contact_MPa"] * 1e6
+        # давление на пояске — из разделения реакции на конус и поясок (drawing_force)
+        p_meas = fem["p_land_MPa"] * 1e6
 
+        k = 2.0 * R0 * k / Rf           # далее k — это L / Rf при L = k D0
         t = vega_terms(lnR, a, mu, s0, k)
         rows.append(dict(
-            alpha=fem["alpha"], mu=mu, k=k, Rf_mm=fem["Rf_mm"], lnR=lnR,
+            alpha=fem["alpha"], mu=mu, k=fem["k"], L_over_Rf=k, Rf_mm=fem["Rf_mm"], lnR=lnR,
             delta=float(delta_param(r_area, a)),
             sigma_f=s0 / 1e6,
             fem=fem["sigma_d_MPa"],
@@ -87,7 +89,7 @@ def build() -> list:
             vega_exact=vega_exact_land(lnR, a, mu, s0, k) / 1e6,
             vega_pmeas=vega_measured_land(lnR, a, mu, s0, k, p_meas) / 1e6,
             p_assumed=bearing_pressure(lnR, a, mu, s0, k) / 1e6,
-            p_measured=fem["p_contact_MPa"],
+            p_measured=fem["p_land_MPa"], p_cone=fem["p_cone_MPa"],
             mu_eff=mu_effective(fem["sigma_d_MPa"] * 1e6, lnR, a, s0, k),
             share_ideal=t["ideal"] / t["sigma_d"],
             share_shear=t["shear"] / t["sigma_d"],

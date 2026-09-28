@@ -22,15 +22,18 @@ read_history.py читает отчёты и даёт быструю сводк�
   измеряется по той же выгрузке (минимум радиальной координаты поверхностного
   узла внутри пояска), а не по номинальному R0 (1 - Q).
 
-  Контактное давление. p = < |RF1| > / A_contact, A_contact — поясок 2 pi Rf L
-  плюс конус pi (R0 + Rf)(R0 - Rf)/sin(alpha). Это частное полной силы на полную
-  номинальную площадь, то есть среднее по контакту, а не пик CPRESS.
+  Давление на конусе и нагрузка на поясок. Реакция делится на конус и поясок по
+  отношению осевой и радиальной составляющих: на конусе при скольжении по Кулону
+  оно равно tan(alpha + atan mu), на пояске — mu. Длина пояска L = k D0 = 2 k R0
+  (сдвиг опорной точки волоки и длительность фазы «только поясок» — ровно 36 k мм).
+  Прежняя величина p_contact = <|RF1|> / (A_cone + A_land) оставлена для сравнения:
+  это не давление на пояске, а сила на конусе, разнесённая на площадь, растущую с k.
 
   Трение. Отношение |RF2|/|RF1| на фазе, когда конус уже вышел из заготовки и в
-  контакте остался только цилиндрический поясок (ход волоки 115-140 мм): там
-  нормаль строго радиальна, и отношение равно коэффициенту трения. Это
-  восстанавливает mu из данных, а не из имени файла, — важно, потому что часть
-  выгрузки продублирована (ERRATA E-23).
+  контакте остался только цилиндрический поясок (последние L мм хода перед концом
+  контакта; для прежней выгрузки — ход 115-140 мм): там нормаль строго радиальна,
+  и отношение равно коэффициенту трения. Это восстанавливает mu из данных, а не из
+  имени файла, — важно, потому что часть выгрузки продублирована (ERRATA E-23).
 
   Разогрев. Средний по сечению подъём температуры: узловые максимумы за всю
   историю, осреднённые по радиусу с весом r (то есть по площади).
@@ -61,10 +64,6 @@ TRAVEL_LO, TRAVEL_HI = 0.020, 0.100     # окно установившегос�
 LAND_LO, LAND_HI = 0.115, 0.140         # окно «в контакте только поясок», м
 RHO, CP, BETA = 7870.0, 470.0, 0.9      # плотность, теплоёмкость, доля работы в тепло
 CORE = 0.5                              # ядро сечения: r <= CORE * R0
-
-
-def Frad_plateau(rf1: np.ndarray, win: np.ndarray) -> float:
-    return float(np.nanmean(rf1[win]))
 
 
 def _cols(names, needle):
@@ -159,25 +158,36 @@ def measure(path: str, window="fixed") -> dict:
     Rf = float(np.nanmin(r_surf[np.isfinite(r_surf)]))
     area = math.pi * Rf ** 2
 
-    # контактная площадь: поясок (L = k * Rf) плюс конус
+    # Длина пояска L = k * D0 = 2 k R0: опорная точка волоки при каждом k сдвинута
+    # ровно на 36 k мм, и фаза «в контакте только поясок» в хвосте прохода длится
+    # 36 k мм (выгрузки 1.5 % и 28.09.2026). Прежнее L = k * Rf было ошибкой.
     a = math.radians(p["alpha"])
-    A_land = 2.0 * math.pi * Rf * p["k"] * Rf
+    mu = p["mu"]
+    L_land = 2.0 * R0 * p["k"]
+    A_land = 2.0 * math.pi * Rf * L_land
     A_cone = math.pi * (R0 + Rf) * (R0 - Rf) / math.sin(a)
     Frad = float(np.nanmean(rf1[win]))
-    p_contact = Frad / (A_land + A_cone)
 
-    # трение по фазе «только поясок»: конус вышел, в контакте цилиндр
-    if how == "auto":
-        # после полки: радиальная реакция ещё не меньше четверти установившейся,
-        # последние 60 % таких точек — конус уже вышел, в контакте один поясок
-        after = (np.isfinite(rf1) & np.isfinite(rf2) & (travel > hi_w)
-                 & (rf1 > 0.25 * Frad_plateau(rf1, win)))
-        idx = np.flatnonzero(after)
-        late = np.zeros_like(after)
-        if idx.size:
-            late[idx[int(0.4 * idx.size):]] = True
-        if p["k"] == 0:
-            late[:] = False
+    # Разделение реакции на конус и поясок. На конусе при скольжении по Кулону
+    # осевая и радиальная составляющие относятся как T = tan(alpha + atan mu), на
+    # пояске — как mu. Отсюда нормальная сила на пояске
+    #   N_land = (T * RF1 - RF2) / (T - mu),
+    # а нормальное давление на конусе p_cone = (RF1 - N_land) / (A_cone (cos a - mu sin a)).
+    T_cone = math.tan(a + math.atan(mu))
+    N_land = (T_cone * Frad - F) / (T_cone - mu)
+    p_cone = (Frad - N_land) / (A_cone * (math.cos(a) - mu * math.sin(a)))
+    p_land = N_land / A_land if A_land > 0 else float("nan")
+    p_contact = Frad / (A_land + A_cone)     # прежняя величина, только для сравнения
+
+    # Трение по фазе «только поясок»: конус вышел из хвоста заготовки, в контакте
+    # один цилиндр. Эта фаза — последние L мм хода перед концом контакта.
+    loaded = np.isfinite(rf1) & (rf1 > 0.01 * Frad)
+    s_end = float(np.nanmax(travel[loaded])) if loaded.any() else float("nan")
+    if how == "auto" and L_land > 0.002:
+        late = (np.isfinite(rf1) & np.isfinite(rf2) & (rf1 > 1e3)
+                & (travel >= s_end - L_land + 0.001) & (travel <= s_end - 0.001))
+    elif how == "auto":
+        late = np.zeros_like(loaded)
     else:
         late = (np.isfinite(rf1) & np.isfinite(rf2) & (rf1 > 1e3)
                 & (travel >= LAND_LO) & (travel <= LAND_HI))
@@ -198,8 +208,28 @@ def measure(path: str, window="fixed") -> dict:
     dT_mean = float(np.trapezoid(dd * rr, rr) * 2.0 / rr[-1] ** 2)
     temp = M[:, sorted(temp_by_node.values())]
 
-    # предел текучести из тепла по ядру сечения
+    # Разогрев к концу деформации: в каждом узле температура в момент, когда PEEQ
+    # достигает 99.5 % своего конечного значения. Максимум по всей истории включает
+    # и тепло, пришедшее теплопроводностью уже после прохода (к оси — до 3.6 К/с).
     peeq_by_node = _by_node(names, "PEEQ")
+    tt = M[:, 0]
+    rr2, dd2 = [], []
+    for n in sorted(set(temp_by_node) & set(r_by_node) & set(peeq_by_node) - {1}):
+        pe, te = M[:, peeq_by_node[n]], M[:, temp_by_node[n]]
+        okp, okt = np.isfinite(pe), np.isfinite(te)
+        if okp.sum() < 5 or okt.sum() < 5 or np.nanmax(pe) <= 0:
+            continue
+        t_end = tt[okp][np.argmax(pe[okp] >= 0.995 * np.nanmax(pe))]
+        rr2.append(np.nanmax(M[:, r_by_node[n]]))
+        dd2.append(float(np.interp(t_end, tt[okt], te[okt])) - T_init)
+    if len(rr2) > 3:
+        o = np.argsort(rr2)
+        rr2, dd2 = np.array(rr2)[o], np.array(dd2)[o]
+        dT_def = float(np.trapezoid(dd2 * rr2, rr2) * 2.0 / rr2[-1] ** 2)
+    else:
+        dT_def = float("nan")
+
+    # предел текучести из тепла по ядру сечения
     core = []
     for n in sorted(set(temp_by_node) & set(r_by_node) & set(peeq_by_node) - {1}):
         rad = np.nanmax(M[:, r_by_node[n]])
@@ -215,8 +245,12 @@ def measure(path: str, window="fixed") -> dict:
         F_kN=round(F / 1e3, 2), sigma_d_MPa=round(F / area / 1e6, 1),
         spread_pct=round(spread * 100.0, 1),
         p_contact_MPa=round(p_contact / 1e6, 1),
+        L_land_mm=round(L_land * 1e3, 2), N_land_kN=round(N_land / 1e3, 2),
+        land_share_axial=round(mu * N_land / F, 4),
+        p_cone_MPa=round(p_cone / 1e6, 1), p_land_MPa=round(p_land / 1e6, 1),
+        s_end_mm=round(s_end * 1e3, 1),
         mu_from_data=round(mu_data, 4),
-        dT_mean_C=round(dT_mean, 1),
+        dT_mean_C=round(dT_mean, 1), dT_def_C=round(dT_def, 1),
         dT_peak_C=round(float(np.nanmax(temp) - T_init), 1),
         T_init=round(T_init, 2), kelvin=bool(T_init > 200.0),
         sigma_f_heat_min_MPa=round(min(core) / 1e6, 0) if core else float("nan"),

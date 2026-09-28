@@ -95,7 +95,34 @@ def parse(path: str):
                     M[i, j] = float(tok)
                 except ValueError:
                     pass
-    return names, M
+    return names, collapse_repeated_times(M)
+
+
+def collapse_repeated_times(M: np.ndarray) -> np.ndarray:
+    """Строки с одним и тем же временем сводятся в одну средним по каждой колонке.
+
+    В отчётах бывают повторы момента времени: в них лежат неосреднённые значения по
+    элементам (осреднение Avg: 75 % не сработало), чаще всего у TEMP. Если их
+    оставить, приращение времени между ними нулевое, скорость деформации там
+    обнуляется, а максимум температуры берётся по отдельному элементу.
+    """
+    t = M[:, 0]
+    if np.unique(t[np.isfinite(t)]).size == np.isfinite(t).sum():
+        return M
+    out, i = [], 0
+    while i < M.shape[0]:
+        j = i + 1
+        while j < M.shape[0] and M[j, 0] == M[i, 0]:
+            j += 1
+        block = M[i:j]
+        if j - i == 1:
+            out.append(block[0])
+        else:
+            with np.errstate(all="ignore"):
+                row = np.nanmean(block, axis=0)
+            out.append(row)
+        i = j
+    return np.array(out)
 
 
 def job_params(job: str) -> dict:
