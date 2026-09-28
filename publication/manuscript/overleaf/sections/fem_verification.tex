@@ -297,5 +297,5 @@ on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%), % src: V
 and the residual field stays below the flow stress everywhere: the maximum von Mises stress over the retained cases is 232.6~MPa, against the 300--305~MPa that the constitutive equation returns for the deformation histories of this pass (Section~\ref{sec:materials}).
 % REV: the comparison is now made against the flow stress derived from the constitutive equation,
 % not against a postulated yield stress of 320 MPa. % src: VALIDATION.md §7 (max Mises 232.6 at σ_y = 320)
-Kinematically, the exit radius follows $R_0(1-Q)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
+Kinematically, the exit radius follows $R_0(1-Q/100)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
 These tests check the mesh, the contact and the solver of this model, not its correspondence to real wire. % src: VALIDATION.md §5 item 6

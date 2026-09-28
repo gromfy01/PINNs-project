@@ -222,7 +222,7 @@ $S_3$ - is the free lateral surface;
 $S_4$ - is the contact surface between the wire and the die; and $S_5$ - is the entry surface of the billet. 
 
 The half-angle of the working cone of the die is denoted $\alpha$; $D_0$ and $D$ are the diameters of the billet and of the drawn wire; $L$ is the length of the calibration land.
-The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction $Q=(r_0-r_1)/r_0$ follows from $D_0$ and $D$, the deformation-zone half-angle is $\alpha$, and the calibration ratio $k$ relates the land length $L$ to the outlet radius.
+The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$, in per cent, follows from $D_0$ and $D$, the deformation-zone half-angle is $\alpha$, and the calibration ratio $k$ relates the land length $L$ to the outlet radius.
 
 \begin{figure*}[t]
 \centering
@@ -291,7 +291,7 @@ The same constitutive description was used in all simulations, so the resulting 
 \toprule
 Parameter & Values \\
 \midrule
-Reduction $Q$ & 0.015, 0.025, 0.05, 0.10, 0.15, 0.20, 0.25 \\
+Reduction $Q$, \% & 1.5, 2.5, 5, 10, 15, 20, 25 \\
 Calibration ratio $k$ & 0.0, 0.1, 0.3, 0.5, 0.75, 1.0 \\
 Die half-angle $\alpha$, $^{\circ}$ & 4, 8, 12, 16, 20 \\
 Friction coefficient $\mu$ & 0.025, 0.05, 0.10 \\
@@ -300,7 +300,7 @@ Drawing velocity $v$, m/min & 5, 10, 20, 40, 250 \\
 \end{tabularx}
 \end{table}
 
-After removing friction-label duplicates, the highest reduction level $Q=0.25$ (at which several runs ceased to be drawing as the billet adhered to the die) and runs that did not complete the draw, the cleaning detailed in Section~\ref{sec:prep-data} leaves 1756 valid simulations for surrogate-model training.
+After removing friction-label duplicates, the highest reduction level $Q=25\,\%$ (at which several runs ceased to be drawing as the billet adhered to the die) and runs that did not complete the draw, the cleaning detailed in Section~\ref{sec:prep-data} leaves 1756 valid simulations for surrogate-model training.
 
 The modelling approach follows established practice in the numerical analysis of wire drawing: an axisymmetric finite-element discretisation, a Coulomb contact formulation at the die interface, and an elastic--plastic material description. Independent studies built on the same ingredients \citep{shin2026accurate,he2003residual,overstam2006influence,selbmann2024residual} report good agreement with measurements, which supports the approach; the present dataset itself was not compared with measurements on drawn wire, and the residual stress values are therefore interpreted with respect to the model that produced them. The internal consistency of that model, and its agreement with the analytical solutions for the drawing stress, are examined in Section~\ref{sec:res_fem_verification}.
 % NOTE:, K27: the paragraph no longer opens by declaring the absence of experimental validation; the approach is stated positively, the scope of the conclusions is named once, and the reader is sent to the verification.
@@ -365,7 +365,7 @@ Targets stay in MPa; since the components differ by two orders of magnitude (mea
 
 \paragraph{Filtering.}
 % NOTE: an explanatory opening sentence was added before the list of the filters.
-In the further preparation of the data a part of the computed results had to be discarded, and this was necessary for several distinct reasons. Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=0.25$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels. % src: PLAYBOOK.md §5.2 (six "billet adhered to the die" cases + one convergence artefact, all at Q = 0.25); ERRATA.md E-24 (48 of 275 = 17.5 %); TODO: one consistent justification for excluding Q = 0.25 is to be agreed with the corresponding author (code/filters.py labels this filter "elastic regime")
+In the further preparation of the data a part of the computed results had to be discarded, and this was necessary for several distinct reasons. Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=25\,\%$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels. % src: PLAYBOOK.md §5.2 (six "billet adhered to the die" cases + one convergence artefact, all at Q = 0.25); ERRATA.md E-24 (48 of 275 = 17.5 %); TODO: one consistent justification for excluding Q = 0.25 is to be agreed with the corresponding author (code/filters.py labels this filter "elastic regime")
 % NOTE: the single run with a mistyped friction label is no longer mentioned in the running text; it is retained as a row of Table~\ref{tab:filtering}. % src: ERRATA.md E-03
 Cases whose profile is bit-identical to another case differing only in the friction label are dropped, keeping one per group (323 of the 2443 raw cases, 13.2\,\%; 319 of them survive the two preceding filters and are counted in Table~\ref{tab:filtering}). % src: ERRATA.md E-06; audit/RAW_AUDIT.md §5 (323 / 13.2 % on the raw grid); PLAYBOOK.md §5.5 (−319 after Q = 0.25 and μ-typo removal); code/filters.py find_mu_duplicates
 Finally, runs that stopped before the wire had passed through the die are removed: their tail retains the billet radius $R_0$ and the die reference point lies inside the axial extent of the wire (153 of the 159 such runs on the raw grid). % src: ERRATA.md E-24
@@ -382,7 +382,7 @@ These 92 cases (89 detected through the window plus 3 with the tail outside it) 
 Step & Removed & Remaining \\
 \midrule
 Raw reports                                            &     & 2443 \\ % src: audit/RAW_AUDIT.md (header)
-Level $Q=0.25$ excluded                                & 275 & 2168 \\ % src: PLAYBOOK.md §5.5; audit/RAW_AUDIT.md §4 (Q = 0.25 → 275)
+Level $Q=25\,\%$ excluded                                & 275 & 2168 \\ % src: PLAYBOOK.md §5.5; audit/RAW_AUDIT.md §4 (Q = 0.25 → 275)
 Friction label outside the design (file-name typo)     & 1   & 2167 \\ % src: PLAYBOOK.md §5.5; ERRATA.md E-03
 Bit-identical duplicates differing only in $\mu$ label & 319 & 1848 \\ % src: PLAYBOOK.md §5.5
 Runs that did not complete the pass through the die    & 92  & 1756 \\ % src: ERRATA.md E-24; RESULTS_v1_vs_v2.md (1848 → 1756)
@@ -401,9 +401,9 @@ The runs carried out according to the design of Table~\ref{tab:fem_params} yield
 A random 15\,\% hold-out measures interpolation only; to measure transfer beyond the training range, entire factor levels are held out (Table~\ref{tab:splits}). % src: code/splits.py make_random_split (frac = 0.15); PLAYBOOK.md §7.1
 % NOTE: the description of the controls and of the joint-range partition was recast in more formal terms; the content is unchanged.
 Each extrapolation split is accompanied by two controls. The \emph{matched} control withholds a random subset of the same size drawn from the whole pool, so that the difference $\Delta\mathrm{RMSE} = \mathrm{RMSE}(\text{extrap}) - \mathrm{RMSE}(\text{matched})$ separates the cost of leaving the training range from the cost of a smaller training set; % src: code/splits.py make_matched_split, module docstring
-the \emph{interior} control withholds an inner level of the same axis ($\alpha = 12^\circ$, $Q = 0.10$), which separates the cost of a gap inside the factor grid from the cost of leaving its range. % src: code/splits.py REGIONS (alpha_mid, Q_mid); RESULTS.md §1
+the \emph{interior} control withholds an inner level of the same axis ($\alpha = 12^\circ$, $Q = 10\,\%$), which separates the cost of a gap inside the factor grid from the cost of leaving its range. % src: code/splits.py REGIONS (alpha_mid, Q_mid); RESULTS.md §1
 % NOTE: the term "corner split" was replaced by a description in terms of a joint departure from the ranges of two factors; $\alpha$ is named the die semi-angle, i.e.\ the half-angle of the deformation zone.
-A further partition, denoted \texttt{extrap\_joint:corner} in the run log, is defined by a joint departure from the ranges of two factors, the die semi-angle $\alpha$, i.e.\ the half-angle of the deformation zone, and the reduction $Q$: the region $\alpha = 20^\circ \wedge Q \ge 0.15$ is withheld as a whole. Along either of the two axes taken separately the test cases of this partition remain inside the training range, so that what is probed is a region of the joint factor space left uncovered by the design, and not extrapolation beyond the range of a single factor. % src: code/splits.py REGIONS corner (kind extrap_joint); PLAYBOOK.md §7.1
+A further partition, denoted \texttt{extrap\_joint:corner} in the run log, is defined by a joint departure from the ranges of two factors, the die semi-angle $\alpha$, i.e.\ the half-angle of the deformation zone, and the reduction $Q$: the region $\alpha = 20^\circ \wedge Q \ge 15\,\%$ is withheld as a whole. Along either of the two axes taken separately the test cases of this partition remain inside the training range, so that what is probed is a region of the joint factor space left uncovered by the design, and not extrapolation beyond the range of a single factor. % src: code/splits.py REGIONS corner (kind extrap_joint); PLAYBOOK.md §7.1
 A coverage report states, for each axis, whether the test range leaves the training range; transfer beyond the training range is claimed only for those axes for which it does. % src: code/splits.py coverage_report
 The partitions are fixed (seed 42); the five training seeds of Section~\ref{sec:models} vary the initialisation, the batch order and the 15\,\% early-stopping subset carved from the training pool. % src: code/splits.py defaults (seed = 42); results/runs_v2.csv (seeds 0–4); code/trainer.py (manual_seed, val_frac = 0.15, batch Generator seeded by cfg.seed)
 % FIXED: "validation subset" → "early-stopping subset" to keep the word validation for comparison against experiment (VALIDATION.md: verification, not validation).
@@ -418,12 +418,12 @@ Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
 \midrule
 \texttt{random}              & random 15\,\%                         & interpolation           & 1493 & 263 \\ % src: results/runs_v2.csv
 \texttt{extrap:alpha\_max}   & $\alpha = 20^\circ$                   & extrapolation, $\alpha$ & 1377 & 379 \\ % src: results/runs_v2.csv
-\texttt{extrap:Q\_high}      & $Q = 0.20$                            & extrapolation, $Q$      & 1484 & 272 \\ % src: results/runs_v2.csv
+\texttt{extrap:Q\_high}      & $Q = 20\,\%$                            & extrapolation, $Q$      & 1484 & 272 \\ % src: results/runs_v2.csv
 \texttt{extrap:k\_max}       & $k = 1.0$                             & extrapolation, $k$      & 1466 & 290 \\ % src: results/runs_v2.csv
 \texttt{extrap:v\_max}       & $v = 250$~m/min                       & extrapolation, $v$      & 1255 & 501 \\ % src: results/runs_v2.csv
-\texttt{extrap\_joint:corner}& $\alpha = 20^\circ \wedge Q \ge 0.15$ & gap in the joint $(\alpha, Q)$ range & 1642 & 114 \\ % NOTE: "joint-space gap" named after the two factors involved % src: results/runs_v2.csv
+\texttt{extrap\_joint:corner}& $\alpha = 20^\circ \wedge Q \ge 15\,\%$ & gap in the joint $(\alpha, Q)$ range & 1642 & 114 \\ % NOTE: "joint-space gap" named after the two factors involved % src: results/runs_v2.csv
 \texttt{interp:alpha\_mid}   & $\alpha = 12^\circ$                   & interior control        & 1416 & 340 \\ % src: results/runs_v2.csv
-\texttt{interp:Q\_mid}       & $Q = 0.10$                            & interior control        & 1438 & 318 \\ % src: results/runs_v2.csv
+\texttt{interp:Q\_mid}       & $Q = 10\,\%$                            & interior control        & 1438 & 318 \\ % src: results/runs_v2.csv
 \texttt{matched:alpha\_max}  & random, same size                     & matched control         & 1377 & 379 \\ % src: results/runs_v2.csv
 \texttt{matched:Q\_high}     & random, same size                     & matched control         & 1484 & 272 \\ % src: results/runs_v2.csv
 \texttt{matched:k\_max}      & random, same size                     & matched control         & 1466 & 290 \\ % src: results/runs_v2.csv
@@ -814,7 +814,7 @@ could leak a held-out region.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{pictures/fig2_fem_fields.png}
-    \caption[Residual stress fields from the finite-element simulation]{Distribution of residual stresses obtained from the FEM simulation at $Q = 0.10$ (10\,\% reduction in diameter, 20.1\,\% in area), $k = 0.5$, $\alpha = 12^\circ$, $\mu = 0.05$, $v = 10$~m/min. Panels from left to right: the components $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$ and $\tau_{rz}$ over the full axial extent of the wire, each with its own colour scale graduated in MPa. The radius is normalised by the billet radius $R = 18$~mm and the axial coordinate by the model length $L = 139.5$~mm; dashed lines mark the axial window 25--75\,\% of $L$ from which the training data are taken.}
+    \caption[Residual stress fields from the finite-element simulation]{Distribution of residual stresses obtained from the FEM simulation at $Q = 10\,\%$, $k = 0.5$, $\alpha = 12^\circ$, $\mu = 0.05$, $v = 10$~m/min. Panels from left to right: the components $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$ and $\tau_{rz}$ over the full axial extent of the wire, each with its own colour scale graduated in MPa. The radius is normalised by the billet radius $R = 18$~mm and the axial coordinate by the model length $L = 139.5$~mm; dashed lines mark the axial window 25--75\,\% of $L$ from which the training data are taken.}
     \label{fig:fem-fields}
 \end{figure*}
 
@@ -1118,7 +1118,7 @@ on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%), % src: V
 and the residual field stays below the flow stress everywhere: the maximum von Mises stress over the retained cases is 232.6~MPa, against the 300--305~MPa that the constitutive equation returns for the deformation histories of this pass (Section~\ref{sec:materials}).
 % REV: the comparison is now made against the flow stress derived from the constitutive equation,
 % not against a postulated yield stress of 320 MPa. % src: VALIDATION.md §7 (max Mises 232.6 at σ_y = 320)
-Kinematically, the exit radius follows $R_0(1-Q)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
+Kinematically, the exit radius follows $R_0(1-Q/100)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
 These tests check the mesh, the contact and the solver of this model, not its correspondence to real wire. % src: VALIDATION.md §5 item 6
 % <<< end sections/fem_verification.tex
 
@@ -1158,8 +1158,8 @@ Held-out region & Outside & Control & Ratio & $R^2_{\mathrm{n}}$ outside & Const
 \midrule
 $k=1.0$                              & 8.9  & 8.3 & $\times1.08$ & $+0.98$ & 67 \\
 $\alpha=20^\circ$                    & 13.2 & 8.1 & $\times1.64$ & $+0.96$ & 61 \\
-$\alpha=20^\circ$, $Q\ge0.15$        & 16.1 & 7.3 & $\times2.20$ & $+0.94$ & 61 \\
-$Q=0.20$                             & 24.7 & 7.8 & $\times3.15$ & $+0.81$ & 60 \\
+$\alpha=20^\circ$, $Q\ge15\,\%$        & 16.1 & 7.3 & $\times2.20$ & $+0.94$ & 61 \\
+$Q=20\,\%$                             & 24.7 & 7.8 & $\times3.15$ & $+0.81$ & 60 \\
 $v=250$~m/min                        & 50.9 & 8.6 & $\times5.93$ & $+0.36$ & 71 \\
 \bottomrule
 \end{tabular}
@@ -1173,7 +1173,7 @@ Holding out the largest semi-angle costs a factor of 1.6 with $R^2_{\mathrm{n}}$
 % src: RESULTS.md §1 (interp:alpha_mid 8.69–9.06 vs extrap:alpha_max 12.98–13.63 vs random 7.98–8.04; interp:Q_mid 10.96–12.40 vs extrap:Q_high 23.41–26.27);
 % src: RESULTS.md §1.0б per family: alpha_mid R²_n +0.98/+0.98/+0.98; alpha_max +0.96 (MLP) / +0.97 (PINN) / +0.97 (VPINN) — the family average +0.96 is what tab:axis quotes.
 % NOTE: RESULTS.md text quotes "10.4 MPa" for the interior alpha level; that figure is the mean over BOTH interior splits (alpha_mid 8.91 and Q_mid 11.85 → 10.38) — a text-generation slip in make_results.py; the table values are used here.
-Removing an interior level is not free either. Along $\alpha$, where the volumes are nearly equal, withholding the interior level $\alpha=12^\circ$ gives 8.7--9.1~MPa at $R^2_{\mathrm{n}}=0.98$ and withholding the extreme level $\alpha=20^\circ$ gives 13.0--13.6~MPa at $R^2_{\mathrm{n}}=0.96$--$0.97$, against 8.0~MPa on the random hold-out: most of the price is paid for the hole in a five-level factor grid, and the direction of the hole adds comparatively little. Along $Q$ the same pattern is steeper, 11.0--12.4~MPa for $Q=0.10$ against 23.4--26.3~MPa for $Q=0.20$.
+Removing an interior level is not free either. Along $\alpha$, where the volumes are nearly equal, withholding the interior level $\alpha=12^\circ$ gives 8.7--9.1~MPa at $R^2_{\mathrm{n}}=0.98$ and withholding the extreme level $\alpha=20^\circ$ gives 13.0--13.6~MPa at $R^2_{\mathrm{n}}=0.96$--$0.97$, against 8.0~MPa on the random hold-out: most of the price is paid for the hole in a five-level factor grid, and the direction of the hole adds comparatively little. Along $Q$ the same pattern is steeper, 11.0--12.4~MPa for $Q=10\,\%$ against 23.4--26.3~MPa for $Q=20\,\%$.
 
 % src: RESULTS.md §1.0б (v_max: 48–56 vs 71.4 constant; R²_n +0.23 / +0.45 / +0.40); RESULTS.md §1.3б (τ_rz NRMSE 1.622 / 1.945 / 1.879 on v_max); RESULTS.md §1 (MLP sd 19.04); VALIDATION.md §6 (speed level coincides with simulation batch).
 Withholding the highest drawing speed gives the largest loss of accuracy, and its interpretation requires care. In the source simulations each level of $v$ coincides one-to-one with a separate batch of runs (Section~\ref{sec:prep-data}), so withholding the highest level removes not only the extreme level of a factor but an entire batch: extrapolation along $v$ is here inseparable from a transfer to a batch that is not represented in training. With $v=250$~m/min withheld the error is 48--56~MPa, still below the 71~MPa of the constant predictor, but $R^2_{\mathrm{n}}$ falls to 0.23--0.45 and the shear component is reproduced no better than by a constant: its NRMSE, normalised here by the standard deviation over the held-out cases, is 1.6--1.9. The MLP, in addition, % EDIT: denominators named % NOTE: the batch confound is stated first and the figures are read as a joint effect, in place of "the surrogate breaks down" (VALIDATION.md §6: each speed level coincides one-to-one with the simulation batch); numbers unchanged
@@ -1341,14 +1341,14 @@ The shear component $\tau_{rz}$ is essentially not predicted from the one-dimens
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{pictures/fig5_compare_fields.png}
-    \caption[Residual stress components: finite element against the three families]{Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 0.025$ (2.5\,\% in diameter, 5.4\,\% in area), $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min. Rows: FEM reference and the three model families; columns: $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$, $\tau_{rz}$. The colour scale is common to all rows within a component. $r$ is normalised by the surface radius in the same cross-section ($r/R = 1$ is the free surface), $z$ by the window length. The case shown has the median test error of the full PINN.}
+    \caption[Residual stress components: finite element against the three families]{Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 2.5\,\%$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min. Rows: FEM reference and the three model families; columns: $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$, $\tau_{rz}$. The colour scale is common to all rows within a component. $r$ is normalised by the surface radius in the same cross-section ($r/R = 1$ is the free surface), $z$ by the window length. The case shown has the median test error of the full PINN.}
     \label{fig:compare-fields}
 \end{figure*}
 
 \begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{pictures/fig6_residual_maps.png}
-    \caption[Equilibrium residuals and the traction-free violation]{Comparison of the equilibrium residual distributions $R_r$ and $R_z$ over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 0.025$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min (same case as Fig.~\ref{fig:compare-fields}). (a) radial residual $R_r$, (b) axial residual $R_z$, both made dimensionless by the characteristic magnitude of the terms entering the respective equation; the panel titles give the median $|R|$ over all 261 test cases. (c) distribution over the test cases of the traction-free violation $|\sigma_{rr}|$ at $r/R = 1$, mean marked. The FEM column is the reference: the source itself does not satisfy the equations exactly.}
+    \caption[Equilibrium residuals and the traction-free violation]{Comparison of the equilibrium residual distributions $R_r$ and $R_z$ over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 2.5\,\%$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min (same case as Fig.~\ref{fig:compare-fields}). (a) radial residual $R_r$, (b) axial residual $R_z$, both made dimensionless by the characteristic magnitude of the terms entering the respective equation; the panel titles give the median $|R|$ over all 261 test cases. (c) distribution over the test cases of the traction-free violation $|\sigma_{rr}|$ at $r/R = 1$, mean marked. The FEM column is the reference: the source itself does not satisfy the equations exactly.}
     \label{fig:residual-maps}
 \end{figure*}
 
@@ -1459,15 +1459,15 @@ Split & Held-out region & $n_\mathrm{train}$ & $n_\mathrm{test}$ & MLP & PINN & 
 \midrule
 \texttt{random} & random 15\,\% of all cases & 1493 & 263 & 8.04 $\pm$ 0.33 & 7.98 $\pm$ 0.21 & 7.98 $\pm$ 0.15 \\
 \addlinespace
-\texttt{interp:Q\_mid} & $Q = 0.10$ (interior level) & 1438 & 318 & 12.40 $\pm$ 1.39 & 12.20 $\pm$ 1.20 & 10.96 $\pm$ 0.78 \\
+\texttt{interp:Q\_mid} & $Q = 10\,\%$ (interior level) & 1438 & 318 & 12.40 $\pm$ 1.39 & 12.20 $\pm$ 1.20 & 10.96 $\pm$ 0.78 \\
 \texttt{interp:alpha\_mid} & $\alpha = 12^\circ$ (interior level) & 1416 & 340 & 9.06 $\pm$ 0.25 & 8.69 $\pm$ 0.21 & 8.99 $\pm$ 0.25 \\
 \addlinespace
-\texttt{extrap:Q\_high} & $Q = 0.20$ (highest level) & 1484 & 272 & 26.27 $\pm$ 1.69 & 24.35 $\pm$ 1.59 & 23.41 $\pm$ 0.79 \\
+\texttt{extrap:Q\_high} & $Q = 20\,\%$ (highest level) & 1484 & 272 & 26.27 $\pm$ 1.69 & 24.35 $\pm$ 1.59 & 23.41 $\pm$ 0.79 \\
 \texttt{extrap:k\_max} & $k = 1.0$ (highest level) & 1466 & 290 & 9.45 $\pm$ 0.56 & 8.29 $\pm$ 0.38 & 8.98 $\pm$ 0.16 \\
 \texttt{extrap:alpha\_max} & $\alpha = 20^\circ$ (highest level) & 1377 & 379 & 13.63 $\pm$ 0.51 & 13.05 $\pm$ 0.49 & 12.98 $\pm$ 0.64 \\
 \texttt{extrap:v\_max} & $v = 250$ m/min (highest level) & 1255 & 501 & 55.83 $\pm$ 19.04 & 48.35 $\pm$ 6.99 & 48.42 $\pm$ 4.80 \\
 \addlinespace
-\texttt{extrap\_joint:corner} & $\alpha = 20^\circ$ and $Q \ge 0.15$ & 1642 & 114 & 16.60 $\pm$ 0.84 & 15.54 $\pm$ 0.37 & 16.30 $\pm$ 0.85 \\
+\texttt{extrap\_joint:corner} & $\alpha = 20^\circ$ and $Q \ge 15\,\%$ & 1642 & 114 & 16.60 $\pm$ 0.84 & 15.54 $\pm$ 0.37 & 16.30 $\pm$ 0.85 \\
 \addlinespace
 \texttt{matched:Q\_high} & random, $n_\mathrm{test}$ of \texttt{extrap:Q\_high} & 1484 & 272 & 7.96 $\pm$ 0.12 & 7.80 $\pm$ 0.07 & 7.74 $\pm$ 0.29 \\
 \texttt{matched:k\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:k\_max} & 1466 & 290 & 8.32 $\pm$ 0.15 & 8.18 $\pm$ 0.12 & 8.29 $\pm$ 0.11 \\
@@ -1566,7 +1566,7 @@ $p$ (paired, 3 seeds) & 0.718 & 0.100 & 0.010 & 0.037 & --- \\
 $\Delta$(VPINN $-$ MLP), MPa & $-0.16$ & $+0.11$ & $-0.89$ & $-0.50$ & --- \\
 $p$ (paired, 3 seeds) & 0.478 & 0.747 & 0.123 & 0.253 & --- \\
 \midrule
-\multicolumn{6}{@{}l@{}}{Regression of the seed-level gap $\Delta$(PINN $-$ MLP) on the corruption fraction ($n = 12$ points): slope $= -14.20$ MPa per unit fraction ($-1.42$ MPa per 10 percentage points), $p = 0.00036$, $R^2 = 0.735$.} \\
+\multicolumn{6}{@{}p{0.58\textwidth}@{}}{Regression of the seed-level gap $\Delta$(PINN $-$ MLP) on the corruption fraction ($n = 12$ points): slope $= -14.20$ MPa per unit fraction ($-1.42$ MPa per 10 percentage points), $p = 0.00036$, $R^2 = 0.735$.} \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1686,7 +1686,7 @@ The reference against which all of the above is measured is the finite-element s
 %% Must run latex twice to align the columns.
 
 \begin{nomenclature}
-\entry{$Q$}{reduction of diameter, $(D_0-D)/D_0$}
+\entry{$Q$}{reduction of diameter, $100\,(D_0-D)/D_0$ (\%)}
 \entry{$k$}{calibration ratio (land length over outlet radius)}
 \entry{$L$}{length of the calibration land (m)}
 \entry{$r,z$}{radial and axial coordinates (m)}

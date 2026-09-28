@@ -30,8 +30,8 @@ Held-out region & Outside & Control & Ratio & $R^2_{\mathrm{n}}$ outside & Const
 \midrule
 $k=1.0$                              & 8.9  & 8.3 & $\times1.08$ & $+0.98$ & 67 \\
 $\alpha=20^\circ$                    & 13.2 & 8.1 & $\times1.64$ & $+0.96$ & 61 \\
-$\alpha=20^\circ$, $Q\ge0.15$        & 16.1 & 7.3 & $\times2.20$ & $+0.94$ & 61 \\
-$Q=0.20$                             & 24.7 & 7.8 & $\times3.15$ & $+0.81$ & 60 \\
+$\alpha=20^\circ$, $Q\ge15\,\%$        & 16.1 & 7.3 & $\times2.20$ & $+0.94$ & 61 \\
+$Q=20\,\%$                             & 24.7 & 7.8 & $\times3.15$ & $+0.81$ & 60 \\
 $v=250$~m/min                        & 50.9 & 8.6 & $\times5.93$ & $+0.36$ & 71 \\
 \bottomrule
 \end{tabular}
@@ -45,7 +45,7 @@ Holding out the largest semi-angle costs a factor of 1.6 with $R^2_{\mathrm{n}}$
 % src: RESULTS.md §1 (interp:alpha_mid 8.69–9.06 vs extrap:alpha_max 12.98–13.63 vs random 7.98–8.04; interp:Q_mid 10.96–12.40 vs extrap:Q_high 23.41–26.27);
 % src: RESULTS.md §1.0б per family: alpha_mid R²_n +0.98/+0.98/+0.98; alpha_max +0.96 (MLP) / +0.97 (PINN) / +0.97 (VPINN) — the family average +0.96 is what tab:axis quotes.
 % NOTE: RESULTS.md text quotes "10.4 MPa" for the interior alpha level; that figure is the mean over BOTH interior splits (alpha_mid 8.91 and Q_mid 11.85 → 10.38) — a text-generation slip in make_results.py; the table values are used here.
-Removing an interior level is not free either. Along $\alpha$, where the volumes are nearly equal, withholding the interior level $\alpha=12^\circ$ gives 8.7--9.1~MPa at $R^2_{\mathrm{n}}=0.98$ and withholding the extreme level $\alpha=20^\circ$ gives 13.0--13.6~MPa at $R^2_{\mathrm{n}}=0.96$--$0.97$, against 8.0~MPa on the random hold-out: most of the price is paid for the hole in a five-level factor grid, and the direction of the hole adds comparatively little. Along $Q$ the same pattern is steeper, 11.0--12.4~MPa for $Q=0.10$ against 23.4--26.3~MPa for $Q=0.20$.
+Removing an interior level is not free either. Along $\alpha$, where the volumes are nearly equal, withholding the interior level $\alpha=12^\circ$ gives 8.7--9.1~MPa at $R^2_{\mathrm{n}}=0.98$ and withholding the extreme level $\alpha=20^\circ$ gives 13.0--13.6~MPa at $R^2_{\mathrm{n}}=0.96$--$0.97$, against 8.0~MPa on the random hold-out: most of the price is paid for the hole in a five-level factor grid, and the direction of the hole adds comparatively little. Along $Q$ the same pattern is steeper, 11.0--12.4~MPa for $Q=10\,\%$ against 23.4--26.3~MPa for $Q=20\,\%$.
 
 % src: RESULTS.md §1.0б (v_max: 48–56 vs 71.4 constant; R²_n +0.23 / +0.45 / +0.40); RESULTS.md §1.3б (τ_rz NRMSE 1.622 / 1.945 / 1.879 on v_max); RESULTS.md §1 (MLP sd 19.04); VALIDATION.md §6 (speed level coincides with simulation batch).
 Withholding the highest drawing speed gives the largest loss of accuracy, and its interpretation requires care. In the source simulations each level of $v$ coincides one-to-one with a separate batch of runs (Section~\ref{sec:prep-data}), so withholding the highest level removes not only the extreme level of a factor but an entire batch: extrapolation along $v$ is here inseparable from a transfer to a batch that is not represented in training. With $v=250$~m/min withheld the error is 48--56~MPa, still below the 71~MPa of the constant predictor, but $R^2_{\mathrm{n}}$ falls to 0.23--0.45 and the shear component is reproduced no better than by a constant: its NRMSE, normalised here by the standard deviation over the held-out cases, is 1.6--1.9. The MLP, in addition, % EDIT: denominators named % NOTE: the batch confound is stated first and the figures are read as a joint effect, in place of "the surrogate breaks down" (VALIDATION.md §6: each speed level coincides one-to-one with the simulation batch); numbers unchanged

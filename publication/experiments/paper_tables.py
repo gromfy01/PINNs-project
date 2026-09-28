@@ -60,13 +60,13 @@ SPLIT_ORDER = [
 # in publication/manuscript/captions.md; the levels are 5/10/20/40/250).
 REGION_TEXT = {
     "random": ("random", r"random 15\,\% of all cases"),
-    "interp:Q_mid": ("interp", r"$Q = 0.10$ (interior level)"),
+    "interp:Q_mid": ("interp", r"$Q = 10\,\%$ (interior level)"),
     "interp:alpha_mid": ("interp", r"$\alpha = 12^\circ$ (interior level)"),
-    "extrap:Q_high": ("extrap", r"$Q = 0.20$ (highest level)"),
+    "extrap:Q_high": ("extrap", r"$Q = 20\,\%$ (highest level)"),
     "extrap:k_max": ("extrap", r"$k = 1.0$ (highest level)"),
     "extrap:alpha_max": ("extrap", r"$\alpha = 20^\circ$ (highest level)"),
     "extrap:v_max": ("extrap", r"$v = 250$ m/min (highest level)"),
-    "extrap_joint:corner": ("extrap\\_joint", r"$\alpha = 20^\circ$ and $Q \ge 0.15$"),
+    "extrap_joint:corner": ("extrap\\_joint", r"$\alpha = 20^\circ$ and $Q \ge 15\,\%$"),
     "matched:Q_high": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap:Q\_high}"),
     "matched:k_max": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap:k\_max}"),
     "matched:alpha_max": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap:alpha\_max}"),
@@ -198,15 +198,16 @@ def table_main(df: pd.DataFrame, L: Ledger) -> str:
     L.add(len(splits), "number of splits", f"{CSV_NAME}: stage=main -> nunique(split)")
 
     # Region-definition numbers (caption / column 2) come from splits.py.
-    for val, meaning in [("0.10", "Q level held out in interp:Q_mid"),
-                         ("12", "alpha level (deg) held out in interp:alpha_mid"),
-                         ("0.20", "Q level held out in extrap:Q_high"),
-                         ("1.0", "k level held out in extrap:k_max"),
-                         ("20", "alpha level (deg) held out in extrap:alpha_max and corner"),
-                         ("0.15", "Q threshold of the joint corner region"),
-                         ("250", "v level (m/min) held out in extrap:v_max; unit from publication/manuscript/captions.md"),
-                         ("15", "random hold-out fraction, percent")]:
-        L.add(val, meaning, REGION_SRC if val != "15" else "publication/code/splits.py: make_random_split(frac=0.15)")
+    # Q is printed in percent of the diameter (splits.py keeps it as a fraction: 0.10, 0.20, 0.15).
+    for val, meaning, src in [("10", "Q level (%) held out in interp:Q_mid", REGION_SRC),
+                              ("12", "alpha level (deg) held out in interp:alpha_mid", REGION_SRC),
+                              ("20", "Q level (%) held out in extrap:Q_high", REGION_SRC),
+                              ("1.0", "k level held out in extrap:k_max", REGION_SRC),
+                              ("20", "alpha level (deg) held out in extrap:alpha_max and corner", REGION_SRC),
+                              ("15", "Q threshold (%) of the joint corner region", REGION_SRC),
+                              ("250", "v level (m/min) held out in extrap:v_max; unit from publication/manuscript/captions.md", REGION_SRC),
+                              ("15", "random hold-out fraction, percent", "publication/code/splits.py: make_random_split(frac=0.15)")]:
+        L.add(val, meaning, src)
 
     # Caption deliberately short: the definition of the split types and of the matched
     # controls is given in the body text.
@@ -377,7 +378,7 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
 
     body.append(r"\midrule")
     ncol = 2 + len(rates)
-    body.append(r"\multicolumn{" + str(ncol) + r"}{@{}l@{}}{Regression of the seed-level gap "
+    body.append(r"\multicolumn{" + str(ncol) + r"}{@{}p{0.58\textwidth}@{}}{Regression of the seed-level gap "
                 r"$\Delta$(PINN $-$ MLP) on the corruption fraction ($n = " + str(n_pts) + r"$ points): "
                 r"slope $= " + f"{lr.slope:.2f}" + r"$ MPa per unit fraction "
                 r"($" + f"{lr.slope / 10:.2f}" + r"$ MPa per 10 percentage points), "

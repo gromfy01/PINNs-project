@@ -8,7 +8,7 @@
 Нумерация — по расстановке в Overleaf (Рис. 2, 5, 6). Английский вариант —
 основной; русский — как сформулировал вычитка, для сверки смысла.
 
-Note: the area reductions in the captions are the measured values of the factor table (Section 2.2, tab:factors: Q = 0.10 → 20.1 %, Q = 0.025 → 5.4 %), not the identity 1 − (1 − Q)², for consistency with that table. <!-- src: sec22 tab:factors; ERRATA.md E-22 (0.2013, 0.0543) -->
+Note: the English captions give Q in percent of the diameter and no longer quote the area reduction. The earlier 20.1 % and 5.4 % were the measured values of the factor table (tab:factors, ERRATA E-22: 0.2013, 0.0543), which is no longer in the manuscript, so next to a nominal Q they read as arithmetic errors (1 − 0.9² = 19.0 %, 1 − 0.975² = 4.9 %). <!-- src: sec22 tab:factors; ERRATA.md E-22 (0.2013, 0.0543) -->
 
 ---
 
@@ -21,7 +21,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 **EN**
 
 > **Fig. 2.** Distribution of residual stresses obtained from the FEM
-> simulation at Q = 0.10 (10 % reduction in diameter, 20.1 % in area),
+> simulation at Q = 10 %,
 > k = 0.5, α = 12°, μ = 0.05, v = 10 m/min. Panels from left to right:
 > the components σ_rr, σ_θθ, σ_zz and τ_rz over the full axial extent of the
 > wire; the colour scale of each panel is graduated in MPa and is common to
@@ -51,7 +51,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 
 > **Fig. 5.** Distribution of the residual stress tensor components over the
 > investigated region for FEM, MLP, and PINN in the full and reduced
-> formulations at Q = 0.025 (2.5 % in diameter, 5.4 % in area), k = 0.1,
+> formulations at Q = 2.5 %, k = 0.1,
 > α = 8°, μ = 0.10, v = 20 m/min. Rows: FEM reference and the three model
 > families; columns: σ_rr, σ_θθ, σ_zz, τ_rz. The colour scale is common to
 > all rows within a component. r is normalised by the surface radius in the
@@ -77,7 +77,7 @@ Note: the area reductions in the captions are the measured values of the factor 
 
 > **Fig. 6.** Comparison of the equilibrium residual distributions R_r and
 > R_z over the investigated region for FEM, MLP, and PINN in the full and
-> reduced formulations at Q = 0.025, k = 0.1, α = 8°, μ = 0.10,
+> reduced formulations at Q = 2.5 %, k = 0.1, α = 8°, μ = 0.10,
 > v = 20 m/min (same case as Fig. 5). (a) radial residual R_r, (b) axial
 > residual R_z, both made dimensionless by the characteristic magnitude of
 > the terms entering the respective equation; the panel titles give the
