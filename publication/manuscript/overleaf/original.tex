@@ -262,24 +262,15 @@ the pass.
 % src: .inp deck (*Plastic, hardening=JOHNSON COOK; *Rate Dependent, type=JOHNSON COOK;
 % *Elastic; *Density; *Specific Heat; *Inelastic Heat Fraction), supplied 12-13.09.2026.
 
-All three arguments of the constitutive equation vary strongly across the section, so no
-single yield stress describes the pass. Over the 111 runs for which the strain, strain-rate
-and temperature histories were exported, the equivalent plastic strain runs from 0.22--0.34 on the
-axis to 0.30--0.46 at the surface, the strain rate up to 5--16~s$^{-1}$, and the temperature
-from the initial $20^\circ$C to 47--98$^\circ$C at the surface. Because the thermal exponent
-is below unity, the homologous temperature enters with disproportionate weight: a rise of
-75~K gives a homologous temperature of 0.055 but a softening of 9.5\,\%.
-% src: publication/reexport/flow_stress.py on the export of 28.09.2026 (111 runs; strain rate as the
-% 95th percentile per node; kelvin converted to Celsius). The earlier four runs at Q = 1.5 %, v = 40
-% gave 0.034 / 0.46-0.58 / 3-99 1/s / 66-95 C.
+% The ranges of strain, strain rate and temperature along the exported histories are given in
+% Section 3.1 (moved there from here on review, 29.09).
 
 Where a single representative flow stress is needed -- in the comparison with the analytical
 solutions of Section~\ref{sec:res_fem_verification}, which are energy methods -- it is formed
 by averaging the constitutive equation \eqref{eq:johnson-cook} along the deformation path of
 each material point, weighted by plastic work, and then over the section weighted by radius:
 $\sigma_f = \int\sigma(\varepsilon,\edot,T)\,\mathrm{d}\varepsilon_p /
-\int\mathrm{d}\varepsilon_p$. Evaluated on the exported histories this gives
-$\sigma_f = 314$--$331$~MPa, with a node-to-node spread of 306--338~MPa across the section.
+\int\mathrm{d}\varepsilon_p$.
 % src: publication/reexport/flow_stress.py
 % REV: the earlier text recovered an effective yield stress of 320 MPa from the stress field
 % and used it as if it were a material constant. The reviewer's objection is accepted: the
@@ -950,7 +941,10 @@ comparison is stated below.
 For each run the three relations are evaluated with one and the same flow stress, obtained from
 the constitutive equation~\eqref{eq:johnson-cook} by averaging it along the strain, strain-rate
 and temperature histories exported for that run (Section~\ref{sec:materials}). It lies between
-314 and 331~MPa depending on the run, and no parameter is fitted. Within a run $\sigma_f$
+314 and 331~MPa depending on the run, and no parameter is fitted. Along these histories the equivalent plastic
+strain reaches 0.22--0.34 on the axis and 0.30--0.46 at the surface, the strain rate
+5--16~s$^{-1}$ and the surface temperature 47--98~$^\circ$C, and the node-to-node spread of
+the averaged flow stress across the section is 306--338~MPa. Within a run $\sigma_f$
 multiplies each relation as a whole, so the columns of Table~\ref{tab:drawstress} differ only in
 the bracketed work terms, and an error in $\sigma_f$ would shift all three predictions of that
 run by the same factor.
