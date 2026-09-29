@@ -237,15 +237,9 @@ The radial coordinate $r$ is measured from the axis and the axial coordinate $z$
 A series of axisymmetric FEM simulations of the wire-drawing process was carried out in Abaqus CAE~\citep{abaqus2022}.
 The workpiece was a rectangular longitudinal section discretised with a CAX4RT element mesh. The geometry of the die was described by three parameters: the reduction ($Q$), the half-angle of the deformation zone ($\alpha$), and the ratio between the calibration-section length and the billet diameter ($k$). Process parameters varied during the campaign were the Coulomb friction coefficient ($\mu$) and the drawing velocity ($v$). The ranges of these parameters are summarised in Table~\ref{tab:fem_params}.
 
-Material behaviour is described by the Johnson--Cook model, with the constants of the
-input deck: $A = 213$~MPa, $B = 53$~MPa, $n = 0.345$, $m = 0.81$, melting temperature
-$1386^\circ$C and transition temperature $20^\circ$C for the thermal term, and
-$C = 0.055$ with a reference strain rate of $0.004$~s$^{-1}$ for the rate term. Elastic
-constants are $E = 190$~GPa and $\nu = 0.29$. The density is 7870~kg\,m$^{-3}$, the
-specific heat 470~J\,kg$^{-1}$K$^{-1}$ and the inelastic heat fraction 0.9. The analysis
-is a coupled temperature--displacement one and is carried out in degrees Celsius, with an
-initial temperature of $20^\circ$C throughout. The flow stress therefore follows the constitutive
-equation
+Material behaviour is described by the Johnson--Cook model for the low-carbon steel AISI 1020
+\pending{references to be added}. The analysis is a coupled temperature--displacement one, and the
+initial temperature is $20^\circ$C throughout. The flow stress follows the constitutive equation
 \begin{equation}
 \sigma_f = \bigl(A + B\varepsilon^{\,n}\bigr)
            \left(1 + C\ln\frac{\edot}{\edot_0}\right)
@@ -253,9 +247,18 @@ equation
 \theta = \frac{T - T_{\mathrm{tr}}}{T_{\mathrm{melt}} - T_{\mathrm{tr}}},
 \label{eq:johnson-cook}
 \end{equation}
-in which $T_{\mathrm{tr}} = 20^\circ$C is the transition temperature of the thermal term and
-$\edot_0 = 0.004$~s$^{-1}$ the reference strain rate. It is defined only at stated
-values of strain, strain rate and temperature, which is why no single number describes the pass.
+in which the first factor describes strain hardening, with $A$ the initial yield stress and $B$
+and $n$ the hardening constants. The second factor describes the rise of the flow stress with the
+strain rate, with $C$ the rate sensitivity and $\edot_0$ the reference strain rate. The third
+factor describes thermal softening, with $\theta$ the homologous temperature between the
+transition temperature $T_{\mathrm{tr}}$ and the melting temperature $T_{\mathrm{melt}}$ and $m$
+the softening exponent. Since Eq.~\eqref{eq:johnson-cook} describes the behaviour of the material
+as a function of strain, strain rate and temperature, $\sigma_f = \sigma_f(\varepsilon,\edot,T)$,
+it is defined only at stated values of these three quantities, and no single number describes
+the pass.
+% Constants of the input deck (not quoted in the text): A = 213 MPa, B = 53 MPa, n = 0.345,
+% m = 0.81, T_melt = 1386 C, T_tr = 20 C, C = 0.055, edot_0 = 0.004 1/s; E = 190 GPa, nu = 0.29,
+% rho = 7870 kg/m3, c = 470 J/(kg K), inelastic heat fraction 0.9.
 % src: .inp deck (*Plastic, hardening=JOHNSON COOK; *Rate Dependent, type=JOHNSON COOK;
 % *Elastic; *Density; *Specific Heat; *Inelastic Heat Fraction), supplied 12-13.09.2026.
 
