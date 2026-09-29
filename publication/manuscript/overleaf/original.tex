@@ -224,7 +224,7 @@ $S_3$ - is the free lateral surface;
 $S_4$ - is the contact surface between the wire and the die; and $S_5$ - is the entry surface of the wire. 
 
 The half-angle of the working cone of the die is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, and $L$ is the length of the calibration zone.
-The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$ follows from $D_0$ and $D$ and is given in per cent, as is usual in the drawing literature, the half-angle of the deformation zone is $\alpha$, and the calibration ratio $k$ relates the bearing length $L$ to the billet diameter, $L = kD_0$. \pending{$L = kD_0$ is read from the exports of Section~\ref{sec:res_fem_verification}. This is to be confirmed against the model generator.}
+The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$ follows from $D_0$ and $D$ and is given in per cent, as is usual in the drawing literature, the half-angle of the deformation zone is $\alpha$, and the calibration ratio $k$ relates the bearing length $L$ to the billet diameter, $L = kD_0$.
 
 \begin{figure*}[t]
 \centering
@@ -886,11 +886,10 @@ $f\to1$ as $\alpha\to0$, so that the first
 term reduces to $\ln[1/(1-r)]$, $m$ is the friction factor and $L$ the bearing length
 \citep{siebel1947drahtziehen,avitzur1968metal,avitzur1971study}. In the model the bearing length is
 $L = kD_0$, so that $L/R_f = kD_0/R_f$ is 2.2--2.3 times the calibration ratio.
-\pending{$L = kD_0$ is read from the exports: the die reference point shifts by exactly
-$36k$~mm, and the phase in which only the bearing is in contact lasts $36k$~mm. This is to be confirmed
-against the model generator.}
-% src: verify_land (die RP initial z = c - 36.000 k mm at every alpha; land-only tail phase
-% 35.99 k - 0.84 mm over 88 runs; 36.9 mm at k = 1 in the earlier export at Q = 1.5 %).
+% src: bearing length measured in Abaqus CAE on 1020_2a_16_rd_1000_cal_100_v_10_f_050: 0.036 m
+% (30.09.2026). The exports agree: die RP initial z = c - 36.000 k mm at every alpha; bearing-only
+% tail phase 36.0 k mm (88 runs); 36 mm at k = 1 in the earlier export at Q = 1.5 %. The generator
+% line cp_len = 2 r_1 cp (32.4 mm at k = 1, Q = 10 %) is not what the die profile uses.
 
 Equation~\eqref{eq:avitzur} measures the friction through the factor $m$, the ratio of the
 interface shear stress to the shear yield stress, whereas the simulations are driven by a Coulomb
