@@ -43,7 +43,7 @@ Radii are stored per case, and $r$ is normalised by the outermost bin radius of 
 % NOTE: "nodal noise" replaced by an explicit explanation of the numerical origin of the effect; the figures are unchanged.
 Numerical effects inherent in the finite-element treatment of large plastic deformation displace individual nodes in the vicinity of the axis across the axis of symmetry, so that the radial coordinate recovered for them turns out slightly negative ($|r|/R \le 0.054$). In all $1/r$ terms the radius is therefore clipped at $0.05R$. % src: ERRATA.md E-25; code/trainer.py r_clip = 0.05
 For the extended track the same nodes are binned on an $8\times20$ grid in $(z,r)$ by the median. The radius $r$ is normalised by the surface radius of the same axial slice, $z$ by the window ($z=0$ entry, $z=1$ exit). % src: code/dataset2d.py (n_z = 8, n_r = 20 defaults; module docstring); QA_DATA_AND_Z.md §4
-Targets stay in MPa. Since the components differ by two orders of magnitude (mean $|\sigma|$ about 79~MPa for the normal components against 0.67~MPa for $\tau_{rz}$), per-component errors are always reported next to macro-averaged ones. % src: PLAYBOOK.md §2.4
+Targets stay in MPa, and since the components differ by two orders of magnitude, with a mean $|\sigma|$ of about 79~MPa for the normal components against 0.67~MPa for $\tau_{rz}$, per-component errors are always reported next to macro-averaged ones. % src: PLAYBOOK.md §2.4
 
 \paragraph{Filtering.}
 % NOTE: an explanatory opening sentence was added before the list of the filters.
