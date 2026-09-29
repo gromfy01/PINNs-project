@@ -223,13 +223,13 @@ $S_2$ - is the outlet surface, on which the drawing velocity is prescribed;
 $S_3$ - is the free lateral surface; 
 $S_4$ - is the contact surface between the wire and the die; and $S_5$ - is the entry surface of the wire. 
 
-The half-angle of the working cone of the die is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, and $L$ is the length of the calibration land.
+The half-angle of the working cone of the die is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, and $L$ is the length of the calibration zone.
 The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$, in per cent, follows from $D_0$ and $D$, the deformation-zone half-angle is $\alpha$, and the calibration ratio $k$ relates the land length $L$ to the billet diameter, $L = kD_0$. \pending{$L = kD_0$ is read from the exports of Section~\ref{sec:res_fem_verification}. This is to be confirmed against the model generator.}
 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.5\textwidth]{pictures/scheme.png}
-\caption[Axisymmetric wire-drawing process and its boundaries]{Axisymmetric wire-drawing process. $S_1$~--~axis of symmetry, $S_2$~--~outlet face of the finished product, $S_3$~--~free lateral surface, $S_4$~--~contact surface with the die, $S_5$~--~entry face of the billet, $\alpha$~--~half-angle of the working cone of the die, $D_0$ and $D$~--~diameters of the billet and of the drawn wire, $L$~--~length of the calibration land}
+\caption[Axisymmetric wire-drawing process and its boundaries]{Axisymmetric wire-drawing process. $S_1$~--~axis of symmetry, $S_2$~--~outlet face of the finished product, $S_3$~--~free lateral surface, $S_4$~--~contact surface with the die, $S_5$~--~entry face of the billet, $\alpha$~--~half-angle of the working cone of the die, $D_0$ and $D$~--~diameters of the billet and of the drawn wire, $L$~--~length of the calibration zone}
 \label{fig:scheme}
 \end{figure*}
 
@@ -1718,7 +1718,7 @@ The reference against which all of the above is measured is the finite-element s
 \begin{nomenclature}
 \entry{$Q$}{reduction of diameter, $100\,(D_0-D)/D_0$ (\%)}
 \entry{$k$}{calibration ratio (land length over billet diameter)}
-\entry{$L$}{length of the calibration land (m)}
+\entry{$L$}{length of the calibration zone (m)}
 \entry{$r,z$}{radial and axial coordinates (m)}
 \entry{$R$}{billet radius (Fig.~\ref{fig:fem-fields}) or surface radius of the cross-section (Figs.~\ref{fig:compare-fields}--\ref{fig:residual-maps})}
 \entry{$\sigma_{rr},\sigma_{\theta\theta},\sigma_{zz}$}{normal residual stress components (MPa)}
