@@ -298,7 +298,7 @@ Drawing velocity $v$, m/min & 5, 10, 20, 40, 250 \\
 \end{tabularx}
 \end{table}
 
-After removing friction-label duplicates, the highest reduction level $Q=25\,\%$ (at which several runs ceased to be drawing as the billet adhered to the die) and runs that did not complete the draw, the cleaning detailed in Section~\ref{sec:prep-data} leaves 1756 valid simulations for surrogate-model training.
+The cleaning detailed in Section~\ref{sec:prep-data} removes friction-label duplicates, runs that did not complete the draw and the highest reduction level $Q=25\,\%$, at which several runs ceased to be drawing because the wire adhered to the die, and leaves 1756 valid simulations for surrogate-model training.
 
 The modelling approach follows established practice in the numerical analysis of wire drawing: an axisymmetric finite-element discretisation, a Coulomb contact formulation at the die interface, and an elastic--plastic material description. Independent studies built on the same ingredients \citep{shin2026accurate,he2003residual,overstam2006influence,selbmann2024residual} report good agreement with measurements, which supports the approach. The present dataset itself was not compared with measurements on drawn wire, and the residual stress values are therefore interpreted with respect to the model that produced them. The internal consistency of that model, and its agreement with the analytical solutions for the drawing stress, are examined in Section~\ref{sec:res_fem_verification}.
 % NOTE:, K27: the paragraph no longer opens by declaring the absence of experimental validation; the approach is stated positively, the scope of the conclusions is named once, and the reader is sent to the verification.
