@@ -289,7 +289,7 @@ def table_paired(df: pd.DataFrame, L: Ledger) -> str:
 
     cap = (r"Seed-paired comparison of the physics-informed families with the data-driven "
            r"baseline on every split of Table~\ref{tab:main}. $\Delta$ is the mean over "
-           r"seeds of the per-seed difference in macro-RMSE, MPa; negative favours the "
+           r"seeds of the per-seed difference in macro-RMSE, MPa. Negative favours the "
            r"physics-informed model. Two-sided paired $t$-test, $n = " + str(n_seeds) +
            r"$ pairs, $\alpha = 0.05$." + holm_txt)
     head = (r"\begin{table*}[t]" "\n"
