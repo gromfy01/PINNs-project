@@ -7,7 +7,7 @@ Nodal averaging leaves a residual at the free surface: on the final dataset the 
 This is the accuracy with which the source itself satisfies the traction-free condition and is the baseline for every boundary-condition metric in Section~\ref{sec:res_fem}. % EDIT: \ref{sec:results-physics} → \ref{sec:res_fem} (label defined in sec32)
 % NOTE: the enumeration of the quantities absent from the present export, and the reference to a further export, were removed; only the consequence that bears on the present study is kept.
 % NOTE: the framing "one consequence has to be stated explicitly" was dropped — the comment asks for the point to be made less, not more, emphatically; and the statement is confined to the retained cases, so that it does not contradict Section~\ref{sec:res_fem_verification}, where the drawing stress is obtained from the runs whose frame is captured inside the die.
-In the retained runs the exported cross-section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}A|/A$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa), so the drawing force is not read from these cases. % src: VALIDATION.md §1 (1756 cases: 5.3 MPa against rms 167 MPa)
+In the retained runs the exported cross-section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}S|/S$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa), so the drawing force is not read from these cases. % src: VALIDATION.md §1 (1756 cases: 5.3 MPa against rms 167 MPa)
 
 \paragraph{Axial window.}
 For the further preparation of the data only the values within 25--75\,\% of the length of the wire are used, which lie in the region of steady-state drawing. % Removed on review (29.09): median captured fraction 0.4985; window of median length 57.5 mm at a radius of 16.2 mm (L/R ~ 3.5). src: audit/RAW_AUDIT.md §2; code/raw_probe.py axial_window; QA_DATA_AND_Z.md §4
@@ -19,7 +19,7 @@ The shear component is therefore not predictable from the one-dimensional varian
 % NOTE: the numerical value of the billet radius is not repeated in the text; it is retained in the caption of Fig.~\ref{fig:fem-fields}. % NOTE: with the value gone, $R$ was left undefined here and clashed with $R$ = surface radius used elsewhere in this subsection; the sentence now says which radius the axis label of Fig.~\ref{fig:fem-fields} denotes.
 Coordinates in the field plots are dimensionless throughout. In Fig.~\ref{fig:fem-fields} the radius is normalised by the billet radius, written $R$ in the axis label of that figure, so that the drawn part of the wire ends at $r/R = 0.9$, and the axial coordinate by the length of the model. % src: captions.md Fig. 2 (R = 18 mm; L = 139.5 mm; drawn part ends at r/R = 0.9 at Q = 0.10)
 In Figs.~\ref{fig:compare-fields} and \ref{fig:residual-maps} the radius is normalised by the surface radius of the same cross-section, so that $r/R = 1$ is the free surface at every axial position, and $z$ by the window length. % src: captions.md ("Нормировка координат"); code/dataset2d.py (r = RP / RP[:, :, -1])
-The radial axis is stretched relative to the axial one: at $L/R \approx 3.5$--$7.7$ an equal-aspect panel degenerates into a strip. % src: captions.md ("Нормировка координат": L/R ≈ 3.5–7.7); experiments/contours.py (set_aspect("auto"))
+The radial axis is stretched relative to the axial one: at a window length of 3.5--7.7 radii an equal-aspect panel degenerates into a strip. % src: captions.md ("Нормировка координат": L/R ≈ 3.5–7.7); experiments/contours.py (set_aspect("auto"))
 
 \begin{table*}[htbp]
 \centering\small

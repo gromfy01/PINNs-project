@@ -70,7 +70,8 @@ def representative(path: str) -> dict:
         temp = temp - 273.15
     radius = np.array([np.nanmax(M[:, j]) for j in i_r])[:peeq.shape[1]]
 
-    sig_node, w_node, eps_f, ed95, t_max = [], [], [], [], []
+    # колонки PEEQ и TEMP идут в порядке узлов 151 (поверхность), 271 (ось), 1226...1242
+    sig_node, w_node, eps_f, ed95, t_max, kept = [], [], [], [], [], []
     for k in range(peeq.shape[1]):
         ok = ~np.isnan(peeq[:, k])
         tt, pe = t[ok], peeq[ok, k]
@@ -92,17 +93,21 @@ def representative(path: str) -> dict:
         eps_f.append(float(pe[-1]))
         ed95.append(float(np.percentile(edot[flowing], 95)))
         t_max.append(float(np.nanmax(tk)))
+        kept.append(k)
 
     s = np.array(sig_node)
     w = np.array(w_node) / np.sum(w_node)
+    surf = kept.index(0) if 0 in kept else None
     return dict(job=path.split("/")[-1].replace(".rpt.gz", "").replace(".rpt", ""),
                 **job_params(path.split("/")[-1].replace(".rpt.gz", "").replace(".rpt", "")),
-                sigma_f_MPa=round(float(np.sum(s * w)) / 1e6, 1),
-                sigma_f_min_MPa=round(float(s.min()) / 1e6, 1),
-                sigma_f_max_MPa=round(float(s.max()) / 1e6, 1),
-                eps_axis=round(min(eps_f), 3), eps_surface=round(max(eps_f), 3),
-                edot_min=round(min(ed95), 1), edot_max=round(max(ed95), 1),
-                T_max=round(max(t_max), 1))
+                sigma_f_MPa=float(np.sum(s * w)) / 1e6,
+                sigma_f_min_MPa=float(s.min()) / 1e6,
+                sigma_f_max_MPa=float(s.max()) / 1e6,
+                eps_axis=float(min(eps_f)), eps_max=float(max(eps_f)),
+                eps_surface=eps_f[surf] if surf is not None else float("nan"),
+                edot_min=float(min(ed95)), edot_max=float(max(ed95)),
+                T_max=float(max(t_max)),
+                T_surface=t_max[surf] if surf is not None else float("nan"))
 
 
 def main() -> None:

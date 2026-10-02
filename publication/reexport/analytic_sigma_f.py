@@ -11,7 +11,8 @@ dT = beta * sigma_d / (rho * c). Так как sigma_d зависит от пр�
 а тот от температуры, получается неподвижная точка; итерация сходится за
 несколько шагов.
 
-Ни одна величина не берётся из МКЭ — расчёт самодостаточен.
+Из МКЭ берётся, если её передать, только достигнутое обжатие (выходной радиус):
+verification_recalc.py подаёт Q_real = 1 - Rf/R0, как и во все остальные соотношения.
 
 СООТНОШЕНИЯ
 
@@ -65,7 +66,7 @@ def strain_rate(Q: float, alpha: float, v_mpm: float, R0: float = R0_DEFAULT) ->
 
 def solve(Q: float, alpha_deg: float, mu: float, v_mpm: float,
           T0: float = 20.0, R0: float = R0_DEFAULT, land: float = 0.0,
-          tol: float = 1e-6, itmax: int = 50) -> dict:
+          tol: float = 1e-6, itmax: int = 50, phi_alt: bool = False) -> dict:
     from analytical import avitzur, delta_param      # noqa: E402
     S3 = math.sqrt(3.0)
 
@@ -74,7 +75,8 @@ def solve(Q: float, alpha_deg: float, mu: float, v_mpm: float,
     r_area = 1.0 - (Rf / R0) ** 2
     eps_hom = 2.0 * math.log(R0 / Rf)
     delta = float(delta_param(r_area, a))
-    phi = 0.8 + delta / 4.4
+    # фактор избыточной работы: 0.8 + Delta/4.4; phi_alt — другая форма из литературы
+    phi = 0.88 + 0.12 * delta if phi_alt else 0.8 + delta / 4.4
     eps_eff = phi * eps_hom
     edot = strain_rate(Q, a, v_mpm, R0)
 
@@ -93,11 +95,11 @@ def solve(Q: float, alpha_deg: float, mu: float, v_mpm: float,
         T = T_new
 
     return dict(Q=Q, alpha=alpha_deg, mu=mu, v=v_mpm,
-                eps_hom=round(eps_hom, 4), delta=round(delta, 1), phi=round(phi, 2),
-                eps_eff=round(eps_eff, 3), edot=round(edot, 1),
-                T_mean=round(T, 1), dT=round(2.0 * (T - T0), 1),
-                sigma_f_MPa=round(sigma_f / 1e6, 1),
-                sigma_d_MPa=round(sigma_d / 1e6, 1), iterations=its)
+                eps_hom=float(eps_hom), delta=float(delta), phi=float(phi),
+                eps_eff=float(eps_eff), edot=float(edot),
+                T_mean=float(T), dT=float(2.0 * (T - T0)),
+                sigma_f_MPa=float(sigma_f / 1e6),
+                sigma_d_MPa=float(sigma_d / 1e6), iterations=its)
 
 
 def main() -> None:

@@ -32,8 +32,14 @@ R0 = 0.018
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def _r(x, nd):
+    from decimal import Decimal, ROUND_HALF_UP
+    q = Decimal(1).scaleb(-nd)
+    return str(Decimal(repr(float(x))).quantize(q, rounding=ROUND_HALF_UP))
+
+
 def rng(xs, nd=1):
-    return f"{round(min(xs), nd)}–{round(max(xs), nd)}"
+    return f"{_r(min(xs), nd)}–{_r(max(xs), nd)}"
 
 
 def main() -> None:
@@ -50,7 +56,7 @@ def main() -> None:
     P(f"прогонов: всего {len(R)}, при 10 % {len(q10)}, при 15 % {len(q15)}")
     P(f"разброс реакции на окне, %: {rng([r['spread_pct'] for r in R])}")
     t = [r for r in R if r['alpha'] == 12 and r['k'] == 0.5 and r['v'] == 10 and r['mu'] == 0.05 and r in q10][0]
-    P(f"типичный прогон (10 %, 12°, k 0.5, 10 м/мин, mu 0.05): {t['fem']} МПа")
+    P(f"типичный прогон (10 %, 12°, k 0.5, 10 м/мин, mu 0.05): {t['fem']:.1f} МПа")
     P(f"обжатие достигнутое, %: 10 → {rng([100*r['Q_real'] for r in q10])}, 15 → {rng([100*r['Q_real'] for r in q15])}")
     P(f"L/Rf / k при k > 0: {rng([r['L_over_Rf']/r['k'] for r in R if r['k'] > 0], 2)}")
 
@@ -59,23 +65,21 @@ def main() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         fl = [representative(f) for f in sorted(glob.glob(os.path.join(a.dir, "*.rpt")))]
-    P(f"  деформация на оси {rng([x['eps_axis'] for x in fl], 2)}, на поверхности {rng([x['eps_surface'] for x in fl], 2)}")
-    P(f"  скорость деформации (95-й процентиль по узлу), 1/с: {rng([x['edot_min'] for x in fl], 0)} … {rng([x['edot_max'] for x in fl], 0)}")
-    P(f"  температура поверхности макс., °C: {rng([x['T_max'] for x in fl], 0)}")
-    P(f"  разброс по сечению, МПа: {rng([x['sigma_f_min_MPa'] for x in fl], 0)} … {rng([x['sigma_f_max_MPa'] for x in fl], 0)}"
-      f"  (общий: {round(min(x['sigma_f_min_MPa'] for x in fl))}–{round(max(x['sigma_f_max_MPa'] for x in fl))})")
+    P(f"  деформация на оси {rng([x['eps_axis'] for x in fl], 2)}, на поверхности (узел 151) {rng([x['eps_surface'] for x in fl], 2)},"
+      f" максимум по сечению {rng([x['eps_max'] for x in fl], 2)}")
+    P(f"  скорость деформации, 95-й процентиль по узлу, наибольший в прогоне, 1/с: {rng([x['edot_max'] for x in fl], 1)}")
+    P(f"  температура: максимум по сечению {rng([x['T_max'] for x in fl], 0)} °C, на поверхности {rng([x['T_surface'] for x in fl], 0)} °C")
+    P(f"  осреднённый предел текучести узлов: от {_r(min(x['sigma_f_min_MPa'] for x in fl), 0)} до {_r(max(x['sigma_f_max_MPa'] for x in fl), 0)} МПа по всем прогонам,"
+      f" внутри прогона разброс не более {_r(max(x['sigma_f_max_MPa'] - x['sigma_f_min_MPa'] for x in fl), 0)} МПа")
 
     P("\nзамкнутая оценка")
     sol = [A.solve(r["Q_real"], r["alpha"], r["mu"], r["v"]) for r in R]
     P(f"  sigma_f, МПа: {rng([s['sigma_f_MPa'] for s in sol], 0)}; итераций не более {max(s['iterations'] for s in sol)}")
     P(f"  Delta {rng([s['delta'] for s in sol])}, eps_eff {rng([s['eps_eff'] for s in sol], 2)}, edot {rng([s['edot'] for s in sol])} 1/с")
-    ph = []
-    for s in sol:
-        d = s["delta"]
-        p1, p2 = 0.8 + d / 4.4, 0.88 + 0.12 * d
-        f = lambda e: A.A_JC + A.B_JC * e ** A.N_JC / (A.N_JC + 1)  # noqa: E731
-        ph.append((p1 / p2, 100 * (f(p1 * s["eps_hom"]) / f(p2 * s["eps_hom"]) - 1)))
-    P(f"  Phi 0.8+D/4.4 против 0.88+0.12D: отношение {rng([x[0] for x in ph])}, sigma_f {rng([x[1] for x in ph])} %")
+    alt = [A.solve(r["Q_real"], r["alpha"], r["mu"], r["v"], phi_alt=True) for r in R]
+    P(f"  Phi 0.8+D/4.4 против 0.88+0.12D: отношение {rng([s['phi']/t['phi'] for s, t in zip(sol, alt)])},"
+      f" сошедшийся sigma_f {rng([100*abs(s['sigma_f_MPa']/t['sigma_f_MPa']-1) for s, t in zip(sol, alt)])} %,"
+      f" разогрев {rng([100*abs(s['dT']/t['dT']-1) for s, t in zip(sol, alt)])} %")
 
     P("\nпоясок")
     lin = []
@@ -125,17 +129,27 @@ def main() -> None:
                 if 0.025 in g and 0.1 in g:
                     for key in sl:
                         sl[key].append((g[0.1][key] - g[0.025][key]) / 0.075)
-        P(f"  alpha {al}: d sigma/d mu, МПа: " + ", ".join(f"{key} {np.mean(v):.0f}" for key, v in sl.items()))
+        P(f"  alpha {al}: d sigma/d mu, МПа: " + ", ".join(f"{key} {np.mean(v):.0f}" for key, v in sl.items())
+          + "; ниже МКЭ на " + " / ".join(f"{100*(1-np.mean(sl[key])/np.mean(sl['fem'])):.0f}" for key in ("siebel", "avitzur_noland", "vega_noland")) + " %")
     for al in (8, 12, 16):
         P(f"  alpha {al}: давление на конусе / sigma_f {rng([r['p_cone']/r['sigma_f'] for r in q10 if r['alpha']==al], 2)}")
     P(f"  15 %: давление на конусе / sigma_f {rng([r['p_cone']/r['sigma_f'] for r in q15], 2)}")
-    vv = [r2["fem"] / r1["fem"] - 1 for r1 in q10 for r2 in q10 if r1["v"] == 10 and r2["v"] == 20
-          and (r1["alpha"], r1["k"], r1["mu"]) == (r2["alpha"], r2["k"], r2["mu"])]
-    P(f"  v 10 → 20: МКЭ +{rng([100*x for x in vv])} %")
+    for name, rows in (("10 %", q10), ("15 %", q15), ("все", R)):
+        vv = [r2["fem"] / r1["fem"] - 1 for r1 in rows for r2 in rows if r1["v"] == 10 and r2["v"] == 20
+              and (r1["Q"], r1["alpha"], r1["k"], r1["mu"]) == (r2["Q"], r2["alpha"], r2["k"], r2["mu"])]
+        P(f"  v 10 → 20 ({name}): МКЭ +{rng([100*x for x in vv])} %")
+    jc = [100 * A.C_JC * math.log(2.0) / (1 + A.C_JC * math.log(max(e, A.EDOT0) / A.EDOT0)) for x in fl for e in (x['edot_min'], x['edot_max'])]
+    P(f"  член скорости Джонсона-Кука при удвоении скорости деформации: +{rng(jc)} %")
+    P(f"  15 %: Зибель по mu: " + " / ".join(f"{dev([r for r in q15 if r['mu']==m],'siebel'):.1f}" for m in (0.025, 0.05, 0.1)))
+    le = [r for r in R if r["vega_noland"] <= r["siebel"]]
+    tags = sorted({"%.0f%%/%.0f/%s" % (100 * r["Q"], r["alpha"], r["mu"]) for r in le})
+    P(f"  Coulomb не выше Зибеля в {len(le)} прогонах: " + ", ".join(tags))
+    P(f"  friction-factor выше Зибеля во всех: {all(r['avitzur_noland'] > r['siebel'] for r in R)}")
 
     P("\nразогрев")
     P(f"  средний по сечению {rng([r['dT_mean'] for r in R], 0)} °C, у поверхности {rng([r['dT_peak'] for r in R], 0)} °C")
     P(f"  энергетический баланс / МКЭ: +{rng([100*(r['dT_energy']/r['dT_mean']-1) for r in R], 0)} %")
+    P(f"  к концу деформации: средний {rng([r['dT_def'] for r in R], 0)} °C, баланс выше на {rng([100*(r['dT_energy']/r['dT_def']-1) for r in R], 0)} %")
     P(f"  замкнутая оценка / МКЭ: +{rng([100*(r['dT_closed']/r['dT_mean']-1) for r in R], 0)} %")
     sd = [100 * (s["sigma_d_MPa"] / r["fem"] - 1) for s, r in zip(sol, R)]
     P(f"  sigma_d замкнутой оценки выше МКЭ на {rng(sd, 0)} %")
@@ -148,7 +162,9 @@ def main() -> None:
         Rf = r["Rf_mm"] / 1e3
         t0 = vega_terms(math.log(R0 / Rf), math.radians(r["alpha"]), r["mu"], r["sigma_f"] * 1e6, 0.0)
         sh.append(100 * t0["ideal"] / t0["sigma_d"])
-    P(f"  Delta {rng([r['delta'] for r in R])}; идеальная работа {rng(sh, 0)} % предсказания (Coulomb, без пояска)")
+    P(f"  Delta {rng([r['delta'] for r in R])}; по углу при 10 %: " + ", ".join(f"{al}: {rng([r['delta'] for r in q10 if r['alpha']==al])}" for al in (8, 12, 16))
+      + f"; при 15 %: {rng([r['delta'] for r in q15])}; Delta > 3 в {sum(r['delta'] > 3 for r in R)} прогонах")
+    P(f"  идеальная работа {rng(sh, 0)} % предсказания (Coulomb, без пояска)")
     allv = [100 * (r[k] / r["fem"] - 1) for r in R for k in ("siebel", "avitzur_noland", "vega_noland")]
     P(f"  отклонения трёх соотношений без пояска: {rng(allv, 1)} %")
 
