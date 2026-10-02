@@ -835,14 +835,14 @@ the die reference point and the coordinates, equivalent plastic strain and tempe
 radial row of material points are written as histories in time over the whole pass. The series
 covers a reduction of 10\,\% in diameter at die semi-angles of $8^\circ$, $12^\circ$ and
 $16^\circ$, calibration ratios from 0 to 1, drawing speeds of 10 and 20~m/min and all three friction
-coefficients, together with a reduction of 15\,\% at $8^\circ$ without a bearing. In total, 111 runs are
-used. \pending{One run, $\alpha=8^\circ$, $k=0$, $v=10$~m/min, $\mu=0.1$, is excluded until it is
-exported again: its reaction belongs to $\mu=0.1$ but its material-point histories are a copy of
-the $\mu=0.05$ run. Two runs of the grid are missing from the export.}
+coefficients, together with a reduction of 15\,\% at $8^\circ$ without a bearing. In total, 112 runs are
+used, 106 of the 108 combinations at 10\,\% and the six at 15\,\%.
 % src: publication/reexport/verification_recalc.py on the export of 28.09.2026 (res_recalc, 112
-% files; 106 at Q = 10 %, 6 at Q = 15 %); EXCLUDE = 1020_2a_16_rd_1000_cal_0_v_10_f_0100 (wire
-% columns identical to ..._f_050); missing: 1020_2a_24_rd_1000_cal_10_v_10_f_050 and
-% 1020_2a_32_rd_1000_cal_30_v_10_f_025.
+% files; 106 at Q = 10 %, 6 at Q = 15 %), with 1020_2a_16_rd_1000_cal_0_v_10_f_0100 re-exported on
+% 02.10.2026 (its first version carried the wire histories of ..._f_050); per-run results in
+% publication/reexport/results/recalc_2026-09-28.json, every number of this section printed by
+% publication/reexport/sec31_numbers.py (results/sec31_numbers_2026-10-02.txt). Not in the export:
+% 1020_2a_24_rd_1000_cal_10_v_10_f_050 and 1020_2a_32_rd_1000_cal_30_v_10_f_025.
 The axial reaction is averaged over the steady phase of the pass, in which the wire and the die
 are in contact and both the deformation process and the deformation zone are stable. The phase
 is found from the signal itself, and within it the reaction varies by 1.9--4.4\,\% about its
@@ -942,13 +942,13 @@ the constitutive equation~\eqref{eq:johnson-cook} by averaging it along the stra
 and temperature histories exported for that run (Section~\ref{sec:materials}). It lies between
 314 and 331~MPa depending on the run, and no parameter is fitted. Along these histories the equivalent plastic
 strain reaches 0.22--0.34 on the axis and 0.30--0.46 at the surface, the strain rate
-5--16~s$^{-1}$ and the surface temperature 47--98~$^\circ$C, and the node-to-node spread of
+up to 4.5--16~s$^{-1}$ and the surface temperature 47--98~$^\circ$C, and the node-to-node spread of
 the averaged flow stress across the section is 306--338~MPa. Within a run $\sigma_f$
 multiplies each relation as a whole, so the columns of Table~\ref{tab:drawstress} differ only in
 the bracketed work terms, and an error in $\sigma_f$ would shift all three predictions of that
 run by the same factor.
 Below the individual runs, Table~\ref{tab:drawstress} gives for each relation the mean absolute
-deviation from the finite-element value over all 111 runs and the secant slope
+deviation from the finite-element value over all 112 runs and the secant slope
 $\mathrm{d}\sigma_d/\mathrm{d}\mu$ between $\mu = 0.025$ and $\mu = 0.1$ at $\alpha = 12^\circ$.
 % src: publication/reexport/verification_recalc.py (all columns); flow_stress.py (sigma_f, after
 % collapsing repeated time rows, which had biased it 3-6 % low); code/analytical.py (siebel,
@@ -982,7 +982,7 @@ heat, so the mean rise is $\Delta T = \beta\,\sigma_d/(\rho c)$. Since $\sigma_d
 flow stress and the flow stress on the temperature, this is a fixed point, reached in at most
 seven iterations. The friction on the bearing is left out of this balance, since the drawing stress
 of these runs does not depend on the bearing, as shown below. For the
-111 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
+112 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
 314--331~MPa used in Table~\ref{tab:drawstress}, at $\Delta = 1.7$--4.7,
 $\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$. The closed
 estimate is quoted with its own value throughout, and no column of Table~\ref{tab:drawstress}
@@ -1003,7 +1003,7 @@ $Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod 
 \midrule
 10 & $8^\circ$  & 10 & 0--1 & 0.025 & 109.5 & 114.2 & 112.8 & 98.0 \\
 10 & $8^\circ$  & 10 & 0--1 & 0.050 & 121.8 & 126.5 & 123.8 & 110.8 \\
-10 & $8^\circ$  & 10 & 0--1 & 0.100 & 146.9 & 151.6 & 146.2 & 134.9 \\
+10 & $8^\circ$  & 10 & 0--1 & 0.100 & 146.9 & 151.6 & 146.2 & 134.8 \\
 10 & $12^\circ$ & 10 & 0--1 & 0.025 & 124.9 & 132.2 & 131.2 & 111.4 \\
 10 & $12^\circ$ & 10 & 0--1 & 0.050 & 133.9 & 141.2 & 139.3 & 121.8 \\
 10 & $12^\circ$ & 10 & 0--1 & 0.100 & 152.6 & 159.8 & 155.8 & 141.7 \\
@@ -1014,7 +1014,7 @@ $Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod 
 15 & $8^\circ$  & 10 & 0    & 0.050 & 171.4 & 176.1 & 170.0 & 150.7 \\
 15 & $8^\circ$  & 10 & 0    & 0.100 & 211.2 & 215.9 & 203.2 & 180.3 \\
 \midrule
-\multicolumn{5}{@{}l}{mean absolute deviation, 111 runs} & 10.6\,\% & 16.3\,\% & 14.3\,\% & --- \\
+\multicolumn{5}{@{}l}{mean absolute deviation, 112 runs} & 10.6\,\% & 16.2\,\% & 14.2\,\% & --- \\
 \multicolumn{5}{@{}l}{$\mathrm{d}\sigma_d/\mathrm{d}\mu$ at $\alpha=12^\circ$, MPa} & 374 & 373 & 332 & 409 \\
 \bottomrule
 \end{tabular}
@@ -1029,7 +1029,7 @@ changes by at most 0.4\,\% at every semi-angle, friction coefficient and speed, 
 terms of Eqs.~\eqref{eq:avitzur} and \eqref{eq:avitzur-vega} raise the prediction from $k=0$ to
 $k=1$ by 24--93\,\% and 11--36\,\%. Table~\ref{tab:drawstress} therefore compares both relations without their
 bearing terms. With
-those terms the mean deviation rises to 43.5\,\% for Eq.~\eqref{eq:avitzur} and to 26.3\,\% for
+those terms the mean deviation rises to 43.2\,\% for Eq.~\eqref{eq:avitzur} and to 26.1\,\% for
 Eq.~\eqref{eq:avitzur-vega}, and at $k=1$ to 79.8\,\% and 40.6\,\%.
 % src: verification_recalc.py (fem spread over k <= 0.41 %; avitzur/vega k0 -> k1 +24..93 % /
 % +11..36 %; land_share_axial <= 0.003; with land terms 43.5 / 26.3 %, at k = 1 79.8 / 40.6 %);
@@ -1038,18 +1038,18 @@ Eq.~\eqref{eq:avitzur-vega}, and at $k=1$ to 79.8\,\% and 40.6\,\%.
 % 1.9-4.6 % of the axial force, concentrated in a band of about 1 mm at its entry.
 
 Without the bearing terms all three relations lie above the computed drawing stress at every
-point, by 10.6\,\% on average for Siebel, 14.3\,\% for the Coulomb form and 16.3\,\% for the
+point, by 10.6\,\% on average for Siebel, 14.2\,\% for the Coulomb form and 16.2\,\% for the
 friction-factor form, which is the order in which their assumptions add work: the
 friction-factor form is an upper bound, and the Coulomb form differs from it only in how the
 friction enters. The excess lies in the frictionless part of the work. Extrapolated to
-$\mu = 0$, the computed drawing stress is 86, 102 and 116~MPa at $\alpha = 8^\circ$, $12^\circ$
+$\mu = 0$, the computed drawing stress is 86, 101 and 116~MPa at $\alpha = 8^\circ$, $12^\circ$
 and $16^\circ$, against 97, 116 and 135~MPa from Siebel's relation. The friction terms then
 narrow the gap, because the model is more sensitive to friction than the relations at the larger
 semi-angles, 409 and 367~MPa per unit $\mu$ at $12^\circ$ and $16^\circ$ against 374 and 311 for
 Siebel. The friction terms of Eqs.~\eqref{eq:siebel} and \eqref{eq:avitzur} take the pressure on
 the cone equal to the flow stress, whereas the pressure recovered from the split reaction is 1.02--1.10,
 1.16--1.24 and 1.27--1.35 times the flow stress at $8^\circ$, $12^\circ$ and $16^\circ$. The
-deviation accordingly falls with friction, from 12.4\,\% at $\mu = 0.025$ to 8.3\,\% at
+deviation accordingly falls with friction, from 12.4\,\% at $\mu = 0.025$ to 8.4\,\% at
 $\mu = 0.1$ for Siebel, and grows with the semi-angle for both Avitzur forms. The drawing speed
 enters through the flow stress alone: doubling it raises the computed drawing stress by 2.7--3.0\,\%,
 which is what the rate term of Eq.~\eqref{eq:johnson-cook} gives, and the deviations at 10 and
@@ -1101,16 +1101,16 @@ every run, the scale on which Eq.~\eqref{eq:mu-temperature} is also calibrated.
 \cmidrule(lr){4-6}
 $Q$, \% & $\alpha$ & $\mu$ & closed & energy & FEM & $^\circ$C \\
 \midrule
-10 & $8^\circ$  & 0.025 & 27.8 & 23.8 & 22.3 & 31.2 \\
+10 & $8^\circ$  & 0.025 & 27.8 & 23.8 & 22.3 & 31.1 \\
 10 & $8^\circ$  & 0.050 & 30.8 & 27.0 & 24.9 & 32.5 \\
-10 & $8^\circ$  & 0.100 & 36.8 & 32.8 & 30.1 & 35.1 \\
+10 & $8^\circ$  & 0.100 & 36.8 & 32.8 & 30.1 & 35.0 \\
 10 & $12^\circ$ & 0.025 & 32.4 & 27.1 & 26.2 & 33.1 \\
 10 & $12^\circ$ & 0.050 & 34.6 & 29.6 & 28.3 & 34.2 \\
 10 & $12^\circ$ & 0.100 & 39.2 & 34.5 & 32.6 & 36.3 \\
 10 & $16^\circ$ & 0.025 & 37.7 & 30.5 & 30.2 & 35.1 \\
 10 & $16^\circ$ & 0.050 & 39.5 & 32.8 & 32.0 & 36.0 \\
-10 & $16^\circ$ & 0.100 & 43.4 & 37.1 & 35.9 & 38.0 \\
-15 & $8^\circ$  & 0.025 & 38.0 & 32.8 & 30.3 & 35.2 \\
+10 & $16^\circ$ & 0.100 & 43.4 & 37.1 & 35.9 & 37.9 \\
+15 & $8^\circ$  & 0.025 & 38.0 & 32.8 & 30.3 & 35.1 \\
 15 & $8^\circ$  & 0.050 & 42.5 & 36.7 & 33.6 & 36.8 \\
 15 & $8^\circ$  & 0.100 & 52.1 & 43.9 & 39.5 & 39.8 \\
 \bottomrule
@@ -1130,9 +1130,9 @@ coefficient in all 88 runs with a bearing.
 The region of the design covered by these runs limits what the comparison establishes. At a
 reduction of 10--15\,\% the inhomogeneity parameter is 1.7 to 4.7, close to the range of 1 to 3
 in which these solutions are normally applied and against which they have been validated, and
-the ideal work accounts for 46 to 68\,\% of the predicted drawing stress. The deviations of
+the ideal work accounts for 45 to 68\,\% of the predicted drawing stress. The deviations of
 Table~\ref{tab:drawstress} therefore characterise the closed-form solutions where they are
-expected to hold: 10--17\,\% above the numerical solution, with the upper bound above the slab
+expected to hold: 11 to 16\,\% above the numerical solution on average, with the upper bound above the slab
 estimate.
 % src: verification_recalc.py (Delta 1.66-4.71; ideal share 0.46-0.68 of the land-free Coulomb
 % prediction). The small cost of extrapolating in k in Section 3.2 (x1.08) is consistent with it.
@@ -1682,7 +1682,7 @@ In the present work a series of axisymmetric finite-element simulations of cold 
 % Section~\ref{sec:fem-dataset}; the conclusion is kept free of those figures until they are reported in the body,
 % since the Conclusions must not introduce numbers that the results do not carry. The same TODO stands in
 % sec22_fem_dataset.tex, together with the missing bibliography entries for the two relations.
-The reference against which all of the above is measured is the finite-element solution itself. Its adequacy is addressed by the verification described in Section~\ref{sec:res_fem_verification}: on 111 dedicated runs of the same model, covering die semi-angles of 8--16$^\circ$, calibration ratios from 0 to 1, two drawing speeds and all three friction coefficients, the drawing stress obtained from the computed reaction is compared, with no fitted parameters, with the classical analytical descriptions of the process, namely the relation of Siebel, the upper-bound solution of Avitzur and its modification by Vega et~al. Without their bearing terms the three relations lie 10--17\,\% above the computed drawing stress at every point, and they reproduce its dependence on friction and speed. It is with respect to a reference field verified in this way that the conclusions listed above are to be read. Further work is directed at experimental validation of the residual-stress field. Two independent methods are suited to this. X-ray diffraction measures the stress in a thin surface layer of the drawn wire without destroying it \citep{he2003residual}. The distribution through the thickness requires a separate, destructive method, in which surface layers are removed in succession by etching or machining and the residual stresses are recovered from the deformation of the remaining specimen after each step.
+The reference against which all of the above is measured is the finite-element solution itself. Its adequacy is addressed by the verification described in Section~\ref{sec:res_fem_verification}: on 112 dedicated runs of the same model, covering reductions of 10 and 15\,\%, die semi-angles of 8--16$^\circ$, calibration ratios from 0 to 1, two drawing speeds and all three friction coefficients, the drawing stress obtained from the computed reaction is compared, with no fitted parameters, with the classical analytical descriptions of the process, namely the relation of Siebel, the upper-bound solution of Avitzur and its modification by Vega et~al. Without their bearing terms the three relations lie above the computed drawing stress at every point, by 11 to 16\,\% on average, and they reproduce its dependence on friction and speed. It is with respect to a reference field verified in this way that the conclusions listed above are to be read. Further work is directed at experimental validation of the residual-stress field. Two independent methods are suited to this. X-ray diffraction measures the stress in a thin surface layer of the drawn wire without destroying it \citep{he2003residual}. The distribution through the thickness requires a separate, destructive method, in which surface layers are removed in succession by etching or machining and the residual stresses are recovered from the deformation of the remaining specimen after each step.
 % <<< end sections/sec4_conclusions.tex
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
