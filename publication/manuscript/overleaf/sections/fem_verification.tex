@@ -57,7 +57,7 @@ stress, and, in the upper-bound form of Avitzur,
 \sigma_d = \sigma_f\biggl[\,&2f(\alpha)\ln\frac{R_0}{R_f}
   + \frac{2}{\sqrt3}\,\frac{\alpha-\sin\alpha\cos\alpha}{\sin^2\alpha}\\
   &+ \frac{2}{\sqrt3}\,m\cot\alpha\ln\frac{R_0}{R_f}
-  + \frac{2}{\sqrt3}\,m\,\frac{L}{R_f}\biggr],
+  + \frac{2}{\sqrt3}\,m\,\frac{L_b}{R_f}\biggr],
 \end{split}
 \label{eq:avitzur}
 \end{equation}
@@ -65,9 +65,9 @@ whose four terms are the ideal deformation work, the redundant shear, the fricti
 the friction on the bearing. Here $f(\alpha)$ is the closed form of the deformation integral,
 % src: code/analytical.py f_avitzur against f_avitzur_numeric (agreement to eight digits)
 $f\to1$ as $\alpha\to0$, so that the first
-term reduces to $\ln[1/(1-r)]$, $m$ is the friction factor and $L$ the bearing length
+term reduces to $\ln[1/(1-r)]$, $m$ is the friction factor and $L_b$ the bearing length
 \citep{siebel1947drahtziehen,avitzur1968metal,avitzur1971study}. In the model the bearing length is
-$L = kD_0$, so that $L/R_f = kD_0/R_f$ is 2.2--2.3 times the calibration ratio.
+$L_b = kD_0$, so that $L_b/R_f = kD_0/R_f$ is 2.2--2.3 times the calibration ratio.
 % src: bearing length measured in Abaqus CAE on 1020_2a_16_rd_1000_cal_100_v_10_f_050: 0.036 m
 % (30.09.2026). The exports agree: die RP initial z = c - 36.000 k mm at every alpha; bearing-only
 % tail phase 36.0 k mm (88 runs); 36 mm at k = 1 in the earlier export at Q = 1.5 %. The generator
@@ -87,8 +87,8 @@ build their modification on it, it reads
   &2f(\alpha)\ln\frac{R_0}{R_f}
   + \frac{2}{\sqrt3}\left(\frac{\alpha}{\sin^2\alpha}-\cot\alpha\right)\\
   &+ 2\mu\left[\cot\alpha\left(1-\ln\frac{R_0}{R_f}\right)\ln\frac{R_0}{R_f}
-  + \frac{L}{R_f}\right]\end{aligned}}
-  {\displaystyle 1+2\mu\,\frac{L}{R_f}},
+  + \frac{L_b}{R_f}\right]\end{aligned}}
+  {\displaystyle 1+2\mu\,\frac{L_b}{R_f}},
 \label{eq:avitzur-vega}
 \end{equation}
 written here for zero back tension and with the flow stress in place of the yield stress of the
@@ -96,10 +96,10 @@ original. The denominator is Avitzur's treatment of the bearing
 \citep{avitzur1964large,avitzur1968metal}. It is what the axial force balance on a cylindrical
 bearing under Coulomb friction gives when the normal pressure follows from the yield condition,
 $p = \sigma_f-\sigma_z$, and is evaluated at the exit stress:
-$\sigma_z(L) = \sigma_z(0) + 2\mu\,(L/R_f)\,[\sigma_f-\sigma_z(L)]$, which rearranges to the form
+$\sigma_z(L_b) = \sigma_z(0) + 2\mu\,(L_b/R_f)\,[\sigma_f-\sigma_z(L_b)]$, which rearranges to the form
 of Eq.~\eqref{eq:avitzur-vega}. Integrating the same balance along the bearing instead gives
-$\sigma_z(L) = \sigma_f-[\sigma_f-\sigma_z(0)]\exp(-2\mu L/R_f)$. The two agree to first order in
-$2\mu L/R_f$, and at the present parameters the integrated form lies above
+$\sigma_z(L_b) = \sigma_f-[\sigma_f-\sigma_z(0)]\exp(-2\mu L_b/R_f)$. The two agree to first order in
+$2\mu L_b/R_f$, and at the present parameters the integrated form lies above
 Eq.~\eqref{eq:avitzur-vega} by at most 4.4\,\%. Both forms thus carry an explicit assumption about
 the pressure on the bearing.
 
@@ -154,7 +154,7 @@ solution:
 \Delta T &= \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
 \end{align}
 where $\Delta$ is the inhomogeneity parameter of the deformation zone, the ratio of its mean
-diameter to the length of contact along the die cone, set by the die semi-angle and the entry and
+diameter to the length of contact along the die cone, $L$ in Fig.~\ref{fig:scheme}, set by the die semi-angle and the entry and
 exit radii, $\Phi$ the excess-work factor, $\edot$ the mean strain rate over the time taken to
 traverse the cone at constant volume flow, and $\langle\sigma_f\rangle$ the mean of the strain
 term of the constitutive equation over the strain from zero to $\varepsilon_{\mathrm{eff}}$

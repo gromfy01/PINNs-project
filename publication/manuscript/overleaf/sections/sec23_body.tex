@@ -49,7 +49,7 @@ on both coordinates, $r$ and $z$. In preparing the models, however, relations
 are set out in the remainder of this paragraph.
 In the main track the axial coordinate is not an input: each case is one radial
 profile, the median along the steady-state axial window (25--75\,\% of the wire
-length, $L/R\approx3.5$).
+length, about 3.5 radii long).
 % src: QA_DATA_AND_Z.md §4 (axial window 25–75 %, median window length 57.5 mm at R = 16.2 mm, L/R ≈ 3.5); dataset.py (20 equally populated r-bins, median)
 Axial derivatives of the network therefore do not exist, and the axisymmetric
 equilibrium equations
@@ -108,7 +108,7 @@ $\partial\tau_{rz}/\partial z$, exactly the operator of the main track) and
 % src: trainer2d.py FAMILIES_2D, _loss_with_physics (full: d_tau_dz, d_szz_dz; reduced: zeros)
 Physical derivatives follow from the chain rule,
 $\partial/\partial r_{\mathrm{phys}}=R^{-1}\partial/\partial r$,
-$\partial/\partial z_{\mathrm{phys}}=L^{-1}\partial/\partial z$, with $R$ and $L$
+$\partial/\partial z_{\mathrm{phys}}=L_w^{-1}\partial/\partial z$, with $R$ and $L_w$
 the surface radius and window length of the case. The $1/r$ factor uses $r$
 clipped at $0.05R$, since nodal radii near the axis carry noise (worst
 $|r|/R=0.054$).
