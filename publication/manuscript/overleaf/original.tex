@@ -224,7 +224,7 @@ $S_3$ - is the free lateral surface;
 $S_4$ - is the contact surface between the wire and the die; and $S_5$ - is the entry surface of the wire. 
 
 The half-angle of the working cone of the die is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, and $L$ is the length of the calibration zone.
-The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$ follows from $D_0$ and $D$ and is given in per cent, the half-angle of the deformation zone is $\alpha$, and the calibration ratio $k$ relates the bearing length $L$ to the billet diameter, $L = kD_0$.
+The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$ follows from $D_0$ and $D$ and is given in per cent, the half-angle of the deformation zone is $\alpha$, and the calibration ratio $k$ relates the bearing length $L$ to the initial diameter of the wire, $L = kD_0$.
 
 \begin{figure*}[t]
 \centering
@@ -235,7 +235,7 @@ The radial coordinate $r$ is measured from the axis and the axial coordinate $z$
 
 
 A series of axisymmetric FEM simulations of the wire-drawing process was carried out in Abaqus CAE~\citep{abaqus2022}.
-The workpiece was a rectangular longitudinal section discretised with a CAX4RT element mesh. The geometry of the die was described by three parameters: the reduction ($Q$), the half-angle of the deformation zone ($\alpha$), and the ratio between the calibration-section length and the billet diameter ($k$). Process parameters varied during the campaign were the Coulomb friction coefficient ($\mu$) and the drawing velocity ($v$). The ranges of these parameters are summarised in Table~\ref{tab:fem_params}.
+The workpiece was a rectangular longitudinal section discretised with a CAX4RT element mesh. The geometry of the die was described by three parameters: the reduction ($Q$), the half-angle of the deformation zone ($\alpha$), and the ratio between the calibration-section length and the initial diameter of the wire ($k$). Process parameters varied during the campaign were the Coulomb friction coefficient ($\mu$) and the drawing velocity ($v$). The ranges of these parameters are summarised in Table~\ref{tab:fem_params}.
 
 Material behaviour is described by the Johnson--Cook model for the low-carbon steel AISI 1020
 \citep{10.1680/jemmr.16.00019,shi2006analytical}. The analysis is a coupled temperature--displacement one, and the
@@ -1729,7 +1729,7 @@ The reference against which all of the above is measured is the finite-element s
 
 \begin{nomenclature}
 \entry{$Q$}{reduction of diameter, $100\,(D_0-D)/D_0$ (\%)}
-\entry{$k$}{calibration ratio (bearing length over billet diameter)}
+\entry{$k$}{calibration ratio (bearing length over initial wire diameter)}
 \entry{$L$}{length of the calibration zone (m)}
 \entry{$r,z$}{radial and axial coordinates (m)}
 \entry{$R$}{billet radius (Fig.~\ref{fig:fem-fields}) or surface radius of the cross-section (Figs.~\ref{fig:compare-fields}--\ref{fig:residual-maps})}
