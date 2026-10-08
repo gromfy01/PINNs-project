@@ -58,7 +58,13 @@ def preprocessing_res_np(file):
     Stress = np.stack([s_rr[mask], s_tt[mask], s_zz[mask], s_rz[mask]], axis=-1)
     Strain = np.stack([e_rr[mask], e_tt[mask], e_zz[mask], e_rz[mask]], axis=-1)
 
-    order = np.argsort(x_sel)
+    # kind="stable": в осевом окне много узлов приходится на совпадающие
+    # радиусы. При неустойчивой сортировке их порядок не определён, и если
+    # совпадающий радиус попадает на границу чанка, медиана берётся с другого
+    # узла. Измерено: бины без совпадающих радиусов воспроизводятся на 100.00 %,
+    # бины с ними — на 74.7 %, что и даёт ~7 % расхождения по массиву.
+    # См. publication/ERRATA.md, E-21.
+    order = np.argsort(x_sel, kind="stable")
     return x_sel[order], y_sel[order], Stress[order], Strain[order]
 
 
