@@ -223,7 +223,7 @@ $S_2$ - is the outlet surface, on which the drawing velocity is prescribed;
 $S_3$ - is the free lateral surface; 
 $S_4$ - is the contact surface between the wire and the die; and $S_5$ - is the entry surface of the wire. 
 
-The half-angle of the working cone of the die is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, $L$ is the length of the inclined part of the deformation zone, measured along the die cone, and $L_b$ is the length of the cylindrical calibration zone that follows the cone, the bearing length.
+The half-angle of the deformation zone, also termed the die semi-angle, is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, $L$ is the length of the inclined part of the deformation zone, measured along the die cone, and $L_b$ is the length of the cylindrical calibration zone that follows the cone, the bearing length.
 The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$ follows from $D_0$ and $D$ and is given in per cent, the half-angle of the deformation zone is $\alpha$, and the calibration ratio $k$ relates the bearing length $L_b$ to the initial diameter of the wire, $L_b = kD_0$.
 
 \begin{figure*}[t]
@@ -291,7 +291,7 @@ Parameter & Values \\
 \midrule
 Reduction $Q$, \% & 1.5, 2.5, 5, 10, 15, 20, 25 \\
 Calibration ratio $k$ & 0.0, 0.1, 0.3, 0.5, 0.75, 1.0 \\
-Die half-angle $\alpha$, $^{\circ}$ & 4, 8, 12, 16, 20 \\
+Die semi-angle $\alpha$, $^{\circ}$ & 4, 8, 12, 16, 20 \\
 Friction coefficient $\mu$ & 0.025, 0.05, 0.10 \\
 Drawing velocity $v$, m/min & 5, 10, 20, 40, 250 \\
 \bottomrule
@@ -400,8 +400,8 @@ A random 15\,\% hold-out measures interpolation only. To measure transfer beyond
 % NOTE: the description of the controls and of the joint-range partition was recast in more formal terms; the content is unchanged.
 Each extrapolation split is accompanied by two controls. The \emph{matched} control withholds a random subset of the same size drawn from the whole pool, so that the difference $\Delta\mathrm{RMSE} = \mathrm{RMSE}(\text{extrap}) - \mathrm{RMSE}(\text{matched})$ separates the cost of leaving the training range from the cost of a smaller training set. % src: code/splits.py make_matched_split, module docstring
 The \emph{interior} control withholds an inner level of the same axis ($\alpha = 12^\circ$, $Q = 10\,\%$), which separates the cost of a gap inside the factor grid from the cost of leaving its range. % src: code/splits.py REGIONS (alpha_mid, Q_mid); RESULTS.md §1
-% NOTE: the term "corner split" was replaced by a description in terms of a joint departure from the ranges of two factors; $\alpha$ is named the die semi-angle, i.e.\ the half-angle of the deformation zone.
-A further partition, denoted \texttt{extrap\_joint:corner} in the run log, is defined by a joint departure from the ranges of two factors, the die semi-angle $\alpha$, i.e.\ the half-angle of the deformation zone, and the reduction $Q$: the region $\alpha = 20^\circ \wedge Q \ge 15\,\%$ is withheld as a whole. Along either of the two axes taken separately the test cases of this partition remain inside the training range, so that what is probed is a region of the joint factor space left uncovered by the design, and not extrapolation beyond the range of a single factor. % src: code/splits.py REGIONS corner (kind extrap_joint); PLAYBOOK.md §7.1
+% NOTE: the term "corner split" was replaced by a description in terms of a joint departure from the ranges of two factors. The split and its matched control are labelled extrap_joint:alpha_Q and matched:alpha_Q after the two factors involved. In the run log (results/runs_v2.csv), in code/splits.py and in experiments/make_results.py they are named extrap_joint:corner and matched:corner (experiments/paper_tables.py maps the names for display).
+A further partition, \texttt{extrap\_joint:alpha\_Q}, is defined by a joint departure from the ranges of two factors, the die semi-angle $\alpha$ and the reduction $Q$: the region $\alpha = 20^\circ \wedge Q \ge 15\,\%$ is withheld as a whole. Along either of the two axes taken separately the test cases of this partition remain inside the training range, so that what is probed is a region of the joint factor space left uncovered by the design, and not extrapolation beyond the range of a single factor. % src: code/splits.py REGIONS corner (kind extrap_joint); PLAYBOOK.md §7.1
 A coverage report states, for each axis, whether the test range leaves the training range. Transfer beyond the training range is claimed only for those axes for which it does. % src: code/splits.py coverage_report
 The partitions are fixed (seed 42). The five training seeds of Section~\ref{sec:models} vary the initialisation, the batch order and the 15\,\% early-stopping subset carved from the training pool. % src: code/splits.py defaults (seed = 42); results/runs_v2.csv (seeds 0–4); code/trainer.py (manual_seed, val_frac = 0.15, batch Generator seeded by cfg.seed)
 % FIXED: "validation subset" → "early-stopping subset" to keep the word validation for comparison against experiment (VALIDATION.md: verification, not validation).
@@ -419,14 +419,14 @@ Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
 \texttt{extrap:Q\_high}      & $Q = 20\,\%$                            & extrapolation, $Q$      & 1484 & 272 \\ % src: results/runs_v2.csv
 \texttt{extrap:k\_max}       & $k = 1.0$                             & extrapolation, $k$      & 1466 & 290 \\ % src: results/runs_v2.csv
 \texttt{extrap:v\_max}       & $v = 250$~m/min                       & extrapolation, $v$      & 1255 & 501 \\ % src: results/runs_v2.csv
-\texttt{extrap\_joint:corner}& $\alpha = 20^\circ \wedge Q \ge 15\,\%$ & gap in the joint $(\alpha, Q)$ range & 1642 & 114 \\ % NOTE: "joint-space gap" named after the two factors involved % src: results/runs_v2.csv
+\texttt{extrap\_joint:alpha\_Q}& $\alpha = 20^\circ \wedge Q \ge 15\,\%$ & gap in the joint $(\alpha, Q)$ range & 1642 & 114 \\ % NOTE: "joint-space gap" named after the two factors involved % src: results/runs_v2.csv
 \texttt{interp:alpha\_mid}   & $\alpha = 12^\circ$                   & interior control        & 1416 & 340 \\ % src: results/runs_v2.csv
 \texttt{interp:Q\_mid}       & $Q = 10\,\%$                            & interior control        & 1438 & 318 \\ % src: results/runs_v2.csv
 \texttt{matched:alpha\_max}  & random, same size                     & matched control         & 1377 & 379 \\ % src: results/runs_v2.csv
 \texttt{matched:Q\_high}     & random, same size                     & matched control         & 1484 & 272 \\ % src: results/runs_v2.csv
 \texttt{matched:k\_max}      & random, same size                     & matched control         & 1466 & 290 \\ % src: results/runs_v2.csv
 \texttt{matched:v\_max}      & random, same size                     & matched control         & 1255 & 501 \\ % src: results/runs_v2.csv
-\texttt{matched:corner}      & random, same size                     & matched control         & 1642 & 114 \\ % src: results/runs_v2.csv
+\texttt{matched:alpha\_Q}     & random, same size                     & matched control         & 1642 & 114 \\ % src: results/runs_v2.csv
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1234,7 +1234,7 @@ becomes unstable, with a spread of $\pm19$~MPa between seeds. These figures thus
 % src: RESULTS.md §1.2 (Friedman p = 0.04076 extrap:alpha_max, 0.02237 extrap:k_max, 0.006738 matched:v_max; extrap_joint:corner p = 0.09072; Nemenyi separates only MLP–PINN; non-transitivity, ERRATA E-15);
 % src: RESULTS_v1_vs_v2.md §3 and §8 (differences 0.3–1.9 MPa at a level of 8–16 MPa).
 Table~\ref{tab:paired} summarises the seed-paired tests. The PINN has a lower macro-RMSE than the MLP on all thirteen splits, and the difference is established on four: the semi-angle extrapolation ($\Delta=-0.58$~MPa, $p=0.040$), the bearing-length extrapolation ($-1.16$~MPa, $p=0.033$), the joint departure from the range in semi-angle and reduction ($-1.06$~MPa, $p=0.011$) and the matched control of the speed split ($-0.29$~MPa, $p=0.006$). With a Holm step-down correction \citep{holm1979,demsar2006} over the thirteen splits none of the pairwise differences remains significant: the smallest adjusted $p$ is 0.079 for PINN$-$MLP and 0.195 for VPINN$-$MLP. The four verdicts are therefore read as a consistent direction, not as isolated proofs. % src: tables/all_tables.tex tab:paired caption (paper_tables.py, Holm over 13 splits: smallest adjusted p = 0.079 / 0.195) % EDIT: Holm sentence added % NOTE: a reference is supplied for the Holm step-down procedure; the source already cited in this section for the comparison of models over multiple splits describes it. % TODO: if the bibliography is extended, Holm's original paper (Scandinavian Journal of Statistics) may be cited alongside; the .bib file is not part of this section
-The VPINN is established better than the MLP on two splits (\texttt{interp:Q\_mid}, $p=0.015$, and \texttt{matched:v\_max}, $p=0.022$). The strong form is established better than the weak form on \texttt{extrap:k\_max} ($-0.70$~MPa, $p=0.018$) and, by a margin smaller than the seed spread, on \texttt{matched:v\_max} ($-0.11$~MPa, $p=0.046$). On the remaining eleven splits the two physics-informed forms are indistinguishable. A Friedman test over seeds \citep{friedman1937,demsar2006} rejects equality on three of the four splits where the paired test does (\texttt{extrap:alpha\_max}, $p=0.041$, \texttt{extrap:k\_max}, $p=0.022$, and \texttt{matched:v\_max}, $p=0.007$, against $p=0.091$ on the corner), with the Nemenyi post-hoc separating only the MLP--PINN pair. Since indistinguishability there is not transitive, no ``single cluster'' is claimed. In absolute terms the advantage is small, 0.3--1.9~MPa at an error level of 8--16~MPa and of the same order as the seed spread. On accuracy alone the physics term therefore gives no decisive gain, and its other effects are examined in Section~\ref{sec:res_fem}.
+The VPINN is established better than the MLP on two splits (\texttt{interp:Q\_mid}, $p=0.015$, and \texttt{matched:v\_max}, $p=0.022$). The strong form is established better than the weak form on \texttt{extrap:k\_max} ($-0.70$~MPa, $p=0.018$) and, by a margin smaller than the seed spread, on \texttt{matched:v\_max} ($-0.11$~MPa, $p=0.046$). On the remaining eleven splits the two physics-informed forms are indistinguishable. A Friedman test over seeds \citep{friedman1937,demsar2006} rejects equality on three of the four splits where the paired test does (\texttt{extrap:alpha\_max}, $p=0.041$, \texttt{extrap:k\_max}, $p=0.022$, and \texttt{matched:v\_max}, $p=0.007$, against $p=0.091$ on \texttt{extrap\_joint:alpha\_Q}), with the Nemenyi post-hoc separating only the MLP--PINN pair. Since indistinguishability there is not transitive, no ``single cluster'' is claimed. In absolute terms the advantage is small, 0.3--1.9~MPa at an error level of 8--16~MPa and of the same order as the seed spread. On accuracy alone the physics term therefore gives no decisive gain, and its other effects are examined in Section~\ref{sec:res_fem}.
 
 % src: RESULTS.md §3 (learning curves, macro-RMSE at 10/25/50/100 %) — all 24 entries verified; RESULTS_v1_vs_v2.md §5 (gaps, slopes on log fraction, p-values);
 % src: runs_v2.csv stage=curves (n_train 149/373/746/1493 random, 138/344/688/1377 alpha_max; 3 seeds); paired p-values recomputed from the csv: 0.317/0.099/0.048/0.718 and 0.498/0.033/0.886/0.238; slopes +0.197 (p = 0.211) and −0.355 (p = 0.070).
@@ -1515,13 +1515,13 @@ Split & Held-out region & $n_\mathrm{train}$ & $n_\mathrm{test}$ & MLP & PINN & 
 \texttt{extrap:alpha\_max} & $\alpha = 20^\circ$ (highest level) & 1377 & 379 & 13.63 $\pm$ 0.51 & 13.05 $\pm$ 0.49 & 12.98 $\pm$ 0.64 \\
 \texttt{extrap:v\_max} & $v = 250$ m/min (highest level) & 1255 & 501 & 55.83 $\pm$ 19.04 & 48.35 $\pm$ 6.99 & 48.42 $\pm$ 4.80 \\
 \addlinespace
-\texttt{extrap\_joint:corner} & $\alpha = 20^\circ$ and $Q \ge 15\,\%$ & 1642 & 114 & 16.60 $\pm$ 0.84 & 15.54 $\pm$ 0.37 & 16.30 $\pm$ 0.85 \\
+\texttt{extrap\_joint:alpha\_Q} & $\alpha = 20^\circ$ and $Q \ge 15\,\%$ & 1642 & 114 & 16.60 $\pm$ 0.84 & 15.54 $\pm$ 0.37 & 16.30 $\pm$ 0.85 \\
 \addlinespace
 \texttt{matched:Q\_high} & random, $n_\mathrm{test}$ of \texttt{extrap:Q\_high} & 1484 & 272 & 7.96 $\pm$ 0.12 & 7.80 $\pm$ 0.07 & 7.74 $\pm$ 0.29 \\
 \texttt{matched:k\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:k\_max} & 1466 & 290 & 8.32 $\pm$ 0.15 & 8.18 $\pm$ 0.12 & 8.29 $\pm$ 0.11 \\
 \texttt{matched:alpha\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:alpha\_max} & 1377 & 379 & 8.11 $\pm$ 0.26 & 7.88 $\pm$ 0.28 & 8.18 $\pm$ 0.22 \\
 \texttt{matched:v\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:v\_max} & 1255 & 501 & 8.73 $\pm$ 0.12 & 8.44 $\pm$ 0.12 & 8.55 $\pm$ 0.14 \\
-\texttt{matched:corner} & random, $n_\mathrm{test}$ of \texttt{extrap\_joint:corner} & 1642 & 114 & 7.50 $\pm$ 0.16 & 7.17 $\pm$ 0.38 & 7.34 $\pm$ 0.14 \\
+\texttt{matched:alpha\_Q} & random, $n_\mathrm{test}$ of \texttt{extrap\_joint:alpha\_Q} & 1642 & 114 & 7.50 $\pm$ 0.16 & 7.17 $\pm$ 0.38 & 7.34 $\pm$ 0.14 \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1550,13 +1550,13 @@ Split & $\Delta$, MPa & $t$ & $p$ & verdict & $\Delta$, MPa & $t$ & $p$ & verdic
 \texttt{extrap:alpha\_max} & $-0.58$ & $-3.01$ & 0.040 & PINN better & $-0.66$ & $-2.59$ & 0.061 & n.s. \\
 \texttt{extrap:v\_max} & $-7.48$ & $-0.73$ & 0.508 & n.s. & $-7.41$ & $-1.02$ & 0.366 & n.s. \\
 \addlinespace
-\texttt{extrap\_joint:corner} & $-1.06$ & $-4.42$ & 0.011 & PINN better & $-0.30$ & $-0.62$ & 0.568 & n.s. \\
+\texttt{extrap\_joint:alpha\_Q} & $-1.06$ & $-4.42$ & 0.011 & PINN better & $-0.30$ & $-0.62$ & 0.568 & n.s. \\
 \addlinespace
 \texttt{matched:Q\_high} & $-0.16$ & $-2.20$ & 0.093 & n.s. & $-0.22$ & $-1.52$ & 0.204 & n.s. \\
 \texttt{matched:k\_max} & $-0.14$ & $-1.83$ & 0.141 & n.s. & $-0.03$ & $-0.26$ & 0.809 & n.s. \\
 \texttt{matched:alpha\_max} & $-0.23$ & $-2.15$ & 0.098 & n.s. & $+0.07$ & $0.55$ & 0.613 & n.s. \\
 \texttt{matched:v\_max} & $-0.29$ & $-5.31$ & 0.006 & PINN better & $-0.18$ & $-3.64$ & 0.022 & VPINN better \\
-\texttt{matched:corner} & $-0.33$ & $-1.59$ & 0.186 & n.s. & $-0.16$ & $-1.56$ & 0.195 & n.s. \\
+\texttt{matched:alpha\_Q} & $-0.33$ & $-1.59$ & 0.186 & n.s. & $-0.16$ & $-1.56$ & 0.195 & n.s. \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1747,7 +1747,7 @@ The reference against which all of the above is measured is the finite-element s
 \entry{$c$}{specific heat (J\,kg$^{-1}$K$^{-1}$)}
 \entry{$T$}{temperature ($^\circ$C)}
 \EntryHeading{Greek Letters}
-\entry{$\alpha$}{half-angle of the die working cone (deg)}
+\entry{$\alpha$}{die semi-angle, the half-angle of the deformation zone (deg)}
 \entry{$\mu$}{Coulomb friction coefficient}
 \entry{$\sigma_d$}{drawing stress (MPa)}
 \entry{$\sigma_f$}{flow stress (MPa)}

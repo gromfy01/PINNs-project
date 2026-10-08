@@ -71,7 +71,7 @@ REGION_TEXT = {
     "matched:k_max": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap:k\_max}"),
     "matched:alpha_max": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap:alpha\_max}"),
     "matched:v_max": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap:v\_max}"),
-    "matched:corner": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap\_joint:corner}"),
+    "matched:corner": ("matched", r"random, $n_\mathrm{test}$ of \texttt{extrap\_joint:alpha\_Q}"),
 }
 REGION_SRC = "publication/code/splits.py: REGIONS"
 
@@ -94,8 +94,14 @@ class Ledger:
             json.dump(self.rows, fh, ensure_ascii=False, indent=1)
 
 
+# Names shown in the paper where they differ from the run log: the joint region
+# is labelled after its two factors (alpha and Q) instead of "corner".
+DISPLAY_NAME = {"extrap_joint:corner": "extrap_joint:alpha_Q", "matched:corner": "matched:alpha_Q"}
+
+
 def tt(s: str) -> str:
     """Split name in typewriter with underscores escaped."""
+    s = DISPLAY_NAME.get(s, s)
     return r"\texttt{" + s.replace("_", r"\_") + "}"
 
 
