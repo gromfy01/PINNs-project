@@ -85,13 +85,13 @@ whereas the axial equation is not used in the main track, for a reason stronger
 than the size of the dropped term: the remainder is a total derivative,
 \begin{equation}
   \frac{\partial\tau_{rz}}{\partial r} + \frac{\tau_{rz}}{r}
-  \equiv \frac{1}{r}\,\frac{\partial\,(r\,\tau_{rz})}{\partial r},
+  \equiv \frac{1}{r}\,\frac{\partial\,(r\cdot\tau_{rz})}{\partial r},
   \label{eq:identity}
 \end{equation}
-so forcing it to zero means $r\,\tau_{rz}=\mathrm{const}$ and, with regularity on
+so forcing it to zero means that the product $r\cdot\tau_{rz}$ does not depend on $r$ and, with regularity on
 the axis ($\tau_{rz}(0)=0$), $\tau_{rz}\equiv0$ over the whole radius. That is not
 an approximate axial balance but the statement that shear is absent, which the
-FEM data contradict (median relative range of $r\,\tau_{rz}$ along the radius
+FEM data contradict (median relative range of $r\cdot\tau_{rz}$ along the radius
 3.15).
 % src: ERRATA.md E-02 (3.15); physics_check.py EQUILIBRIUM_R2_STATUS / zero_shear_residual docstring (3.15); trainer.py _zero_shear docstring (3.15)
 The term exists in the code under its true name (zero-shear penalty,

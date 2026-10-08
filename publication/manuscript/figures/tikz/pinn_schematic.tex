@@ -116,8 +116,8 @@
 \node[note, below=9mm of opt.south west, anchor=north west, text width=140mm] (fix)
   {\textbf{Held fixed for every family and every split.}\ The architecture, the
    optimiser settings and the loss weights were set before any held-out region was
-   evaluated and were not tuned per family or per split, so no search can leak a
-   held-out region. The only quantity read from the data is the gradient-norm
+   evaluated and were not tuned per family or per split, so no extrapolation
+   error entered their choice. The only quantity read from the data is the gradient-norm
    calibration $g=\lVert\nabla_\theta\mathcal{L}_{\mathrm{data}}\rVert_2/
    \lVert\nabla_\theta\mathcal{L}_{\mathrm{phys}}\rVert_2$, set once on the first
    mini-batch so that strong and weak forms enter with the same share of the data

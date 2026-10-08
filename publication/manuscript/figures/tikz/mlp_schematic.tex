@@ -80,7 +80,7 @@
 \node[note, below=9mm of opt.south west, anchor=north west, text width=112mm] (fix)
   {\textbf{Held fixed for every family and every split.}\ Architecture and
    hyperparameters were set before any held-out region was evaluated and were not
-   tuned per family or per split, so no search can leak a held-out region. Patience 40,
+   tuned per family or per split, so no extrapolation error entered their choice. Patience 40,
    at most 800 epochs, five seeds (0--4); the extended track uses
    $\eta=2\cdot10^{-3}$, batch 32, at most 300 epochs, patience 30 and three seeds (0--2).};
 
