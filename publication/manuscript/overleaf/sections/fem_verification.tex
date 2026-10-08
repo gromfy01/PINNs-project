@@ -142,9 +142,14 @@ $\mathrm{d}\sigma_d/\mathrm{d}\mu$ between $\mu = 0.025$ and $\mu = 0.1$ at $\al
 % collapsing repeated time rows, which had biased it 3-6 % low); code/analytical.py (siebel,
 % avitzur); code/vega_avitzur.py (Eq. avitzur-vega, Eq. mu-temperature)
 
-The flow stress and the temperature rise can also be estimated from the geometry of the pass,
-with the exit radius $R_f$ reached in the model as the only quantity taken from the finite-element
-solution:
+The flow stress and the temperature rise can also be estimated without the strain, strain-rate and
+temperature histories of the model, from the approximate relations of the theory of drawing. The
+strain follows from the excess-work correlation \citep{backofen1972deformation}, the strain rate
+from the kinematics of the die cone and the temperature rise from the energy balance of the pass,
+as in the classical estimates of the heating of drawn wire \citep{siebel1943erwaermung}. Apart from
+the material constants and the entry radius, these relations need the die semi-angle, the drawing
+speed and the friction coefficient of the run. The only quantity taken from the finite-element
+solution is the exit radius $R_f$ reached in the model, as in Eq.~\eqref{eq:sigma-d}:
 \begin{align}
 \Delta &= \frac{R_0+R_f}{R_0-R_f}\,\sin\alpha, \label{eq:delta}\\
 \varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
@@ -158,8 +163,7 @@ where $\Delta$ is the inhomogeneity parameter of the deformation zone, the ratio
 diameter to the length of contact along the die cone, $L$ in Fig.~\ref{fig:scheme}, set by the die semi-angle and the entry and
 exit radii, $\Phi$ the excess-work factor, $\edot$ the mean strain rate over the time taken to
 traverse the cone at constant volume flow, and $\langle\sigma_f\rangle$ the mean of the strain
-term of the constitutive equation over the strain from zero to $\varepsilon_{\mathrm{eff}}$
-\citep{backofen1972deformation}. The
+term of the constitutive equation over the strain from zero to $\varepsilon_{\mathrm{eff}}$. The
 flow stress of the estimate is this mean multiplied by the rate and temperature factors of
 Eq.~\eqref{eq:johnson-cook}, evaluated at $\edot$ and at the initial temperature plus half the rise
 $\Delta T$, and its drawing stress is Eq.~\eqref{eq:avitzur} with $m = \sqrt3\,\mu$ and without the
@@ -169,7 +173,7 @@ $\Phi = 0.8+\Delta/4.4$ by the alternative $\Phi = 0.88+0.12\,\Delta$ changes $\
 1.1 to 1.3 but the flow stress, and the estimated temperature rise, by only 0.3 to 1.0\,\%,
 because the hardening term of the constitutive equation is small against $A$. The
 choice therefore does not carry the comparison. The temperature
-does not need a separate source, because it closes on the deformation work itself: that work per
+needs no input from the model, because it closes on the deformation work itself: that work per
 unit volume is the part of $\sigma_d$ raised in the cone, a fraction $\beta$ of which becomes
 heat, so the mean rise is $\Delta T = \beta\,\sigma_d/(\rho c)$. Since $\sigma_d$ depends on the
 flow stress and the flow stress on the temperature, this is a fixed point, reached in at most
