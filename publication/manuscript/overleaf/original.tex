@@ -1058,18 +1058,27 @@ $Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod 
 % Avitzur with m = sqrt3 mu, Avitzur_mod = Eq. avitzur-vega; deviation row over all 112 runs
 % (both speeds, all k); slope row averaged over both speeds and all k at Q = 10 %.
 
-The finite-element drawing stress does not depend on the calibration ratio: over $k$ from 0 to 1 it
-changes by at most 0.4\,\% at every semi-angle, friction coefficient and speed, whereas the bearing
-terms of Eqs.~\eqref{eq:avitzur} and \eqref{eq:avitzur-vega} raise the prediction from $k=0$ to
-$k=1$ by 24--93\,\% and 12--36\,\%. Table~\ref{tab:drawstress} therefore compares both relations without their
-bearing terms. With
-those terms the mean deviation rises to 43.2\,\% for Eq.~\eqref{eq:avitzur} and to 26.1\,\% for
-Eq.~\eqref{eq:avitzur-vega}, and at $k=1$ to 79.8\,\% and 40.6\,\%.
-% src: verification_recalc.py (fem spread over k <= 0.41 %; avitzur/vega k0 -> k1 +24..93 % /
-% +12..36 %; land_share_axial <= 0.003; with land terms 43.2 / 26.1 %, at k = 1 79.8 / 40.6 %);
-% verify_land (clearance 39-266 um from the surface node against the bore; Poisson contraction
-% under sigma_d only 2.3-3.6 um). In the earlier export at Q = 1.5 % the land did carry
-% 1.9-4.6 % of the axial force, concentrated in a band of about 1 mm at its entry.
+The finite-element drawing stress depends only weakly on the calibration ratio. Over $k$ from 0 to
+1 it changes by at most 0.4\,\% at every semi-angle, friction coefficient and drawing speed. The
+analytical relations behave differently. Their bearing terms assume contact along the whole length
+of the bearing zone, under a normal pressure equal to the flow stress in Eq.~\eqref{eq:avitzur}
+with $m=\sqrt3\,\mu$ and to $\sigma_f-\sigma_z$ in Eq.~\eqref{eq:avitzur-vega}, and they grow with
+$\mu L_b/R_f$. From $k=0$ to $k=1$ these terms raise the prediction of Eq.~\eqref{eq:avitzur} by
+between 24\,\%, at $16^\circ$ and $\mu=0.025$, and 93\,\%, at $8^\circ$ and $\mu=0.1$, and that of
+Eq.~\eqref{eq:avitzur-vega} by 12\,\% and 36\,\% at the same two combinations. This spread belongs
+to the analytical bearing terms alone. It is widest where the friction is high and the semi-angle
+small, because there the bearing term is large compared with the rest of the prediction, and it
+has no counterpart in the computed drawing stress. Table~\ref{tab:drawstress} therefore compares
+both relations without their bearing terms. With those terms the mean deviation from the computed
+drawing stress over all 112 runs rises to 43.2\,\% for Eq.~\eqref{eq:avitzur} and to 26.1\,\% for
+Eq.~\eqref{eq:avitzur-vega}, and over the 18 runs at $k=1$ to 79.8\,\% and 40.6\,\%.
+% src: verification_recalc.py / recalc_2026-09-28.json (fem spread over k <= 0.41 %; rise k 0 -> 1 per
+% (alpha, mu, v) at Q = 10 %: Avitzur +23.96 % at 16 deg / 0.025 to +92.82 % at 8 deg / 0.1, Coulomb form
+% +11.53 % to +35.64 % at the same combinations; bearing term of Eq. avitzur = 2 mu (L_b/R_f) sigma_f,
+% 0.11-0.45 sigma_f at k = 1, other terms 0.36-0.55 sigma_f; land_share_axial <= 0.003; with bearing
+% terms 43.2 / 26.1 % over 112 runs, 79.8 / 40.6 % over the 18 runs at k = 1). In the earlier export at
+% Q = 1.5 % the bearing zone did carry 1.9-4.6 % of the axial force, concentrated in a band of about
+% 1 mm at its entry.
 
 Without the bearing terms all three relations lie above the computed drawing stress in every run,
 by 10.6\,\% on average for Siebel, 14.2\,\% for the Coulomb form and 16.2\,\% for the
