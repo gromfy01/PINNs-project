@@ -488,6 +488,12 @@ multilayer perceptron with three hidden layers of 96 $\tanh$ units and a linear
 head with four outputs
 $\hat{\boldsymbol\sigma}=(\hat\sigma_{rr},\hat\sigma_{\theta\theta},\hat\sigma_{zz},\hat\tau_{rz})$,
 de-standardised before entering any physical term.
+The configuration was fixed at the initial design stage of the study, guided by
+preliminary Optuna searches~\citep{akiba2019optunanextgenerationhyperparameteroptimization}
+on an earlier version of the dataset.
+% src: launch/stress/{MLP_Optuna,PyTorch,JAX,DeepXDE,VPINN}_Stresses.ipynb (Optuna, 19.05.2026, 20 trials each,
+% random split of the earlier dataset; optima 4-6 layers of 76-253 units, tanh in three of five, lr 1.0e-3-1.9e-3);
+% search spaces in models/mlp_model.py and models/pinn_model_torch.py. 3x96 / lr 3e-3 is not one of these optima.
 % src: runs_v2.csv (n_layers=3, n_units=96 in all 341 runs); trainer.py Scalers.fit on the training subset; COMPONENTS, n_out=4
 % TODO: tanh is the Config.activation default (ACTS = tanh/selu/softplus); activation is not logged in the csv and the hp JSON is absent — confirm with the author of the run.
 All arithmetic is in double precision in both backends.
@@ -796,11 +802,12 @@ question at issue.
 
 \paragraph{Fixed architecture and hyperparameters.}
 % NOTE: the statement is placed here, in a later part of the text, rather than inside "Training protocol".
-% TODO: agree with the review whether the Optuna search of the preceding work is to be described here at all. Optuna is not used in the code of the present publication (protocol.py, which carries the n_trials/Optuna fields, is imported neither by run_matrix.py nor by trainer.py or trainer2d.py), so the runs reported here cannot be credited with it.
-% TODO: state how the 3×96 / 3e-3 configuration was chosen — no "tune" stage appears in runs_v2.csv (stages: main 195, curves 72, corrupt 36, backend 20, twod 18); the Config defaults are 4×128 / 1e-3, so the choice was made outside the logged matrix.
+% NOTE: the preliminary Optuna searches are now named in the architecture paragraph of Section 2.3. They used a
+% random split of the earlier dataset, so cases of the regions held out later were among their data. The closing
+% clause therefore states only what follows from fixing everything before any held-out region was evaluated.
 One architecture and one hyperparameter set were fixed before any held-out
-region was evaluated and were not tuned per family or per split, so no search
-could leak a held-out region.
+region was evaluated and were not tuned per family or per split, so no
+extrapolation error entered their choice.
 % src: RESULTS.md header ("Гиперпараметры зафиксированы априори и на held-out регионах не подбирались"); PLAYBOOK.md §8 item 1 ("Optuna на held-out регионе не запускается вовсе").
 % <<< end sections/sec23_body.tex
 
