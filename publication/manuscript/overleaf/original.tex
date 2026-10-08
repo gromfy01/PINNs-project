@@ -708,13 +708,21 @@ restoration of the best state.
 % NOTE: the statement on the fixed architecture and hyperparameters moved from here to the closing paragraph of the subsection.
 Every configuration is trained with five seeds (0--4) on the thirteen splits of
 Table~\ref{tab:splits} and in the backend comparison, and with three seeds (0--2)
-in the learning-curve, label-corruption and extended-track stages.
+in the learning-curve and label-corruption stages described below and in the
+extended track.
 % src: runs_v2.csv (seed ∈ {0..4} for stage main and backend; {0,1,2} for curves, corrupt, twod; 13 distinct split values)
 The seed governs initialisation, batch order and the internal early-stopping subset, % EDIT: "validation subset" → "early-stopping subset"
 while the test cases of a split are the same for every seed (split seed 42).
 % src: trainer.py (torch.manual_seed(cfg.seed); rng = default_rng(cfg.seed) for the val subset; torch.Generator().manual_seed(cfg.seed) for batch order); splits.py build_split_suite(seed=42) called by run_matrix.py with the default; protocol.py split_seed=42 (legacy, consistent)
-Learning curves use nested group-aware subsamples of 10/25/50/100\,\% of the
-training pool, identical for all families.
+The learning-curve stage measures how the accuracy of each family depends on
+the amount of training data. On the \texttt{random} and
+\texttt{extrap:alpha\_max} splits each family is trained on group-aware
+subsamples of 10/25/50/100\,\% of the training pool, each smaller subsample
+being contained in the larger ones. The subsamples are the same for all
+families and seeds, and the test cases of the split are kept unchanged. The
+macro-RMSE on these test cases as a function of the fraction of the training
+pool is the learning curve, and its values are given in
+Section~\ref{sec:res_extrap}.
 % src: learning_curves.py DEFAULT_FRACTIONS=(0.10,0.25,0.50,1.00), nested_subsamples; run_matrix.py stage curves (seed=42); runs_v2.csv frac ∈ {0.1,0.25,0.5,1.0}
 The subsamples are nested but not stratified by $v$ (the launcher uses
 \texttt{nested\_subsamples}, not the stratified variant), so the sparsest level
