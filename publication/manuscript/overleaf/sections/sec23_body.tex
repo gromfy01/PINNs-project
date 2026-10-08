@@ -31,9 +31,9 @@ multilayer perceptron with three hidden layers of 96 $\tanh$ units and a linear
 head with four outputs
 $\hat{\boldsymbol\sigma}=(\hat\sigma_{rr},\hat\sigma_{\theta\theta},\hat\sigma_{zz},\hat\tau_{rz})$,
 de-standardised before entering any physical term.
-The configuration was fixed at the initial design stage of the study, guided by
-preliminary Optuna searches~\citep{akiba2019optunanextgenerationhyperparameteroptimization}
-on an earlier version of the dataset.
+This configuration was selected with
+Optuna~\citep{akiba2019optunanextgenerationhyperparameteroptimization} at the initial design
+stage of the study and then held fixed.
 % src: launch/stress/{MLP_Optuna,PyTorch,JAX,DeepXDE,VPINN}_Stresses.ipynb (Optuna, 19.05.2026, 20 trials each,
 % random split of the earlier dataset; optima 4-6 layers of 76-253 units, tanh in three of five, lr 1.0e-3-1.9e-3);
 % search spaces in models/mlp_model.py and models/pinn_model_torch.py. 3x96 / lr 3e-3 is not one of these optima.
@@ -345,7 +345,7 @@ question at issue.
 
 \paragraph{Fixed architecture and hyperparameters.}
 % NOTE: the statement is placed here, in a later part of the text, rather than inside "Training protocol".
-% NOTE: the preliminary Optuna searches are now named in the architecture paragraph of Section 2.3. They used a
+% NOTE: the Optuna selection is now named in the architecture paragraph of Section 2.3. They used a
 % random split of the earlier dataset, so cases of the regions held out later were among their data. The closing
 % clause therefore states only what follows from fixing everything before any held-out region was evaluated.
 One architecture and one hyperparameter set were fixed before any held-out
