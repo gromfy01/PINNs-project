@@ -902,8 +902,9 @@ the friction on the bearing. Here $f(\alpha)$ is the closed form of the deformat
 % src: code/analytical.py f_avitzur against f_avitzur_numeric (agreement to eight digits)
 $f\to1$ as $\alpha\to0$, so that the first
 term reduces to $\ln[1/(1-r)]$, $m$ is the friction factor and $L_b$ the bearing length
-\citep{siebel1947drahtziehen,avitzur1968metal,avitzur1971study}. In the model the bearing length is
-$L_b = kD_0$, so that $L_b/R_f = kD_0/R_f$ is 2.2--2.3 times the calibration ratio.
+\citep{siebel1947drahtziehen,avitzur1968metal,avitzur1971study}. In the model
+$L_b = kD_0 = 36k$~mm (Section~\ref{sec:materials}), so that $L_b/R_f$ is 2.2--2.3 times the
+calibration ratio.
 % src: bearing length measured in Abaqus CAE on 1020_2a_16_rd_1000_cal_100_v_10_f_050: 0.036 m
 % (30.09.2026). The exports agree: die RP initial z = c - 36.000 k mm at every alpha; bearing-only
 % tail phase 36.0 k mm (88 runs); 36 mm at k = 1 in the earlier export at Q = 1.5 %. The generator
