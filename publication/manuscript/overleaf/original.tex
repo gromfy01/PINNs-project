@@ -876,8 +876,8 @@ where $F$ is the time-averaged axial reaction and $S$ the cross-section of the d
 the outlet radius $R_f$ taken as reached in the model rather than from the nominal reduction.
 For a typical run, at a reduction of 10\,\% in
 diameter, a die semi-angle of $12^\circ$, a calibration ratio of 0.5, a drawing speed of 10~m/min and
-$\mu = 0.05$, the drawing stress is 121.7~MPa. The values for all runs are summarised in
-Table~\ref{tab:drawstress}.
+$\mu = 0.05$, the drawing stress is 121.7~MPa. This run appears in Table~\ref{tab:drawstress}
+together with the other runs at $k = 0.5$, and the summary rows of the table cover all runs.
 % src: verification_recalc.py (typical run 1020_2a_24_rd_1000_cal_50_v_10_f_050: 121.7 MPa at
 % Rf = 16.07 mm); surface PEEQ keeps rising for 10-20 mm past the cone exit.
 
@@ -968,13 +968,13 @@ across the section by at most 15~MPa within a run. Within a run $\sigma_f$
 multiplies each relation as a whole, so the columns of Table~\ref{tab:drawstress} differ only in
 the bracketed work terms, and an error in $\sigma_f$ would shift all three predictions of that
 run by the same factor.
-Each row of Table~\ref{tab:drawstress} is the mean over the runs at 10~m/min and the calibration
-ratios listed in its column $k$. At the reduction of 10\,\% these are six runs, or five in the rows
-$12^\circ$, $\mu = 0.050$ and $16^\circ$, $\mu = 0.025$, which lack $k = 0.1$ and $k = 0.3$
-respectively, the two combinations missing from the series. At 15\,\% each row is a single run at
-$k = 0$. The finite-element values averaged in a row differ by at most 0.4~MPa. Below the rows, Table~\ref{tab:drawstress} gives for each relation the mean absolute
+The rows of Table~\ref{tab:drawstress} are the runs at 10~m/min with a calibration ratio of 0.5 at
+the reduction of 10\,\% and without a bearing zone ($k = 0$) at 15\,\%. Since the computed drawing
+stress changes with $k$ by at most 0.4\,\%, as shown below, these runs stand for all calibration
+ratios. Below the rows, Table~\ref{tab:drawstress} gives for each relation the mean absolute
 deviation from the finite-element value over all 112 runs and the secant slope
-$\mathrm{d}\sigma_d/\mathrm{d}\mu$ between $\mu = 0.025$ and $\mu = 0.1$ at $\alpha = 12^\circ$.
+$\mathrm{d}\sigma_d/\mathrm{d}\mu$ between $\mu = 0.025$ and $\mu = 0.1$ at $\alpha = 12^\circ$,
+averaged over both speeds and all calibration ratios.
 % src: publication/reexport/verification_recalc.py (all columns); flow_stress.py (sigma_f, after
 % collapsing repeated time rows, which had biased it 3-6 % low); code/analytical.py (siebel,
 % avitzur); code/vega_avitzur.py (Eq. avitzur-vega, Eq. mu-temperature)
@@ -1036,15 +1036,15 @@ uses it.
 \cmidrule(r){1-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
 $Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod & FEM \\
 \midrule
-10 & $8^\circ$  & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.025 & 109.5 & 114.1 & 112.8 & 98.0 \\
-10 & $8^\circ$  & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.050 & 121.8 & 126.5 & 123.8 & 110.8 \\
-10 & $8^\circ$  & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.100 & 146.9 & 151.6 & 146.2 & 134.9 \\
-10 & $12^\circ$ & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.025 & 124.9 & 132.2 & 131.2 & 111.4 \\
-10 & $12^\circ$ & 10 & 0, 0.3, 0.5, 0.75, 1 & 0.050 & 133.9 & 141.2 & 139.3 & 121.8 \\
-10 & $12^\circ$ & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.100 & 152.5 & 159.8 & 155.8 & 141.7 \\
-10 & $16^\circ$ & 10 & 0, 0.1, 0.5, 0.75, 1 & 0.025 & 142.4 & 152.6 & 151.8 & 125.3 \\
-10 & $16^\circ$ & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.050 & 149.9 & 160.0 & 158.4 & 134.5 \\
-10 & $16^\circ$ & 10 & 0, 0.1, 0.3, 0.5, 0.75, 1 & 0.100 & 165.4 & 175.5 & 172.2 & 152.5 \\
+10 & $8^\circ$  & 10 & 0.5 & 0.025 & 109.5 & 114.2 & 112.9 & 98.0 \\
+10 & $8^\circ$  & 10 & 0.5 & 0.050 & 121.9 & 126.5 & 123.9 & 110.9 \\
+10 & $8^\circ$  & 10 & 0.5 & 0.100 & 147.1 & 151.8 & 146.4 & 135.0 \\
+10 & $12^\circ$ & 10 & 0.5 & 0.025 & 124.9 & 132.2 & 131.2 & 111.4 \\
+10 & $12^\circ$ & 10 & 0.5 & 0.050 & 133.9 & 141.2 & 139.3 & 121.7 \\
+10 & $12^\circ$ & 10 & 0.5 & 0.100 & 152.6 & 159.9 & 155.9 & 141.8 \\
+10 & $16^\circ$ & 10 & 0.5 & 0.025 & 142.5 & 152.6 & 151.9 & 125.3 \\
+10 & $16^\circ$ & 10 & 0.5 & 0.050 & 149.9 & 160.0 & 158.4 & 134.5 \\
+10 & $16^\circ$ & 10 & 0.5 & 0.100 & 165.5 & 175.6 & 172.2 & 152.5 \\
 15 & $8^\circ$  & 10 & 0    & 0.025 & 152.6 & 157.3 & 154.3 & 134.6 \\
 15 & $8^\circ$  & 10 & 0    & 0.050 & 171.4 & 176.1 & 170.0 & 150.7 \\
 15 & $8^\circ$  & 10 & 0    & 0.100 & 211.2 & 215.9 & 203.2 & 180.3 \\
@@ -1054,8 +1054,8 @@ $Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod 
 \bottomrule
 \end{tabular}
 \end{table*}
-% src: publication/reexport/verification_recalc.py (--json), rows averaged over the listed k at
-% v = 10 m/min (FEM range within a row at most 0.4 MPa); analytical columns without the land term,
+% src: publication/reexport/verification_recalc.py (--json); rows: single runs at v = 10 m/min, k = 0.5
+% (Q = 10 %) and k = 0 (Q = 15 %), printed by sec31_numbers.py; analytical columns without the land term,
 % Avitzur with m = sqrt3 mu, Avitzur_mod = Eq. avitzur-vega; deviation row over all 112 runs
 % (both speeds, all k); slope row averaged over both speeds and all k at Q = 10 %.
 

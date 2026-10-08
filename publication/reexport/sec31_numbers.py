@@ -178,6 +178,23 @@ def main() -> None:
                   f"   (n {len(g)}, размах МКЭ {max(r['fem'] for r in g)-min(r['fem'] for r in g):.1f})")
     P(f"  итог: {dev(R,'siebel'):.1f} / {dev(R,'avitzur_noland'):.1f} / {dev(R,'vega_noland'):.1f} %")
 
+    # в статье строки таблицы 6 — по одному прогону: k = 0.5 при 10 % и k = 0 при 15 %, v = 10
+    P("\nтаблица 6 (v = 10, k = 0.5 при 10 %, k = 0 при 15 %)")
+    for Q, k6, als in ((0.10, 0.5, (8, 12, 16)), (0.15, 0.0, (8,))):
+        for al in als:
+            for m in (0.025, 0.05, 0.1):
+                g = [r for r in R if abs(r["Q"] - Q) < 1e-9 and r["alpha"] == al and r["mu"] == m
+                     and r["v"] == 10 and r["k"] == k6]
+                assert len(g) == 1, (Q, al, m, len(g))
+                r = g[0]
+                P(f"  {Q*100:.0f} & {al} & {k6:g} & {m:.3f} & " + " & ".join(_r(r[key], 1) for key in
+                  ("siebel", "avitzur_noland", "vega_noland", "fem")) + f"   ({r['job']})")
+    sl = {key: [] for key in ("fem", "siebel", "avitzur_noland", "vega_noland")}
+    g = {r["mu"]: r for r in q10 if r["alpha"] == 12 and r["v"] == 10 and r["k"] == 0.5}
+    for key in sl:
+        sl[key] = (g[0.1][key] - g[0.025][key]) / 0.075
+    P("  d sigma/d mu при 12°, k = 0.5, v = 10, МПа: " + ", ".join(f"{key} {_r(v, 0)}" for key, v in sl.items()))
+
     P("\nтаблица 7 (v = 10, среднее по k)")
     for Q, als in ((0.10, (8, 12, 16)), (0.15, (8,))):
         for al in als:
