@@ -1215,7 +1215,7 @@ and the residual field stays below the flow stress everywhere: the maximum von M
 % REV: the comparison is now made against the flow stress derived from the constitutive equation,
 % not against a postulated yield stress of 320 MPa. % src: VALIDATION.md §7 (max Mises 232.6 at σ_y = 320)
 Kinematically, on the retained cases the exit radius follows $R_0(1-Q/100)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%. % src: VALIDATION.md §7 (1.0011 → 0.11 %; 5.1e-4 → 0.05 %)
-These tests check the mesh, the contact and the solver of this model, not its correspondence to real wire. % src: VALIDATION.md §5 item 6
+These tests verify the mesh, the contact and the solver of the model. The comparison of the computed residual stresses with measurements on drawn wire is the subject of the further work outlined in Section~\ref{sec:conclusions}. % src: VALIDATION.md §5 item 6
 % <<< end sections/fem_verification.tex
 
 \subsection{ML models results}
@@ -1670,6 +1670,7 @@ $p$ (paired, 3 seeds) & 0.478 & 0.747 & 0.123 & 0.253 & --- \\
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusions}
+\label{sec:conclusions}
 
 % >>> inlined sections/sec4_conclusions.tex
 % NOTE: an introductory paragraph is placed before the list, following the agreed outline (a series of
