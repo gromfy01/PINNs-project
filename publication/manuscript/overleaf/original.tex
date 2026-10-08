@@ -953,8 +953,8 @@ Inverting Eq.~\eqref{eq:avitzur-vega} against their own force measurements, they
 $\mu_0 = 0.0125$,
 $m_\mu = 2.68$ and $T_0 = 15.6\,^\circ$C for copper drawn in oil at 1--7~m/s, the temperatures
 entering the ratio in degrees Celsius. In the present simulations $\mu$ is prescribed and constant,
-so Eq.~\eqref{eq:mu-temperature} has no counterpart in the model. What it contributes to the
-comparison is stated below.
+so Eq.~\eqref{eq:mu-temperature} has no counterpart in the model and is not used in the comparison,
+as discussed below.
 
 For each run the three relations are evaluated with one and the same flow stress, obtained from
 the constitutive equation~\eqref{eq:johnson-cook} by averaging it along the strain, strain-rate
@@ -1126,15 +1126,16 @@ term of Eq.~\eqref{eq:johnson-cook} gives for a doubled strain rate, and the dev
 % v 20 / 10 = 1.025-1.030; Coulomb <= Siebel in 10 %/8/0.1 (12 runs) and 15 %/8/0.05-0.1 (4 runs));
 % every number from sec31_numbers.py.
 
-Equation~\eqref{eq:mu-temperature} cannot be tested on this series and must not be carried over
-with its published constants. The Coulomb coefficient of the simulations is an input and does not
-respond to the 22--42~$^\circ$C mean rise the model produces. Reading $\mu_0$ as the prescribed
-coefficient at the initial 20~$^\circ$C would multiply it by 3.3 to 6.8 at the pass-mean
-temperature of 31--41~$^\circ$C, or by 6.4 to 13.1 if $T_0$ is instead taken as the
-15.6~$^\circ$C reference temperature of the original calibration, in either case moving every prediction further from the computed value rather than
-closer. What the relation contributes here is the statement of what a friction model for this
-process would have to contain, and the identification of what a series in which $\mu$ is
-prescribed rather than observed cannot supply.
+The temperature dependence of friction expressed by Eq.~\eqref{eq:mu-temperature} was not studied
+in this work and lies outside its scope. In the model the Coulomb coefficient keeps its prescribed
+value throughout the pass, while the mean temperature rise in the wire is 22--42~$^\circ$C. The
+three relations are therefore evaluated with the prescribed coefficient of each run, and the
+published constants serve only to show the size of the effect. With $\mu_0$ taken as the prescribed
+coefficient at the initial 20~$^\circ$C, they would multiply the coefficient by 3.3 to 6.8 at the
+pass-mean temperature of 31--41~$^\circ$C, or by 6.4 to 13.1 if $T_0$ is instead taken as the
+15.6~$^\circ$C reference temperature of the original calibration. For steel wire a relation of
+this kind would be identified in the same way as Vega et~al.\ did for copper, from measured drawing
+forces and die temperatures.
 % src: verification_recalc.py (pass-mean temperature 20 + dT_mean/2 = 31.1-40.8 C;
 % (T/20)^2.68 = 3.28-6.76, (T/15.6)^2.68 = 6.37-13.14)
 
