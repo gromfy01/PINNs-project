@@ -16,7 +16,7 @@ the die reference point and the coordinates, equivalent plastic strain and tempe
 radial row of material points are written as histories in time over the whole pass. The series
 covers a reduction of 10\,\% in diameter at die semi-angles of $8^\circ$, $12^\circ$ and
 $16^\circ$, calibration ratios from 0 to 1, drawing speeds of 10 and 20~m/min and all three friction
-coefficients, together with a reduction of 15\,\% at $8^\circ$ without a bearing. In total, 112 runs are
+coefficients, together with a reduction of 15\,\% at $8^\circ$ without a bearing zone ($k = 0$). In total, 112 runs are
 used, 106 of the 108 combinations at 10\,\% and the six at 15\,\%.
 % src: publication/reexport/verification_recalc.py on the export of 28.09.2026 (res_recalc, 112
 % files; 106 at Q = 10 %, 6 at Q = 15 %), with 1020_2a_16_rd_1000_cal_0_v_10_f_0100 re-exported on
@@ -62,7 +62,7 @@ stress, and, in the upper-bound form of Avitzur,
 \label{eq:avitzur}
 \end{equation}
 whose four terms are the ideal deformation work, the redundant shear, the friction on the cone and
-the friction on the bearing. Here $f(\alpha)$ is the closed form of the deformation integral,
+the friction in the bearing zone. Here $f(\alpha)$ is the closed form of the deformation integral,
 % src: code/analytical.py f_avitzur against f_avitzur_numeric (agreement to eight digits)
 $f\to1$ as $\alpha\to0$, so that the first
 term reduces to $\ln[1/(1-r)]$, $m$ is the friction factor and $L_b$ the bearing length
@@ -79,7 +79,7 @@ interface shear stress to the shear yield stress, whereas the simulations are dr
 coefficient $\mu$. The Siebel relation above already takes $\mu$ directly. The conversion
 $m = \sqrt3\,\mu$ holds only where the normal pressure on the contact equals the flow stress, so it
 is an assumption about the contact rather than a change of units. Avitzur gives the bound in a
-second form in which $\mu$ enters directly and the bearing is treated as a zone along which the
+second form in which $\mu$ enters directly and the bearing zone is treated as a cylinder along which the
 axial stress grows under Coulomb friction \citep{avitzur1968metal,avitzur1971study}. In the writing
 of Vega et~al.\ \citep{vega2009temperature,vega2009investigation,haddi2011analysis}, who
 build their modification on it, it reads
@@ -93,20 +93,20 @@ build their modification on it, it reads
 \label{eq:avitzur-vega}
 \end{equation}
 written here for zero back tension and with the flow stress in place of the yield stress of the
-original. The denominator is Avitzur's treatment of the bearing
+original. The denominator is Avitzur's treatment of the bearing zone
 \citep{avitzur1964large,avitzur1968metal}. It is what the axial force balance on a cylindrical
-bearing under Coulomb friction gives when the normal pressure follows from the yield condition,
+bearing zone under Coulomb friction gives when the normal pressure follows from the yield condition,
 $p = \sigma_f-\sigma_z$, and is evaluated at the exit stress:
 $\sigma_z(L_b) = \sigma_z(0) + 2\mu\,(L_b/R_f)\,[\sigma_f-\sigma_z(L_b)]$, which rearranges to the form
-of Eq.~\eqref{eq:avitzur-vega}. Integrating the same balance along the bearing instead gives
+of Eq.~\eqref{eq:avitzur-vega}. Integrating the same balance along the bearing length instead gives
 $\sigma_z(L_b) = \sigma_f-[\sigma_f-\sigma_z(0)]\exp(-2\mu L_b/R_f)$. The two agree to first order in
 $2\mu L_b/R_f$, and at the present parameters the integrated form lies above
 Eq.~\eqref{eq:avitzur-vega} by at most 4.4\,\%. Both forms thus carry an explicit assumption about
-the pressure on the bearing.
+the normal pressure in the bearing zone.
 
 The modification those authors propose is to drop the assumption that $\mu$ is a constant of the
 lubricant and make it a function of the temperature measured by a thermocouple set in the die above
-the bearing, which they take to be proportional to the temperature of the wire--die interface,
+the bearing zone, which they take to be proportional to the temperature of the wire--die interface,
 \begin{equation}
 \mu = \mu_0\left(\frac{T}{T_0}\right)^{m_\mu},
 \label{eq:mu-temperature}
@@ -173,8 +173,8 @@ does not need a separate source, because it closes on the deformation work itsel
 unit volume is the part of $\sigma_d$ raised in the cone, a fraction $\beta$ of which becomes
 heat, so the mean rise is $\Delta T = \beta\,\sigma_d/(\rho c)$. Since $\sigma_d$ depends on the
 flow stress and the flow stress on the temperature, this is a fixed point, reached in at most
-seven iterations. The friction on the bearing is left out of this balance, since the drawing stress
-of these runs does not depend on the bearing, as shown below. For the
+seven iterations. The friction in the bearing zone is left out of this balance, since the drawing stress
+of these runs depends only weakly on the bearing length, as shown below. For the
 112 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
 314--331~MPa used in Table~\ref{tab:drawstress}, at $\Delta = 1.7$--4.7,
 $\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$. The closed
@@ -278,7 +278,7 @@ temperature history. The cross-section mean of the peak nodal rise in the model 
 drawing stress lies 1--11\,\% above it (Table~\ref{tab:deltaT}). Taken at the end of deformation
 rather than as a peak over the history, the mean rise is 21--37~$^\circ$C and the balance lies
 5--25\,\% above it. The heating of the section is therefore set by
-the deformation work, with the bearing contributing nothing. The closed estimate of
+the deformation work, with the bearing zone contributing practically nothing. The closed estimate of
 Eqs.~\eqref{eq:delta}--\eqref{eq:closed-rest} lies 19--32\,\% above the computed rise, and the
 reason is its drawing stress, which follows Avitzur's relation and exceeds the computed one by
 12--24\,\%. The closure itself is sound, and the error is inherited from the work term. The rise
@@ -324,9 +324,9 @@ $Q$, \% & $\alpha$ & $\mu$ & closed & energy & FEM & $^\circ$C \\
 % temperature rise; pass mean 20 + dT_FEM / 2.
 
 The exported histories also allow the friction coefficient to be recovered from the data rather
-than read from the file name: at the end of the pass, when only the bearing is in contact with the
+than read from the file name: at the end of the pass, when only the bearing zone is in contact with the
 tail of the billet, the ratio of the axial to the radial reaction returns the prescribed
-coefficient in all 88 runs with a bearing.
+coefficient in all 88 runs with a bearing zone.
 % src: drawing_force.py (mu_from_data over the last L mm of contact: ratio to the label 1.000 in
 % all 88 runs with k > 0; steady RF2/RF1 against the cone-only value, verify_land / critic).
 
