@@ -245,12 +245,27 @@ Eq.~\eqref{eq:avitzur-vega}, and over the 18 runs at $k=1$ to 79.8\,\% and 40.6\
 % 1 mm at its entry.
 
 Without the bearing terms all three relations lie above the computed drawing stress in every run,
-by 10.6\,\% on average for Siebel, 14.2\,\% for the Coulomb form and 16.2\,\% for the
-friction-factor form. The friction-factor form, an upper bound, lies above Siebel's relation in
-every run. The Coulomb form differs from it only in how the friction enters and lies at or below
-Siebel's relation in 16 runs, all at $8^\circ$, namely the twelve at $\mu = 0.1$ and a reduction of
-10\,\% and the four at $\mu \ge 0.05$ and 15\,\%. The excess lies in the frictionless part of the
-work. Extrapolated linearly to $\mu = 0$ from the means over $k$ at 10\,\% and 10~m/min, the
+by 10.6\,\% on average for Siebel's relation, Eq.~\eqref{eq:siebel}, 14.2\,\% for the Coulomb form
+of Avitzur's solution, Eq.~\eqref{eq:avitzur-vega}, and 16.2\,\% for its friction-factor form,
+Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$. In Table~\ref{tab:drawstress} these are the columns
+\emph{Siebel}, \emph{Avitzur\_mod} and \emph{Avitzur}. The friction-factor form is Avitzur's
+upper-bound solution and lies above Siebel's relation in every run, by 2.2--7.1\,\%. With
+$m=\sqrt3\,\mu$ its friction term on the cone, $2\mu\cot\alpha\ln(R_0/R_f)\,\sigma_f$, is the same
+as in Siebel's relation, and almost the whole difference comes from the redundant shear, which in
+Eq.~\eqref{eq:avitzur} exceeds the term $2\alpha/3$ of Siebel's relation by 16--17\,\%. The Coulomb
+form has the same terms of ideal deformation work and redundant shear as the friction-factor form
+and differs from it only in the friction on the cone, whose term is multiplied by
+$1-\ln(R_0/R_f)$, that is, by 0.88--0.89 at the reduction of 10\,\% and by 0.83--0.84 at 15\,\%.
+Where the friction on the cone is a large part of the work, this smaller friction term outweighs
+the larger redundant shear, and the Coulomb form lies below Siebel's relation. This is the case in
+16 runs, all at $8^\circ$, namely the twelve at $\mu = 0.1$ and a reduction of 10\,\% and the four
+at $\mu \ge 0.05$ and 15\,\%.
+% src: recalc_2026-09-28.json: avitzur_noland / siebel - 1 = 2.2-7.1 % (all 112 runs); avitzur_noland -
+% siebel = sigma_f [2 (f - 1) ln(R0/Rf) + redundant excess], the redundant excess giving 98.7-99.4 % of it,
+% (2/sqrt3)(alpha/sin^2 alpha - cot alpha) / (2 alpha/3) = 1.158-1.167; vega_noland = avitzur_noland -
+% 2 mu cot(alpha) ln^2(R0/Rf) sigma_f; 1 - ln(R0/Rf) = 0.878-0.893 at 10 %, 0.832-0.836 at 15 %;
+% vega_noland < siebel by >= 0.7 MPa in the 16 runs.
+The excess over the computed drawing stress lies in the frictionless part of the work. Extrapolated linearly to $\mu = 0$ from the means over $k$ at 10\,\% and 10~m/min, the
 computed drawing stress is 86, 101 and 116~MPa at $\alpha = 8^\circ$, $12^\circ$ and $16^\circ$,
 against 97, 116 and 135~MPa from Siebel's relation. At $12^\circ$ and $16^\circ$ the friction terms
 then narrow the gap, because the model is more sensitive to friction than the relations, 409 and
