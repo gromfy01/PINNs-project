@@ -10,7 +10,7 @@ variant, the training protocol, the metrics and the physical audit, the two
 backends, the statistical treatment of the results and, last, the architecture
 and hyperparameters held fixed throughout.
 
-\paragraph{Network and inputs.}
+\paragraph{Network and inputs}
 % NOTE: ``training budget'' spelled out (epoch limit, early-stopping criterion with its patience, mini-batch size and batch order, seeds); the values differ between the tracks and are given in ``Training protocol''.
 All surrogates share one network and one optimiser, and the families compared
 with one another are trained under the same conditions: the same limit on the
@@ -45,7 +45,7 @@ Each FEM case contributes 20 radial points, always kept in the same partition
 (group-aware splitting~\citep{roberts2017crossvalidation}).
 % src: trainer.py N_R=20; splits.py sets_to_rows (set-major rows)
 
-\paragraph{Two tracks and the role of $z$.}
+\paragraph{Two tracks and the role of $z$}
 % NOTE: the paragraph opens with the equations of equilibrium as the basis of the physics-informed families, notes that the quantities entering them depend on $r$ and $z$, and states that in preparing the models those relations undergo a number of changes.
 % TODO: still needed are the two references on the PINN formulation for the equilibrium equations of a continuum to be cited here; the keys are not in the bibliography of publication/ and must be supplied by him.
 The physics-informed families are built on the equations of equilibrium of an
@@ -121,7 +121,7 @@ $|r|/R=0.054$).
 % src: trainer.py (_physics_strong: dsrr_dnorm / R; r_safe = max(r_phys, R·r_clip)); trainer2d.py (Rm, Lm; r_clip=0.05); ERRATA.md E-25 (worst |r_neg|/R = 0.054; r_clip = 0.05)
 % TODO: r_clip = 0.05 is the Config default; not logged.
 
-\paragraph{Loss function.}
+\paragraph{Loss function}
 Every physics-informed family minimises
 \begin{equation}
   \mathcal{L} = \mathcal{L}_{\mathrm{data}}
@@ -186,7 +186,7 @@ every PyTorch run.
 % FIXED: scoped to the main stage; "every run" → "every PyTorch run" (the JAX twin does not calibrate, see Backends).
 % src: RESULTS.md §1.4 (×0.165, ×4.97); runs_v2.csv phys_gain, stage=main: pinn 0.12710–0.22025 (mean 0.16499), vpinn 2.75588–8.02296 (mean 4.96797). Over all 1D PyTorch stages: pinn 0.127–0.256, vpinn 2.76–10.58 (corrupt stage widest). PLAYBOOK §7.0.1a quotes an earlier measurement (0.162 / 4.87) — not used.
 
-\paragraph{Weak form (VPINN).}
+\paragraph{Weak form (VPINN)}
 Multiplying \eqref{eq:eq_red} by $r\,v_k(r)$ with test functions
 $v_k=\sin(k\pi r)$, $k=1,\dots,8$, $v_k(0)=v_k(1)=0$, and integrating by parts over
 $[0,1]$ gives \citep{kharazmi2021}
@@ -229,7 +229,7 @@ VPINN (weak)            & $(Q,k,\alpha,\mu,v,r)$   & $W_k$, $k\le8$, 32-pt quadr
 % src: trainer.py FAMILIES and fit() (BC + physics added only for pinn/vpinn), trainer2d.py FAMILIES_2D (use_phys = family != mlp2d); runs_v2.csv lambda_bc = 0.5 for physics families, 0.0 for mlp/mlp2d
 \end{table*}
 
-\paragraph{Training protocol.}
+\paragraph{Training protocol}
 % NOTE: introductory construction added before the protocol.
 As noted above, a meaningful comparison between the model families requires
 that they be brought to the training stage under equal conditions. The protocol
@@ -281,7 +281,7 @@ source rather than Gaussian noise, which averages out over a profile.
 
 % EDIT: the "Evaluation splits" table (a second \label{tab:splits}) deleted — the full 13-split table with n_train/n_test is Table~\ref{tab:splits} in Section~\ref{sec:prep-data}; its caption sentence on the 13.2 % friction-label duplicates was moved to §2.2 "Factorial design".
 
-\paragraph{Metrics and physical audit.}
+\paragraph{Metrics and physical audit}
 The primary metric is the macro-RMSE (mean over the four components of the
 component RMSE, MPa). $R^2$ is reported with a single denominator, the standard
 deviation of each component over the whole dataset, since a denominator taken
@@ -296,7 +296,7 @@ data of the same test cases, since the source itself satisfies the traction-free
 condition only approximately.
 % src: trainer.py equilibrium_audit (np.gradient, median |res| over interior points, then median over cases; r_clip 0.05), bc_audit; run_matrix.py (bc_audit at predict_at(r=1.0)); RESULTS.md §1.4 (FEM baseline rows: |σ_rr| 3.52, |τ_rz| 0.24 MPa overall)
 
-\paragraph{Backends.}
+\paragraph{Backends}
 % NOTE: "training budget" replaced by an explicit statement of what the twin shares (the epoch limit and the early-stopping rule).
 The reference implementation is PyTorch (\texttt{torch.autograd}). An independent
 twin in JAX (\texttt{jax.grad}, \texttt{optax.adamw}) shares architecture, data,
@@ -327,7 +327,7 @@ differentiation engine and is not reported separately.
 % NOTE: stated as a property of the library rather than as a correction of an earlier text.
 % src: ERRATA.md E-19 (DDE_BACKEND=pytorch, dde.grad.jacobian → torch.autograd.grad); jax_twin.py docstring
 
-\paragraph{Statistical treatment.}
+\paragraph{Statistical treatment}
 The unit of replication is the training run (seed), not the test case. Within a
 split, two families are compared by a paired $t$-test over seeds ($\alpha=0.05$,
 with no verdict for fewer than three seeds), with $|\Delta|$ reported beside the pooled
@@ -352,7 +352,7 @@ question at issue.
 % NOTE: the point is kept, the reference to an earlier version of the text removed.
 % src: ERRATA.md E-08 (one run per model; Friedman–Nemenyi over 304 hold-out sets); stats.py module docstring (304)
 
-\paragraph{Fixed architecture and hyperparameters.}
+\paragraph{Fixed architecture and hyperparameters}
 % NOTE: the statement is placed here, in a later part of the text, rather than inside "Training protocol".
 % NOTE: the Optuna selection is now named in the architecture paragraph of Section 2.3. They used a
 % random split of the earlier dataset, so cases of the regions held out later were among their data. The closing

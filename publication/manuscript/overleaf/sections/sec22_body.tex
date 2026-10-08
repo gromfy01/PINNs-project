@@ -1,4 +1,4 @@
-\paragraph{Exported fields and their limits.}
+\paragraph{Exported fields and their limits}
 Each report holds one frame of nodal values, the last one of the run: the coordinates $(r,z)$ and the stress components S11, S22, S33, S12, which in the CAX convention are $\sigma_{rr}$, $\sigma_{zz}$, $\sigma_{\theta\theta}$, $\tau_{rz}$. The export can be extended with further fields as the parameters under study require. The dedicated runs of Section~\ref{sec:res_fem_verification}, for instance, also carry the equivalent plastic strain PEEQ and the temperature, written as histories in time. % src: audit/RAW_AUDIT.md §1; QA_DATA_AND_Z.md §5 (one frame per file)
 % FIXED: "final, unloaded frame" → for the completed runs the frame is unloaded (VALIDATION.md §1: median |∫σzz dA|/A = 5.3 MPa on the 1756 cases); for the 158 unfinished runs the drawn part still carries F/A ≈ 232–237 MPa (VALIDATION.md §1). Those runs are removed below.
 The targets are read directly from these columns (present in 2443 of 2443 files), and the identity of every stored field is verified against all quantities of the report, not only the four expected ones. % src: QA_DATA_AND_Z.md §2; MANUSCRIPT.md §2; code/verify_pkl.py
@@ -9,7 +9,7 @@ This is the accuracy with which the source itself satisfies the traction-free co
 % NOTE: the framing "one consequence has to be stated explicitly" was dropped — the comment asks for the point to be made less, not more, emphatically; and the statement is confined to the retained cases, so that it does not contradict Section~\ref{sec:res_fem_verification}, where the drawing stress is obtained from the runs whose frame is captured inside the die.
 In the retained runs the exported cross-section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}S|/S$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa), so the drawing force is not read from these cases. % src: VALIDATION.md §1 (1756 cases: 5.3 MPa against rms 167 MPa)
 
-\paragraph{Axial window.}
+\paragraph{Axial window}
 For the further preparation of the data only the values within 25--75\,\% of the length of the wire are used, which lie in the region of steady-state drawing. % Removed on review (29.09): median captured fraction 0.4985; window of median length 57.5 mm at a radius of 16.2 mm (L/R ~ 3.5). src: audit/RAW_AUDIT.md §2; code/raw_probe.py axial_window; QA_DATA_AND_Z.md §4
 % NOTE: the sentence was recast; the shares and the losses are unchanged.
 The window is used in two variants, and the choice determines the form of the equations used later. In the main track the field inside the window is collapsed along the axis, that is, replaced by its median within each of 20 radial bins, so that only the radial coordinate $r$ remains and the equilibrium condition enters in its radial form, Eq.~\eqref{eq:eq_red}. In the extended track the axial coordinate is kept, the field is described in $(r,z)$, and the full equations \eqref{eq:eq_full_r}--\eqref{eq:eq_full_z} with derivatives in both coordinates apply (Section~\ref{sec:models}). What the one-dimensional variant loses was measured component by component (Table~\ref{tab:zshare}). For the normal components the share of the in-window variance along $z$ is 10--12\,\% and collapsing the field along $z$ lowers their mean absolute value by 2--4\,\%, whereas for $\tau_{rz}$ the two amount to 40\,\% and 79\,\%, because this component changes sign along $z$ and largely cancels when the field is collapsed. % src: QA_DATA_AND_Z.md §4 (shares 0.098–0.116 → 10–12 %; loss 2–4 %; τ_rz 0.397 → 40 %, 79 %)
@@ -37,7 +37,7 @@ $\tau_{rz}$             & 0.397 & 3.22  & 0.68  \\ % src: QA_DATA_AND_Z.md §4
 \end{tabular}
 \end{table*}
 
-\paragraph{Profiles and grids.}
+\paragraph{Profiles and grids}
 For the main track the window nodes are sorted by radius and split into 20 equal-count bins. The bin radius and the four components are the medians within each bin. % src: code/dataset.py (N_R = 20, module docstring); code/raw_probe.py median_bins
 Radii are stored per case, and $r$ is normalised by the outermost bin radius of the same case, so that $r=1$ is the free surface by construction. % Removed on review (29.09): median ratio of the outermost bin to the wire radius 0.996. src: code/dataset.py (r = r_phys / r_max); audit/RAW_AUDIT.md §2 (0.9958); PLAYBOOK.md §2.3 (0.996)
 % NOTE: "nodal noise" replaced by an explicit explanation of the numerical origin of the effect; the figures are unchanged.
@@ -45,7 +45,7 @@ Numerical effects inherent in the finite-element treatment of large plastic defo
 For the extended track the same nodes are binned on an $8\times20$ grid in $(z,r)$ by the median. The radius $r$ is normalised by the surface radius of the same axial slice, $z$ by the window ($z=0$ entry, $z=1$ exit). % src: code/dataset2d.py (n_z = 8, n_r = 20 defaults; module docstring); QA_DATA_AND_Z.md §4
 Targets stay in MPa, and since the components differ by two orders of magnitude, with a mean $|\sigma|$ of about 79~MPa for the normal components against 0.67~MPa for $\tau_{rz}$, per-component errors are always reported next to macro-averaged ones. % src: PLAYBOOK.md §2.4
 
-\paragraph{Filtering.}
+\paragraph{Filtering}
 % NOTE: an explanatory opening sentence was added before the list of the filters.
 In the further preparation of the data a part of the computed results had to be discarded, and this was necessary for several distinct reasons. Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=25\,\%$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels. % src: PLAYBOOK.md §5.2 (six "billet adhered to the die" cases + one convergence artefact, all at Q = 0.25); ERRATA.md E-24 (48 of 275 = 17.5 %); TODO: one consistent justification for excluding Q = 0.25 is to be agreed with the corresponding author (code/filters.py labels this filter "elastic regime")
 % NOTE: the single run with a mistyped friction label is no longer mentioned in the running text; it is retained as a row of Table~\ref{tab:filtering}. % src: ERRATA.md E-03
@@ -75,7 +75,7 @@ Runs that did not complete the pass through the die    & 92  & 1756 \\ % src: ER
 The final dataset has 1756 cases: $35\,120$ radial points in the main track and $280\,960$ grid points in the extended track. % src: 1756×20 and 1756×8×20 (arithmetic); results/runs_v2.csv stage twod: n_train + n_test = 1493 + 263 = 1377 + 379 = 1756, i.e. the same cases
 % EDIT: sentence "Removing the last 5.0 % of cases changed the results materially; the comparison with the uncleaned data is given in Section ..." deleted — §3.2 contains no comparison with the uncleaned data and v1 figures are not used
 
-\paragraph{Group-aware splits.}
+\paragraph{Group-aware splits}
 % NOTE: an introductory sentence was placed before the description of the partitions.
 For the training that follows, several scenarios of partitioning the initial sample were considered, each of them addressing a different question about the behaviour of the surrogates.
 % NOTE: the number of points per computation was removed; the uniqueness of the configurations produced by the design and the fact that the partitioning is performed at the level of computations are stated instead.
