@@ -790,15 +790,16 @@ split, two families are compared by a paired $t$-test over seeds ($\alpha=0.05$,
 with no verdict for fewer than three seeds), with $|\Delta|$ reported beside the pooled
 seed standard deviation as effect size.
 % src: stats.py significance_gate (scipy ttest_rel, alpha=0.05, MIN_SEEDS_FOR_TEST=3, pooled = sqrt(0.5(s_i² + s_j²)), practical flag |Δ| ≥ k_sigma·pooled)
-Ranking of the three families within a split uses Friedman with Nemenyi post hoc,
-blocks being seeds \citep{demsar2006}. Indistinguishability is not
+Ranking of the three families within a split uses the Friedman
+test~\citep{friedman1937} with the Nemenyi post hoc test, blocks being seeds
+\citep{demsar2006}. Indistinguishability is not
 transitive, so distinguishable pairs are listed rather than ``clusters''.
 % src: stats.py friedman_test (n_blocks ≥ 3), nemenyi_cd, NemenyiResult.cliques / to_text ("различимые пары"); ERRATA.md E-15
 Splits are never pooled: ranks in \texttt{extrap:alpha\_max} and in
 \texttt{random} describe different tasks.
 % src: stats.py pool_guard
 The excess error of an extrapolation split over its matched control is tested by
-Welch's unpaired $t$-test. Trends across data fraction and corruption rate are tested by
+Welch's unpaired $t$-test~\citep{welch1947}. Trends across data fraction and corruption rate are tested by
 least squares of the seed-wise PINN$-$MLP gap on $\log$(fraction) and on the rate.
 % src: stats.py delta_vs_matched (ttest_ind, equal_var=False); paper_tables.py (scipy.stats.linregress of the seed-level PINN−MLP gap on corrupt_rate); RESULTS_v1_vs_v2.md §5 (regression on log(доля)) and §6 (slope −14.20 MPa per unit fraction, p = 0.00036, R² = 0.735)
 Testing across hold-out cases rather than across seeds was also examined and is not used here:
