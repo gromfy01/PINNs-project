@@ -53,7 +53,9 @@ In the further preparation of the data a part of the computed results had to be 
 Cases whose profile is bit-identical to another case differing only in the friction label are dropped, keeping one per group (323 of the 2443 raw cases, 13.2\,\%, of which 319 survive the two preceding filters and are counted in Table~\ref{tab:filtering}). % src: ERRATA.md E-06; audit/RAW_AUDIT.md §5 (323 / 13.2 % on the raw grid); PLAYBOOK.md §5.5 (−319 after Q = 0.25 and μ-typo removal); code/filters.py find_mu_duplicates
 Finally, runs that stopped before the wire had passed through the die are removed: their tail retains the billet radius $R_0$ and the die reference point lies inside the axial extent of the wire (153 of the 159 such runs on the raw grid). % src: ERRATA.md E-24
 Where the undrawn part enters the window the surface radius varies along it (spread above 0.1~mm against a median of 0.0026~mm), and what the profile labels as free-surface $\sigma_{rr}$ is contact pressure, down to $-571.3$~MPa against $-19.7$~MPa at worst in clean cases. % src: ERRATA.md E-24 (threshold 0.1 mm → 89 cases; median spread 0.0026 mm; clean 1756 cases min −19.7 MPa)
-These 92 cases (89 detected through the window plus 3 with the tail outside it) are removed before splitting: on the random split of the uncleaned set 73 of the 89 fell into the training pool, where the data term contradicts the traction-free condition. % src: ERRATA.md E-24; code/filters.py unfinished_draw_in_window docstring (73 train / 16 test on the 1571/277 random split of the 1848-case set)
+These 89 cases are removed before splitting: on the random split of the uncleaned set 73 of them fell into the training pool, where the data term contradicts the traction-free condition. % src: ERRATA.md E-24; code/filters.py unfinished_draw_in_window docstring (73 train / 16 test on the 1571/277 random split of the 1848-case set)
+% EDIT (11.10, rebuild from raw-data-v1): the "3 with the tail outside the window" are completed runs (Q = 1.5 %, k = 0, v = 250 m/min: 1020_2a_32/40_rd_150_cal_0_v_250_f_0100, 1020_2a_40_rd_150_cal_0_v_250_f_025); R_max 17.82–17.88 mm at one or two nodes of the wire head, no node at R0 = 18 mm, die outside the wire span; neighbouring runs kept in the set look the same. Composition confirmed by the per-component std fingerprint of runs_v2.csv (rmse/nrmse_global, 1D and 2D stages, rel. diff < 1e-12). correspondence/2026-10-11_table13_fem_row.md
+Three further runs at $Q=1.5\,\%$ and $v=250$~m/min were removed with them. They were flagged by an earlier check of the tail but did complete the pass: their largest radius, 17.82--17.88~mm, is a bulge of the wire head outside the window. All results below refer to the remaining 1756 cases.
 % FIXED: "73 of the 89 would otherwise enter training" qualified — the 73/16 count is for the random split of the 1848-case set only.
 
 \begin{table*}[htbp]
@@ -68,7 +70,8 @@ Raw reports                                            &     & 2443 \\ % src: au
 Level $Q=25\,\%$ excluded                                & 275 & 2168 \\ % src: PLAYBOOK.md §5.5; audit/RAW_AUDIT.md §4 (Q = 0.25 → 275)
 Friction label outside the design (file-name typo)     & 1   & 2167 \\ % src: PLAYBOOK.md §5.5; ERRATA.md E-03
 Bit-identical duplicates differing only in $\mu$ label & 319 & 1848 \\ % src: PLAYBOOK.md §5.5
-Runs that did not complete the pass through the die    & 92  & 1756 \\ % src: ERRATA.md E-24; RESULTS_v1_vs_v2.md (1848 → 1756)
+Runs that did not complete the pass through the die    & 89  & 1759 \\ % src: ERRATA.md E-24 (window mask, spread > 0.1 mm)
+Completed runs flagged by an earlier check of the tail & 3   & 1756 \\ % src: rebuild from raw-data-v1 (11.10); RESULTS_v1_vs_v2.md (1848 → 1756)
 \bottomrule
 \end{tabular}
 \end{table*}
