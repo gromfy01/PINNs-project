@@ -1080,27 +1080,28 @@ Eq.~\eqref{eq:avitzur-vega}, and over the 18 runs at $k=1$ to 79.8\,\% and 40.6\
 % Q = 1.5 % the bearing zone did carry 1.9-4.6 % of the axial force, concentrated in a band of about
 % 1 mm at its entry.
 
-Without the bearing terms all three relations lie above the computed drawing stress in every run,
-by 10.6\,\% on average for Siebel's relation, Eq.~\eqref{eq:siebel}, 14.2\,\% for the Coulomb form
-of Avitzur's solution, Eq.~\eqref{eq:avitzur-vega}, and 16.2\,\% for its friction-factor form,
-Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$. In Table~\ref{tab:drawstress} these are the columns
-\emph{Siebel}, \emph{Avitzur\_mod} and \emph{Avitzur}. The friction-factor form is Avitzur's
-upper-bound solution and lies above Siebel's relation in every run, by 2.2--7.1\,\%. With
-$m=\sqrt3\,\mu$ its friction term on the cone, $2\mu\cot\alpha\ln(R_0/R_f)\,\sigma_f$, is the same
-as in Siebel's relation, and almost the whole difference comes from the redundant shear, which in
-Eq.~\eqref{eq:avitzur} exceeds the term $2\alpha/3$ of Siebel's relation by 16--17\,\%. The Coulomb
-form has the same terms of ideal deformation work and redundant shear as the friction-factor form
-and differs from it only in the friction on the cone, whose term is multiplied by
+Without the bearing terms all three relations lie above the computed drawing stress in every run.
+On average the excess is 10.6\,\% for Siebel's relation, Eq.~\eqref{eq:siebel}, 14.2\,\% for the
+Coulomb form of Avitzur's solution, Eq.~\eqref{eq:avitzur-vega}, and 16.2\,\% for its
+friction-factor form, Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$, the columns \emph{Siebel},
+\emph{Avitzur\_mod} and \emph{Avitzur} of Table~\ref{tab:drawstress}.
+
+The three relations differ mainly in two terms. The redundant shear is the same in both forms of
+Avitzur's solution and exceeds the term $2\alpha/3$ of Siebel's relation by 16--17\,\%. The
+friction on the cone is $2\mu\cot\alpha\ln(R_0/R_f)\,\sigma_f$ in Siebel's relation and, with
+$m=\sqrt3\,\mu$, in the friction-factor form, whereas in the Coulomb form it is multiplied by
 $1-\ln(R_0/R_f)$, that is, by 0.88--0.89 at the reduction of 10\,\% and by 0.83--0.84 at 15\,\%.
-Where the friction on the cone is a large part of the work, this smaller friction term outweighs
-the larger redundant shear, and the Coulomb form lies below Siebel's relation. This is the case in
-16 runs, all at $8^\circ$, namely the twelve at $\mu = 0.1$ and a reduction of 10\,\% and the four
-at $\mu \ge 0.05$ and 15\,\%.
+The friction-factor form, Avitzur's upper bound, therefore lies above Siebel's relation in every
+run, by 2.2--7.1\,\%. The Coulomb form lies between the two, except in the 16 runs at $8^\circ$ in
+which the friction on the cone is a large part of the work, the twelve at $\mu = 0.1$ and a
+reduction of 10\,\% and the four at $\mu \ge 0.05$ and 15\,\%. There its smaller friction term
+outweighs the larger redundant shear, and it falls below Siebel's relation.
 % src: recalc_2026-09-28.json: avitzur_noland / siebel - 1 = 2.2-7.1 % (all 112 runs); avitzur_noland -
 % siebel = sigma_f [2 (f - 1) ln(R0/Rf) + redundant excess], the redundant excess giving 98.7-99.4 % of it,
 % (2/sqrt3)(alpha/sin^2 alpha - cot alpha) / (2 alpha/3) = 1.158-1.167; vega_noland = avitzur_noland -
 % 2 mu cot(alpha) ln^2(R0/Rf) sigma_f; 1 - ln(R0/Rf) = 0.878-0.893 at 10 %, 0.832-0.836 at 15 %;
 % vega_noland < siebel by >= 0.7 MPa in the 16 runs.
+
 The excess over the computed drawing stress lies in the frictionless part of the work. Extrapolated linearly to $\mu = 0$ from the means over $k$ at 10\,\% and 10~m/min, the
 computed drawing stress is 86, 101 and 116~MPa at $\alpha = 8^\circ$, $12^\circ$ and $16^\circ$,
 against 97, 116 and 135~MPa from Siebel's relation. At $12^\circ$ and $16^\circ$ the friction terms
@@ -1126,16 +1127,15 @@ term of Eq.~\eqref{eq:johnson-cook} gives for a doubled strain rate, and the dev
 % v 20 / 10 = 1.025-1.030; Coulomb <= Siebel in 10 %/8/0.1 (12 runs) and 15 %/8/0.05-0.1 (4 runs));
 % every number from sec31_numbers.py.
 
-The temperature dependence of friction expressed by Eq.~\eqref{eq:mu-temperature} was not studied
-in this work and lies outside its scope. In the model the Coulomb coefficient keeps its prescribed
-value throughout the pass, while the mean temperature rise in the wire is 22--42~$^\circ$C. The
-three relations are therefore evaluated with the prescribed coefficient of each run, and the
-published constants serve only to show the size of the effect. With $\mu_0$ taken as the prescribed
-coefficient at the initial 20~$^\circ$C, they would multiply the coefficient by 3.3 to 6.8 at the
-pass-mean temperature of 31--41~$^\circ$C, or by 6.4 to 13.1 if $T_0$ is instead taken as the
-15.6~$^\circ$C reference temperature of the original calibration. For steel wire a relation of
-this kind would be identified in the same way as Vega et~al.\ did for copper, from measured drawing
-forces and die temperatures.
+The temperature dependence of friction, Eq.~\eqref{eq:mu-temperature}, was not studied in this
+work and lies outside its scope. In the model the Coulomb coefficient keeps its prescribed value
+throughout the pass, and the three relations are evaluated with the prescribed coefficient of each
+run. The published constants only indicate the size of the effect. With $\mu_0$ taken as the
+prescribed coefficient at the initial 20~$^\circ$C, the mean temperature rise of 22--42~$^\circ$C,
+that is, a pass-mean temperature of 31--41~$^\circ$C, would multiply the coefficient by 3.3 to 6.8,
+or by 6.4 to 13.1 if $T_0$ is taken as the 15.6~$^\circ$C reference temperature of the original
+calibration. For steel wire such a relation would have to be identified as Vega et~al.\ did for
+copper, from measured drawing forces and die temperatures.
 % src: verification_recalc.py (pass-mean temperature 20 + dT_mean/2 = 31.1-40.8 C;
 % (T/20)^2.68 = 3.28-6.76, (T/15.6)^2.68 = 6.37-13.14)
 
