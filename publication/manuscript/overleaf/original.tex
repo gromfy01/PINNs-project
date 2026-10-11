@@ -947,21 +947,10 @@ $2\mu L_b/R_f$, and at the present parameters the integrated form lies above
 Eq.~\eqref{eq:avitzur-vega} by at most 4.4\,\%. Both forms thus carry an explicit assumption about
 the normal pressure in the bearing zone.
 
-The modification those authors propose is to drop the assumption that $\mu$ is a constant of the
-lubricant and make it a function of the temperature measured by a thermocouple set in the die above
-the bearing zone, which they take to be proportional to the temperature of the wire--die interface,
-\begin{equation}
-\mu = \mu_0\left(\frac{T}{T_0}\right)^{m_\mu},
-\label{eq:mu-temperature}
-\end{equation}
-with $\mu_0$ the coefficient at a reference temperature $T_0$.
-
-Inverting Eq.~\eqref{eq:avitzur-vega} against their own force measurements, they obtain
-$\mu_0 = 0.0125$,
-$m_\mu = 2.68$ and $T_0 = 15.6\,^\circ$C for copper drawn in oil at 1--7~m/s, the temperatures
-entering the ratio in degrees Celsius. In the present simulations $\mu$ is prescribed and constant,
-so Eq.~\eqref{eq:mu-temperature} has no counterpart in the model and is not used in the comparison,
-as discussed below.
+The modification of Vega et~al.\ makes $\mu$ a function of the temperature of the die. In the
+simulations $\mu$ is prescribed and constant, so the modification has no counterpart in the model
+and lies outside the scope of this work. It is outlined in Appendix~\ref{app:vega}, and
+Eq.~\eqref{eq:avitzur-vega} is evaluated here with the prescribed coefficient of each run.
 
 For each run the three relations are evaluated with one and the same flow stress, obtained from
 the constitutive equation~\eqref{eq:johnson-cook} by averaging it along the strain, strain-rate
@@ -986,57 +975,12 @@ averaged over both speeds and all calibration ratios.
 % collapsing repeated time rows, which had biased it 3-6 % low); code/analytical.py (siebel,
 % avitzur); code/vega_avitzur.py (Eq. avitzur-vega, Eq. mu-temperature)
 
-The flow stress and the temperature rise can also be estimated without the strain, strain-rate and
-temperature histories of the model, from the approximate relations of the theory of drawing. The
-strain follows from the excess-work correlation \citep{backofen1972deformation}, the strain rate
-from the kinematics of the die cone and the temperature rise from the energy balance of the pass,
-as in the classical estimates of the heating of drawn wire \citep{siebel1943erwaermung}. Apart from
-the material constants and the entry radius, these relations need the die semi-angle, the drawing
-speed and the friction coefficient of the run. The only quantity taken from the finite-element
-solution is the exit radius $R_f$ reached in the model, as in Eq.~\eqref{eq:sigma-d}:
-\begin{align}
-\Delta &= \frac{R_0+R_f}{R_0-R_f}\,\sin\alpha, \label{eq:delta}\\
-\varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
-\Phi = 0.8 + \frac{\Delta}{4.4}, \qquad
-\varepsilon_{\mathrm{eff}} = \Phi\,\varepsilon_{\mathrm{hom}}, \label{eq:closed-strain}\\
-\edot &= \frac{6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)}{R_0^3-R_f^3}, \label{eq:closed-rate}\\
-\langle\sigma_f\rangle &= \left(A + \frac{B\,\varepsilon_{\mathrm{eff}}^{\,n}}{n+1}\right)
-  \left(1 + C\ln\frac{\edot}{\edot_0}\right)
-  \bigl(1 - \bar\theta^{\,m}\bigr), \label{eq:closed-flow}\\
-\Delta T &= \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
-\end{align}
-where $\Delta$ is the inhomogeneity parameter of the deformation zone, the ratio of its mean
-diameter to the length of contact along the die cone, $L$ in Fig.~\ref{fig:scheme}, set by the die semi-angle and the entry and
-exit radii, $\Phi$ the excess-work factor, $\edot$ the mean strain rate over the time taken to
-traverse the cone at constant volume flow, and $\langle\sigma_f\rangle$ the flow stress of the
-estimate. It is Eq.~\eqref{eq:johnson-cook} with the strain term averaged over the strain from zero
-to $\varepsilon_{\mathrm{eff}}$ and with $\bar\theta$ the homologous temperature at the initial
-20~$^\circ$C plus half the rise $\Delta T$. The drawing stress of the estimate is
-Eq.~\eqref{eq:avitzur} with the friction factor set to $\sqrt3\,\mu$ and without the bearing term. The
-excess-work correlation is quoted in the literature in more than one form. Replacing
-$\Phi = 0.8+\Delta/4.4$ by the alternative $\Phi = 0.88+0.12\,\Delta$ changes $\Phi$ by a factor of
-1.1 to 1.3 but the flow stress, and the estimated temperature rise, by only 0.3 to 1.0\,\%,
-because the hardening term of the constitutive equation is small against $A$. The
-choice therefore does not carry the comparison. The temperature
-needs no input from the model, because it closes on the deformation work itself: that work per
-unit volume is the part of $\sigma_d$ raised in the cone, a fraction $\beta$ of which becomes
-heat, so the mean rise is $\Delta T = \beta\,\sigma_d/(\rho c)$. Since $\sigma_d$ depends on the
-flow stress and the flow stress on the temperature, this is a fixed point, reached in at most
-seven iterations. For the
-112 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
-314--331~MPa used in Table~\ref{tab:drawstress}, at $\Delta = 1.7$--4.7,
-$\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$, all obtained with the exit
-radius reached in the model. With the nominal exit radius $R_0(1-Q/100)$ instead, $\Delta$ would be
-1.7--5.2 and $\varepsilon_{\mathrm{eff}}$ 0.30--0.42, while the flow stress would stay within
-313--336~MPa.
-% src: Eq. delta and analytic_sigma_f.solve over the 112 runs with Q_real and with the nominal Q: Delta
-% 1.66-4.71 / 1.72-5.24, eps_eff 0.299-0.446 / 0.295-0.419, sigma_f 313.2-336.0 / 313.3-336.0 MPa
-The closed
-estimate is quoted with its own value throughout, and no column of Table~\ref{tab:drawstress}
-uses it.
-% src: publication/reexport/analytic_sigma_f.py via verification_recalc.py (Q_real, alpha, mu,
-% v per run): eps_hom = 0.215-0.337, Phi = 1.18-1.87, sigma_f = 313.2-336.0 MPa, <= 7 iterations.
-% The land term is excluded from this closure (L/Rf = 0 in the solver).
+The flow stress and the temperature rise can also be estimated in closed form, from the
+approximate relations of the theory of drawing and without the histories of the model
+(Appendix~\ref{app:closed}). The flow stress of this estimate is 313--336~MPa, in agreement with
+the 314--331~MPa above, and no column of Table~\ref{tab:drawstress} uses it.
+% src: publication/reexport/analytic_sigma_f.py via verification_recalc.py (sigma_f = 313.2-336.0 MPa).
+% The equations of the closed estimate and its temperature rise were moved to Appendix B on review (11.10).
 
 \begin{table*}[htbp]
 \centering\small
@@ -1104,11 +1048,11 @@ Avitzur's solution and exceeds the term $2\alpha/3$ of Siebel's relation by 16--
 friction on the cone is $2\mu\cot\alpha\ln(R_0/R_f)\,\sigma_f$ in Siebel's relation and, with
 $m=\sqrt3\,\mu$, in the friction-factor form, whereas in the Coulomb form it is multiplied by
 $1-\ln(R_0/R_f)$, that is, by 0.88--0.89 at the reduction of 10\,\% and by 0.83--0.84 at 15\,\%.
-The friction-factor form, Avitzur's upper bound, therefore lies above Siebel's relation in every
-run, by 2.2--7.1\,\%. The Coulomb form lies between the two, except in the 16 runs at $8^\circ$ in
-which the friction on the cone is a large part of the work, the twelve at $\mu = 0.1$ and a
-reduction of 10\,\% and the four at $\mu \ge 0.05$ and 15\,\%. There its smaller friction term
-outweighs the larger redundant shear, and it falls below Siebel's relation.
+The friction-factor form therefore lies above Siebel's relation in every run, by 2.2--7.1\,\%.
+The Coulomb form lies between the two, except in the 16 runs at $8^\circ$ in which the friction on
+the cone is a large part of the work, the twelve at $\mu = 0.1$ and a reduction of 10\,\% and the
+four at $\mu \ge 0.05$ and 15\,\%. There the reduction of its friction term outweighs its excess
+in redundant shear over Siebel's relation, and it falls below that relation.
 % src: recalc_2026-09-28.json: avitzur_noland / siebel - 1 = 2.2-7.1 % (all 112 runs); avitzur_noland -
 % siebel = sigma_f [2 (f - 1) ln(R0/Rf) + redundant excess], the redundant excess giving 98.7-99.4 % of it,
 % (2/sqrt3)(alpha/sin^2 alpha - cot alpha) / (2 alpha/3) = 1.158-1.167; vega_noland = avitzur_noland -
@@ -1140,69 +1084,52 @@ term of Eq.~\eqref{eq:johnson-cook} gives for a doubled strain rate, and the dev
 % v 20 / 10 = 1.025-1.030; Coulomb <= Siebel in 10 %/8/0.1 (12 runs) and 15 %/8/0.05-0.1 (4 runs));
 % every number from sec31_numbers.py.
 
-The temperature dependence of friction, Eq.~\eqref{eq:mu-temperature}, was not studied in this
-work and lies outside its scope. In the model the Coulomb coefficient keeps its prescribed value
-throughout the pass, and the three relations are evaluated with the prescribed coefficient of each
-run. The published constants only indicate the size of the effect. With $\mu_0$ taken as the
-prescribed coefficient at the initial 20~$^\circ$C, the mean temperature rise of 22--42~$^\circ$C,
-that is, a pass-mean temperature of 31--41~$^\circ$C, would multiply the coefficient by 3.3 to 6.8,
-or by 6.4 to 13.1 if $T_0$ is taken as the 15.6~$^\circ$C reference temperature of the original
-calibration. For steel wire such a relation would have to be identified as Vega et~al.\ did for
-copper, from measured drawing forces and die temperatures.
-% src: verification_recalc.py (pass-mean temperature 20 + dT_mean/2 = 31.1-40.8 C;
-% (T/20)^2.68 = 3.28-6.76, (T/15.6)^2.68 = 6.37-13.14)
-
-The temperature closure can be checked directly, since the dedicated export also carries the
-temperature history. The cross-section mean of the peak nodal rise in the model is
-22--42~$^\circ$C, and the energy balance $\beta\,\sigma_d/(\rho c)$ evaluated with the computed
-drawing stress lies 1--11\,\% above it (Table~\ref{tab:deltaT}). Taken at the end of deformation
-rather than as a peak over the history, the mean rise is 21--37~$^\circ$C and the balance lies
-5--25\,\% above it. The heating of the section is therefore set by
-the deformation work, with the bearing zone contributing practically nothing. The closed estimate of
-Eqs.~\eqref{eq:delta}--\eqref{eq:closed-rest} lies 19--32\,\% above the computed rise, and the
-reason is its drawing stress, which follows Avitzur's relation and exceeds the computed one by
-12--24\,\%. The closure itself is sound, and the error is inherited from the work term. The rise
-is largest at the surface, 27--78~$^\circ$C, and the pass-mean temperature $T_{\mathrm{mean}}$ in
-the last column of Table~\ref{tab:deltaT} is the initial 20~$^\circ$C plus half the computed mean
-rise. The columns \emph{closed} and \emph{energy} are Eq.~\eqref{eq:closed-rest} with the drawing
-stress of the closed estimate and with the computed one.
-All temperatures are given in degrees Celsius, the initial temperature being 20~$^\circ$C in
-every run. The temperature law of friction of Vega et~al., Eq.~\eqref{eq:mu-temperature}, is calibrated
-on the same scale.
+The heating of the wire can be checked directly, since the dedicated export also carries the
+temperature history. The drawing work per unit volume of drawn wire equals $\sigma_d$. If a
+fraction $\beta$ of it becomes heat in the wire, the energy balance of the pass gives a mean
+temperature rise of $\beta\,\sigma_d/(\rho c)$, with $\rho$ the density and $c$ the specific heat.
+In the model the cross-section mean of the peak nodal rise is 22--42~$^\circ$C, and the balance
+evaluated with the computed drawing stress lies 1--11\,\% above it. Table~\ref{tab:deltaT} gives
+both, as the columns \emph{FEM} and \emph{energy}, for the runs at 10~m/min, averaged over the
+calibration ratios at the reduction of 10\,\%. Taken at the end of deformation rather than as a
+peak over the history, the mean rise is 21--37~$^\circ$C and the balance lies 5--25\,\% above it.
+The heating of the section is therefore set by the deformation work, with the bearing zone
+contributing practically nothing. The rise is largest at the surface, 27--78~$^\circ$C. All
+temperatures are given in degrees Celsius, the initial temperature being 20~$^\circ$C in every run.
 % src: verification_recalc.py (dT_mean: cross-section mean of the nodal maxima, repeated time rows
-% collapsed; dT_energy = 0.9 sigma_d / (7870 * 470); dT_closed from analytic_sigma_f.solve);
-% verify_temp (heat test in the core, 1.011 against 1.379 for T_tr = 20, T_melt = 1386 applied
-% to kelvin). dT_def: cross-section mean at the end of deformation (21-37 C), balance 5-25 %
-% above it.
+% collapsed; dT_energy = 0.9 sigma_d / (7870 * 470)); verify_temp (heat test in the core, 1.011
+% against 1.379 for T_tr = 20, T_melt = 1386 applied to kelvin). dT_def: cross-section mean at the
+% end of deformation (21-37 C), balance 5-25 % above it. The closed estimate (19-32 % above) and the
+% pass-mean temperature were moved to Appendices B and A on review (11.10).
 
 \begin{table}[htbp]
 \centering\small
 \caption{Wire drawing temperatures calculated using analytical and FEM models}
 \label{tab:deltaT}
-\begin{tabular}{@{}lllrrrr@{}}
+\begin{tabular}{@{}lllrr@{}}
 \toprule
- & & & \multicolumn{3}{c}{$\Delta T$, $^\circ$C} & $T_{\mathrm{mean}}$, \\
-\cmidrule(lr){4-6}
-$Q$, \% & $\alpha$ & $\mu$ & closed & energy & FEM & $^\circ$C \\
+ & & & \multicolumn{2}{c}{$\Delta T$, $^\circ$C} \\
+\cmidrule(l){4-5}
+$Q$, \% & $\alpha$ & $\mu$ & energy & FEM \\
 \midrule
-10 & $8^\circ$  & 0.025 & 27.8 & 23.8 & 22.3 & 31.2 \\
-10 & $8^\circ$  & 0.050 & 30.8 & 27.0 & 24.9 & 32.5 \\
-10 & $8^\circ$  & 0.100 & 36.8 & 32.8 & 30.1 & 35.0 \\
-10 & $12^\circ$ & 0.025 & 32.4 & 27.1 & 26.2 & 33.1 \\
-10 & $12^\circ$ & 0.050 & 34.6 & 29.6 & 28.3 & 34.2 \\
-10 & $12^\circ$ & 0.100 & 39.2 & 34.5 & 32.6 & 36.3 \\
-10 & $16^\circ$ & 0.025 & 37.7 & 30.5 & 30.2 & 35.1 \\
-10 & $16^\circ$ & 0.050 & 39.5 & 32.7 & 31.9 & 36.0 \\
-10 & $16^\circ$ & 0.100 & 43.3 & 37.1 & 35.9 & 37.9 \\
-15 & $8^\circ$  & 0.025 & 38.0 & 32.8 & 30.3 & 35.2 \\
-15 & $8^\circ$  & 0.050 & 42.5 & 36.7 & 33.6 & 36.8 \\
-15 & $8^\circ$  & 0.100 & 52.1 & 43.9 & 39.5 & 39.7 \\
+10 & $8^\circ$  & 0.025 & 23.8 & 22.3 \\
+10 & $8^\circ$  & 0.050 & 27.0 & 24.9 \\
+10 & $8^\circ$  & 0.100 & 32.8 & 30.1 \\
+10 & $12^\circ$ & 0.025 & 27.1 & 26.2 \\
+10 & $12^\circ$ & 0.050 & 29.6 & 28.3 \\
+10 & $12^\circ$ & 0.100 & 34.5 & 32.6 \\
+10 & $16^\circ$ & 0.025 & 30.5 & 30.2 \\
+10 & $16^\circ$ & 0.050 & 32.7 & 31.9 \\
+10 & $16^\circ$ & 0.100 & 37.1 & 35.9 \\
+15 & $8^\circ$  & 0.025 & 32.8 & 30.3 \\
+15 & $8^\circ$  & 0.050 & 36.7 & 33.6 \\
+15 & $8^\circ$  & 0.100 & 43.9 & 39.5 \\
 \bottomrule
 \end{tabular}
 \end{table}
-% src: verification_recalc.py, v = 10 m/min, averaged over k (Q = 10 %) — closed: Eqs.
-% delta--closed-rest; energy: beta sigma_d^FEM / (rho c); FEM: cross-section mean of the exported
-% temperature rise; pass mean 20 + dT_FEM / 2.
+% src: verification_recalc.py, v = 10 m/min, averaged over k (Q = 10 %) — energy: beta sigma_d^FEM /
+% (rho c); FEM: cross-section mean of the exported temperature rise. The column "closed" moved to
+% the text of Appendix B and the pass mean 20 + dT_FEM / 2 to Appendix A on review (11.10).
 
 The exported histories also allow the friction coefficient to be recovered from the data rather
 than read from the file name: at the end of the pass, when only the bearing zone is in contact with the
@@ -1212,16 +1139,24 @@ coefficient in all 88 runs with a bearing zone.
 % all 88 runs with k > 0; steady RF2/RF1 against the cone-only value, verify_land / critic).
 
 The region of the design covered by these runs limits what the comparison establishes. The
-inhomogeneity parameter of Eq.~\eqref{eq:delta}, evaluated like the relations themselves with the
-exit radius reached in the model, lies within the range of 1 to 3, in which these solutions are
-normally applied and against which they have been validated, only at $8^\circ$, where it is
+analytical relations are normally applied, and have been validated, where the inhomogeneity
+parameter of the deformation zone,
+\begin{equation}
+\Delta = \frac{R_0+R_f}{R_0-R_f}\,\sin\alpha,
+\label{eq:delta}
+\end{equation}
+lies within the range of 1 to 3. The parameter is the ratio of the mean diameter of the zone to
+the length of contact along the die cone, $L$ in Fig.~\ref{fig:scheme}. Evaluated like the
+relations themselves with the exit radius reached in the model, it lies in that range only at
+$8^\circ$, where it is
 2.5--2.6 at the reduction of 10\,\% and 1.7 at 15\,\%. At 10\,\% it is 3.6--3.7 at $12^\circ$
 and 4.5--4.7 at $16^\circ$. With the nominal exit radius it would be 2.64, 3.95 and 5.24 at
 $8^\circ$, $12^\circ$ and $16^\circ$ and the reduction of 10\,\%, and 1.72 at $8^\circ$ and 15\,\%,
 which leaves the same runs inside and outside that range.
 % src: recalc_2026-09-28.json, Delta with the reached Rf: 2.54-2.59 (8 deg), 3.60-3.72 (12 deg), 4.53-4.71
 % (16 deg) at Q = 10 %, 1.66-1.70 at 8 deg and Q = 15 %, Delta > 3 in 70 runs either way; with Rf = R0 (1 - Q):
-% 2.644 / 3.950 / 5.237 / 1.717; code/analytical.py delta_param (exact form) equals Eq. delta. The ideal work accounts for 45 to 68\,\% of the predicted drawing
+% 2.644 / 3.950 / 5.237 / 1.717; code/analytical.py delta_param (exact form) equals Eq. delta.
+The ideal work accounts for 45 to 68\,\% of the predicted drawing
 stress. The deviations of Table~\ref{tab:drawstress} therefore characterise the closed-form
 solutions within and somewhat beyond the range where they are expected to hold. They lie 11 to
 16\,\% above the numerical solution on average, with the upper bound above the slab estimate.
@@ -1837,7 +1772,101 @@ The reference against which all of the above is measured is the finite-element s
 %% The equation counter is reset for each appendix
 %% Figures will be numbered consecutively
 
-%\appendix   %%% starting appendices
+\appendix   %%% starting appendices
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Temperature Dependence of Friction}\label{app:vega}
+
+Vega et~al.\ \citep{vega2009temperature,vega2009investigation,haddi2011analysis} build their
+modification on the Coulomb form of Avitzur's solution, Eq.~\eqref{eq:avitzur-vega}. They drop the
+assumption that $\mu$ is a constant of the
+lubricant and make it a function of the temperature measured by a thermocouple set in the die above
+the bearing zone, which they take to be proportional to the temperature of the wire--die interface,
+\begin{equation}
+\mu = \mu_0\left(\frac{T}{T_0}\right)^{m_\mu},
+\label{eq:mu-temperature}
+\end{equation}
+with $\mu_0$ the coefficient at a reference temperature $T_0$.
+Inverting Eq.~\eqref{eq:avitzur-vega} against their own force measurements, they obtain
+$\mu_0 = 0.0125$,
+$m_\mu = 2.68$ and $T_0 = 15.6\,^\circ$C for copper drawn in oil at 1--7~m/s, the temperatures
+entering the ratio in degrees Celsius.
+% src: code/vega_avitzur.py (constants of Eq. mu-temperature, temperatures in degrees Celsius)
+
+The temperature dependence of friction was not studied in this work and lies outside its scope.
+In the model the Coulomb coefficient keeps its prescribed value throughout the pass, and the
+published constants only indicate the size of the effect. The cross-section mean of the
+temperature rise in the wire is 22--42~$^\circ$C (Section~\ref{sec:res_fem_verification}), so that
+the pass-mean temperature, the initial 20~$^\circ$C plus half the rise, is 31--41~$^\circ$C. With
+$\mu_0$ taken as the prescribed coefficient and $T_0$ as the initial 20~$^\circ$C,
+Eq.~\eqref{eq:mu-temperature} would multiply the coefficient by 3.3 to 6.8 at the pass-mean
+temperature, or by 6.4 to 13.1 if $T_0$ is taken as the 15.6~$^\circ$C reference temperature of
+the original calibration. For steel wire such a relation would have to be identified as Vega
+et~al.\ did for copper, from measured drawing forces and die temperatures.
+% src: verification_recalc.py (pass-mean temperature 20 + dT_mean/2 = 31.1-40.8 C;
+% (T/20)^2.68 = 3.27-6.75, (T/15.6)^2.68 = 6.37-13.14)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Closed Estimate of the Flow Stress and the Temperature Rise}\label{app:closed}
+
+The flow stress and the temperature rise can also be estimated without the strain, strain-rate and
+temperature histories of the model, from the approximate relations of the theory of drawing. The
+strain follows from the excess-work correlation \citep{backofen1972deformation}, the strain rate
+from the kinematics of the die cone and the temperature rise from the energy balance of the pass,
+as in the classical estimates of the heating of drawn wire \citep{siebel1943erwaermung}. Apart from
+the material constants and the entry radius, these relations need the die semi-angle, the drawing
+speed and the friction coefficient of the run. The only quantity taken from the finite-element
+solution is the exit radius $R_f$ reached in the model, as in Eq.~\eqref{eq:sigma-d}:
+\begin{align}
+\varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
+\Phi = 0.8 + \frac{\Delta}{4.4}, \qquad
+\varepsilon_{\mathrm{eff}} = \Phi\,\varepsilon_{\mathrm{hom}}, \label{eq:closed-strain}\\
+\edot &= \frac{6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)}{R_0^3-R_f^3}, \label{eq:closed-rate}\\
+\langle\sigma_f\rangle &= \left(A + \frac{B\,\varepsilon_{\mathrm{eff}}^{\,n}}{n+1}\right)
+  \left(1 + C\ln\frac{\edot}{\edot_0}\right)
+  \bigl(1 - \bar\theta^{\,m}\bigr), \label{eq:closed-flow}\\
+\Delta T &= \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
+\end{align}
+where $\Delta$ is the inhomogeneity parameter of Eq.~\eqref{eq:delta}, $\Phi$ the excess-work factor, $\edot$ the mean strain rate over the time taken to
+traverse the cone at constant volume flow, and $\langle\sigma_f\rangle$ the flow stress of the
+estimate. It is Eq.~\eqref{eq:johnson-cook} with the strain term averaged over the strain from zero
+to $\varepsilon_{\mathrm{eff}}$ and with $\bar\theta$ the homologous temperature at the initial
+20~$^\circ$C plus half the rise $\Delta T$. The drawing stress of the estimate is
+Eq.~\eqref{eq:avitzur} with the friction factor set to $\sqrt3\,\mu$ and without the bearing term. The
+excess-work correlation is quoted in the literature in more than one form. Replacing
+$\Phi = 0.8+\Delta/4.4$ by the alternative $\Phi = 0.88+0.12\,\Delta$ changes $\Phi$ by a factor of
+1.1 to 1.3 but the flow stress, and the estimated temperature rise, by only 0.3 to 1.0\,\%,
+because the hardening term of the constitutive equation is small against $A$. The
+choice therefore does not carry the comparison. The temperature
+needs no input from the model, because it closes on the deformation work itself: that work per
+unit volume is the part of $\sigma_d$ raised in the cone, a fraction $\beta$ of which becomes
+heat, so the mean rise is $\Delta T = \beta\,\sigma_d/(\rho c)$. Since $\sigma_d$ depends on the
+flow stress and the flow stress on the temperature, this is a fixed point, reached in at most
+seven iterations. For the
+112 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
+314--331~MPa used in Table~\ref{tab:drawstress}, at $\Delta = 1.7$--4.7,
+$\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$, all obtained with the exit
+radius reached in the model. With the nominal exit radius $R_0(1-Q/100)$ instead, $\Delta$ would be
+1.7--5.2 and $\varepsilon_{\mathrm{eff}}$ 0.30--0.42, while the flow stress would stay within
+313--336~MPa.
+% src: Eq. delta and analytic_sigma_f.solve over the 112 runs with Q_real and with the nominal Q: Delta
+% 1.66-4.71 / 1.72-5.24, eps_eff 0.299-0.446 / 0.295-0.419, sigma_f 313.2-336.0 / 313.3-336.0 MPa
+The closed
+estimate is quoted with its own value throughout, and no column of Table~\ref{tab:drawstress}
+uses it.
+% src: publication/reexport/analytic_sigma_f.py via verification_recalc.py (Q_real, alpha, mu,
+% v per run): eps_hom = 0.215-0.337, Phi = 1.18-1.87, sigma_f = 313.2-336.0 MPa, <= 7 iterations.
+% The land term is excluded from this closure (L/Rf = 0 in the solver).
+
+The closed estimate of the temperature rise, Eq.~\eqref{eq:closed-rest} with the drawing stress
+of the estimate, lies 19--32\,\% above the computed rise. The reason is its drawing stress, which
+follows Avitzur's relation and exceeds the computed one by 12--24\,\%. The closure itself is sound,
+since with the computed drawing stress the same balance lies only 1--11\,\% above the computed
+rise (Section~\ref{sec:res_fem_verification}), and the error is inherited from the work term.
+% src: verification_recalc.py (dT_closed from analytic_sigma_f.solve: 19.4-32.0 % above dT_mean over the
+% 112 runs; closed sigma_d 12.2-23.6 % above the FEM one, sec31_numbers_2026-10-02.txt). Moved from
+% Section 3.1 on review (11.10), together with the former column "closed" of Table tab:deltaT
+% (v = 10 m/min, k-mean: 27.8-52.1 C against the computed 22.3-39.5 C).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\section{Incomplete Zeta Function~\cite{Lienhard2019c}\label{app:zetafunction}}
