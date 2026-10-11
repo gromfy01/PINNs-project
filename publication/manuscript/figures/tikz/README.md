@@ -1,9 +1,15 @@
-# Схемы обучения: исходники
+# Схемы: исходники
+
+`process_scheme.tex` — исходник рисунка 1 (`pictures/process_scheme.pdf`), схема
+процесса с границами S1–S5 и размерами D0, D, L, L_b, α. Не в масштабе: обжатие и
+поясок увеличены. Заменяет прежний растр `scheme.png`, у которого не было исходника:
+на нём не был проставлен размер L_b, а D0 был подписан как «D_o».
 
 `mlp_schematic.tex` и `pinn_schematic.tex` — исходники рисунков 2 и 3
 (`pictures/mlp_schematic.pdf`, `pictures/pinn_schematic.pdf`). Собираются
 отдельно, классом `standalone`:
 
+    pdflatex process_scheme.tex
     pdflatex mlp_schematic.tex
     pdflatex pinn_schematic.tex
     cp *.pdf ../../overleaf/pictures/
