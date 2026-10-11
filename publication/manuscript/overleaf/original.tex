@@ -237,8 +237,8 @@ The radial coordinate $r$ is measured from the axis and the axial coordinate $z$
 A series of axisymmetric FEM simulations of the wire-drawing process was carried out in Abaqus CAE~\citep{abaqus2022}.
 The workpiece was a rectangular longitudinal section discretised with a CAX4RT element mesh. The geometry of the die was described by three parameters: the reduction ($Q$), the half-angle of the deformation zone ($\alpha$), and the ratio between the bearing length $L_b$ and the initial diameter of the wire ($k$). Process parameters varied during the campaign were the Coulomb friction coefficient ($\mu$) and the drawing velocity ($v$). The ranges of these parameters are summarised in Table~\ref{tab:fem_params}.
 
-Material behaviour is described by the Johnson--Cook model for the low-carbon steel AISI 1020
-\citep{10.1680/jemmr.16.00019,shi2006analytical}. The analysis is a coupled temperature--displacement one, and the
+Material behaviour is described by the Johnson--Cook model for the low-carbon steel AISI 1020, with the constants of
+\citep{10.1680/jemmr.16.00019} and the temperature-related properties after \citep{shi2006analytical}. The analysis is a coupled temperature--displacement one, and the
 initial temperature is $20^\circ$C throughout. The flow stress follows the constitutive equation
 \begin{equation}
 \sigma_f = \bigl(A + B\varepsilon^{\,n}\bigr)
@@ -261,6 +261,7 @@ the pass.
 % rho = 7870 kg/m3, c = 470 J/(kg K), inelastic heat fraction 0.9.
 % src: .inp deck (*Plastic, hardening=JOHNSON COOK; *Rate Dependent, type=JOHNSON COOK;
 % *Elastic; *Density; *Specific Heat; *Inelastic Heat Fraction), supplied 12-13.09.2026.
+% EDIT (11.10): sources split per the corresponding author: the Johnson-Cook constants from [40] (Cui et al. 2017), the temperature-related properties from [41] (Shi & Tounsi 2006).
 
 % The ranges of strain, strain rate and temperature along the exported histories are given in
 % Section 3.1 (moved there from here on review, 29.09).
