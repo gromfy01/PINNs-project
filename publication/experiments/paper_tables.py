@@ -354,9 +354,10 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
     mlp = {r: by_seed(d, family="mlp", corrupt_rate=r) for r in rates}
     gap_points: List[Tuple[float, float]] = []
     for f in ("pinn", "vpinn"):
-        dcells, pcells = [], []
+        dcells, pcells, praw = [], [], []
         for r in rates:
             dm, dsd, t, p, n = paired(by_seed(d, family=f, corrupt_rate=r), mlp[r])
+            praw.append(p)
             src = f"{CSV_NAME}: stage=corrupt, corrupt_rate={r} -> per-seed macro_rmse[{f}]-[mlp], ttest_rel, n={n}"
             L.add(f"{dm:+.2f}", f"Delta {FAMILY_LABEL[f]}-MLP [MPa], corruption {r:g}", src)
             L.add(fmt_p(p), f"paired p, {FAMILY_LABEL[f]}-MLP, corruption {r:g}", src)
@@ -367,6 +368,13 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
                 gap_points += [(float(r), float(v)) for v in diff.to_numpy()]
         body.append(" & ".join([f"$\\Delta$({FAMILY_LABEL[f]} $-$ MLP), MPa"] + dcells + ["---"]) + r" \\")
         body.append(" & ".join([f"$p$ (paired, {n_seeds} seeds)"] + pcells + ["---"]) + r" \\")
+        # Holm over the fractions of this comparison (the clean reference included), as for tab:paired
+        adj = holm_adjust(np.array(praw))
+        for r, pa in zip(rates, adj):
+            L.add(fmt_p(pa), f"Holm-adjusted p, {FAMILY_LABEL[f]}-MLP, corruption {r:g}",
+                  f"{CSV_NAME}: stage=corrupt -> holm_adjust over the {len(rates)} paired p of {FAMILY_LABEL[f]}-MLP")
+        body.append(" & ".join([r"$p_{\mathrm{Holm}}$ (" + str(len(rates)) + " fractions)"]
+                               + [fmt_p(pa) for pa in adj] + ["---"]) + r" \\")
 
     x = np.array([g[0] for g in gap_points])
     y = np.array([g[1] for g in gap_points])
@@ -390,14 +398,18 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
                 r"($" + f"{lr.slope / 10:.2f}" + r"$ MPa per 10 percentage points), "
                 r"$p = " + fmt_p(lr.pvalue) + r"$, $R^2 = " + f"{r2:.3f}" + r"$.} \\")
 
-    cap = (r"Robustness to label corruption on the \texttt{" + sp + r"} split: macro-RMSE on "
-           r"the clean hold-out, MPa, mean $\pm$ sd over " + str(n_seeds) + r" seeds. Below "
-           r"the rule: the seed-paired gap to the data-driven baseline and its regression on "
-           r"the corrupted fraction.")
+    cap = (r"Effect of corrupted training labels on the \texttt{" + sp + r"} split. In the stated "
+           r"fraction of the training cases a constant offset of $+250$~MPa is added to "
+           r"$\sigma_{\theta\theta}$ over the whole profile. Macro-RMSE on the clean hold-out, MPa, "
+           r"mean $\pm$ sd over " + str(n_seeds) + r" seeds. Below the rule: the seed-paired gap to "
+           r"the data-driven baseline with its two-sided paired $p$-value and the value "
+           r"$p_{\mathrm{Holm}}$ adjusted by the Holm procedure over the four fractions of the same "
+           r"comparison, the clean reference included, and the regression of the gap on the "
+           r"corrupted fraction, a single test that is not adjusted.")
     colspec = "@{}l" + "r" * len(rates) + "r@{}"
     head = (r"\begin{table*}[t]" "\n"
             r"\centering" "\n"
-            r"\caption[Robustness to label corruption]{" + cap + "}\n"
+            r"\caption[Effect of corrupted training labels]{" + cap + "}\n"
             r"\label{tab:corrupt}" "\n"
             r"\small" "\n"
             r"\begin{tabular}{" + colspec + "}\n"

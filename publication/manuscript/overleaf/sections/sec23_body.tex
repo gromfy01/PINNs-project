@@ -332,6 +332,10 @@ The unit of replication is the training run (seed), not the test case. Within a
 split, two families are compared by a paired $t$-test over seeds ($\alpha=0.05$,
 with no verdict for fewer than three seeds), with $|\Delta|$ reported beside the pooled
 seed standard deviation as effect size.
+Where a table reports the same comparison of a physics-informed family with the MLP
+on several splits, data fractions or corruption rates, the $p$-values of that comparison
+are in addition adjusted by the Holm step-down procedure~\citep{holm1979} over all of its
+tests in the table, and the caption names this set of tests. % src: paper_tables.py holm_adjust (Holm step-down, monotone, capped at 1), applied to tab:paired (13 splits per comparison), tab:curves (8 PINN-MLP tests) and tab:corrupt (4 fractions per comparison)
 % src: stats.py significance_gate (scipy ttest_rel, alpha=0.05, MIN_SEEDS_FOR_TEST=3, pooled = sqrt(0.5(s_i² + s_j²)), practical flag |Δ| ≥ k_sigma·pooled)
 Ranking of the three families within a split uses the Friedman
 test~\citep{friedman1937} with the Nemenyi post hoc test, blocks being seeds
