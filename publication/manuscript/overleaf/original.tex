@@ -487,7 +487,7 @@ Inputs and targets are standardised with training-set statistics. The body is a
 multilayer perceptron with three hidden layers of 96 $\tanh$ units and a linear
 head with four outputs
 $\hat{\boldsymbol\sigma}=(\hat\sigma_{rr},\hat\sigma_{\theta\theta},\hat\sigma_{zz},\hat\tau_{rz})$,
-de-standardised before entering any physical term.
+mapped back to physical units, by inverting the standardisation, before entering any physical term.
 This configuration was selected with
 Optuna~\citep{akiba2019optunanextgenerationhyperparameteroptimization} at the initial design
 stage of the study and then held fixed.
