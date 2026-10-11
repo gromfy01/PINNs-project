@@ -166,7 +166,7 @@ Table~\ref{tab:curves} shows how the accuracy changes with the size of the train
 
 % src: RESULTS.md §2 and ERRATA.md E-19 (derivative agreement 8.7e-15 abs, 9.8e-16 rel, jax_twin.py::check_gradient_agreement; DeepXDE configured with DDE_BACKEND=pytorch → two engines, not three);
 % src: RESULTS.md §2 (implementations share everything but draw initial weights and batch order from their own RNGs: torch.manual_seed vs numpy default_rng).
-The strong-form PINN was trained in two independent implementations of the same protocol, in PyTorch and in JAX, on the random split and the semi-angle extrapolation, five seeds each. The engines were checked first: on bit-identical weights and inputs the derivative $\partial\sigma_{rr}/\partial r$ from \texttt{torch.autograd} and from \texttt{jax.grad} agrees to $8.7\times10^{-15}$ absolute ($9.8\times10^{-16}$ relative), i.e.\ to machine precision. A DeepXDE implementation \citep{lu2021} of the same network runs on the PyTorch backend and differentiates with the same \texttt{torch.autograd.grad}, so the comparison involves two automatic-differentiation engines, not three.
+The strong-form PINN was trained in two independent implementations, in PyTorch and in JAX, on the random split and the semi-angle extrapolation, five seeds each. Apart from their random streams, the two differ in the weight of the physics term: the JAX implementation applies $\lambda_{\mathrm{phys}}$ without the calibration of Eq.~\eqref{eq:calib}, so that its physics term carries about six times the weight it has in PyTorch (Section~\ref{sec:models}). The engines were checked first: on bit-identical weights and inputs the derivative $\partial\sigma_{rr}/\partial r$ from \texttt{torch.autograd} and from \texttt{jax.grad} agrees to $8.7\times10^{-15}$ absolute ($9.8\times10^{-16}$ relative), i.e.\ to machine precision. A DeepXDE implementation \citep{lu2021} of the same network runs on the PyTorch backend and differentiates with the same \texttt{torch.autograd.grad}, so the comparison involves two automatic-differentiation engines, not three.
 % NOTE: reference to an earlier version of the text removed. The two implementations share architecture, data, split, nominal hyperparameters and stopping rule; the JAX twin applies $\lambda_{\mathrm{phys}} = 0.3$ directly, without the gradient-norm calibration of Eq.~\eqref{eq:calib} (effective weight 0.3 against $\approx 0.05$ in PyTorch), and draws initial weights and batch order from its own random stream. % src: jax_twin.py JaxTrainer.fit (no _calibrate; lam_p = 0.3); runs_v2.csv stage backend (phys_gain = 1.0 in all 10 jax rows, 0.132–0.215 in the 10 torch rows; 0.3 × 0.165 ≈ 0.05) % EDIT: the calibration confound named explicitly. The caption of tab:backend (paper_tables.py) carries the same wording.
 
 % src: RESULTS_v1_vs_v2.md §7 (JAX 8.12 ± 0.18 vs PyTorch 7.98 ± 0.21, Δ +0.14, p = 0.269; 13.49 ± 0.30 vs 13.05 ± 0.49, Δ +0.43, p = 0.169;
@@ -183,10 +183,11 @@ The implementations are statistically indistinguishable in accuracy (Table~\ref{
 Differences of a few tenths of a megapascal between backends are of the same order as the
 spread between two implementations of one method and cannot be attributed to the differentiation
 engine, so no conclusion about a preferred backend follows from accuracy.
+The physical audit is consistent with the larger physics weight of the JAX runs. On the random split the median reduced radial residual $|R_1|$ of their predictions is $608\pm41$~MPa/m against $749\pm42$~MPa/m for PyTorch (paired $p=0.008$), whereas on the extrapolation the two do not differ significantly, $991\pm123$ against $1077\pm77$~MPa/m ($p=0.17$).
 % NOTE: stated as a result of the present comparison rather than as a withdrawal.
 % EDIT (table order): the cost result below had become part of the preceding comment line in this file (commit cf34a15, whereas sec32_results.tex, edited in d89e6ff, kept it as text) and is restored as text, without semicolons. Numbers unchanged, recomputed from runs_v2.csv stage=backend (wall time 313.1 / 516.4 s, ×1.649, s/epoch 0.575 / 0.745, ×1.296, epochs 538.1 / 694.8, ×1.291, cap of 800 reached by jax/random seed 1, jax/alpha_max seed 0, torch/alpha_max seed 2).
-The choice therefore rests on cost, and the cheaper implementation should be used. Here PyTorch completes a full training run 1.65~times faster, in $313\pm102$ against $516\pm94$~s pooled over both splits (paired $p=0.002$, and per split $p=0.028$ on \texttt{random} and $p=0.047$ on \texttt{extrap:alpha\_max}, Table~\ref{tab:backend}). The difference has two roughly equal sources: JAX needs 30\,\% more time per epoch, 0.745 against 0.575~s (paired $p=0.005$, $n=10$), and 29\,\% more epochs before early stopping, 695 against 538 (paired $p=0.021$). These epoch counts include three runs that stopped at the 800-epoch cap, two with JAX and one with PyTorch. % src: tables/all_tables.tex tab:backend (wall time: random p = 0.028, extrap:alpha_max p = 0.047, pooled p = 0.002; s/epoch pooled p = 0.005; epochs pooled p = 0.021) % EDIT: p = 0.0009 (unpaired) → paired 0.005; per-split T4 rows cited instead of the pool alone % EDIT: first sentence reworded so that it does not repeat "accuracy" from the end of the preceding sentence
-The ranking holds for CPU execution in double precision and must not be transferred elsewhere: on a GPU in single precision the just-in-time compilation of JAX is amortised over long uniform runs, whereas here early stopping cuts the runs short.
+Since accuracy does not separate the two implementations, the choice rests on cost, and of the cost only the time per epoch is compared, because it does not depend on the weight of the physics term. An epoch takes 0.745~s in JAX against 0.575~s in PyTorch, that is, 30\,\% longer (paired $p=0.005$, $n=10$, and per split $p=0.018$ on \texttt{random} and $p=0.144$ on \texttt{extrap:alpha\_max}, Table~\ref{tab:backend}). The number of epochs before early stopping, 695 against 538 (paired $p=0.021$, including three runs that stopped at the 800-epoch cap, two with JAX and one with PyTorch), and with it the total training time are not compared, since they depend on the loss. In the split matrix, for instance, the PINN, whose loss differs from that of the MLP only by the physics and boundary terms, stops after 596 epochs on average against 418 for the MLP. The timings also depend on the load of the machine, on which four runs were executed at once. The PyTorch runs of this comparison reproduce the corresponding runs of the split matrix to the last recorded digit of the error and of the epoch count, yet took between 0.86 and 1.56 times as long. % src: tables/all_tables.tex tab:backend (wall time: random p = 0.028, extrap:alpha_max p = 0.047, pooled p = 0.002; s/epoch pooled p = 0.005; epochs pooled p = 0.021) % EDIT: p = 0.0009 (unpaired) → paired 0.005; per-split T4 rows cited instead of the pool alone % EDIT: first sentence reworded so that it does not repeat "accuracy" from the end of the preceding sentence
+The difference of 30\,\% per epoch is therefore a property of the two implementations on CPU in double precision under this load, not a ranking of the differentiation engines, and it is not transferred to other hardware or precision.
 
 % >>> inlined sections/tab_backend.tex
 % T4 generated by publication/experiments/paper_tables.py from runs_v2.csv
@@ -194,25 +195,25 @@ The ranking holds for CPU execution in double precision and must not be transfer
 %      mean/sd(ddof=1) over seeds; scipy.stats.ttest_rel paired by seed (per split) and by (split, seed) (pooled)
 \begin{table*}[t]
 \centering
-\caption[The strong-form PINN in PyTorch and in JAX]{The same strong-form PINN implemented twice, in PyTorch and in JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa) and cost. Mean $\pm$ sd over seeds. The $p$-values are from a seed-paired $t$-test. Timings are for CPU, double precision.}
+\caption[The strong-form PINN in PyTorch and in JAX]{The strong-form PINN in two implementations, PyTorch and JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa), effective weight of the physics term and cost. The JAX implementation applies $\lambda_{\mathrm{phys}}=0.3$ without the calibration $g$ of Eq.~\eqref{eq:calib}, so its epoch counts are not comparable with those of PyTorch and only the time per epoch is compared. Mean $\pm$ sd over seeds. The $p$-values are from a seed-paired $t$-test. Timings are for CPU, double precision, four runs at a time.}
 \label{tab:backend}
 \small
 \begin{tabular}{@{}llrrrr@{}}
 \toprule
-Split & Backend & macro-RMSE, MPa & Wall time, s & Epochs & s/epoch \\
+Split & Backend & macro-RMSE, MPa & $\lambda_{\mathrm{phys}}g$ & Epochs & s/epoch \\
 \midrule
-\texttt{random} & PyTorch & 7.98 $\pm$ 0.21 & 311 $\pm$ 118 & 548 $\pm$ 128 & 0.554 $\pm$ 0.100 \\
- & JAX & 8.12 $\pm$ 0.18 & 557 $\pm$ 76 & 694 $\pm$ 86 & 0.803 $\pm$ 0.044 \\
- & paired $p$ (JAX vs PyTorch) & $p = 0.269$ & $p = 0.028$ & $p = 0.110$ & $p = 0.018$ \\
+\texttt{random} & PyTorch & 7.98 $\pm$ 0.21 & 0.050 $\pm$ 0.010 & 548 $\pm$ 128 & 0.554 $\pm$ 0.100 \\
+ & JAX & 8.12 $\pm$ 0.18 & 0.3 (no $g$) & 694 $\pm$ 86 & 0.803 $\pm$ 0.044 \\
+ & paired $p$ (JAX vs PyTorch) & $p = 0.269$ & --- & $p = 0.110$ & $p = 0.018$ \\
 \addlinespace
-\texttt{extrap:alpha\_max} & PyTorch & 13.05 $\pm$ 0.49 & 316 $\pm$ 97 & 528 $\pm$ 154 & 0.596 $\pm$ 0.049 \\
- & JAX & 13.49 $\pm$ 0.30 & 476 $\pm$ 100 & 696 $\pm$ 97 & 0.688 $\pm$ 0.131 \\
- & paired $p$ (JAX vs PyTorch) & $p = 0.169$ & $p = 0.047$ & $p = 0.155$ & $p = 0.144$ \\
+\texttt{extrap:alpha\_max} & PyTorch & 13.05 $\pm$ 0.49 & 0.050 $\pm$ 0.009 & 528 $\pm$ 154 & 0.596 $\pm$ 0.049 \\
+ & JAX & 13.49 $\pm$ 0.30 & 0.3 (no $g$) & 696 $\pm$ 97 & 0.688 $\pm$ 0.131 \\
+ & paired $p$ (JAX vs PyTorch) & $p = 0.169$ & --- & $p = 0.155$ & $p = 0.144$ \\
 \midrule
-both splits & PyTorch & --- & 313 $\pm$ 102 & 538 $\pm$ 134 & 0.575 $\pm$ 0.078 \\
- & JAX & --- & 516 $\pm$ 94 & 695 $\pm$ 86 & 0.745 $\pm$ 0.110 \\
- & ratio JAX/PyTorch & --- & $\times$1.65 & $\times$1.29 & $\times$1.30 \\
- & paired $p$ ($n = 10$) & --- & $p = 0.002$ & $p = 0.021$ & $p = 0.005$ \\
+both splits & PyTorch & --- & 0.050 $\pm$ 0.009 & 538 $\pm$ 134 & 0.575 $\pm$ 0.078 \\
+ & JAX & --- & 0.3 (no $g$) & 695 $\pm$ 86 & 0.745 $\pm$ 0.110 \\
+ & ratio JAX/PyTorch & --- & $\times$6.0 & $\times$1.29 & $\times$1.30 \\
+ & paired $p$ ($n = 10$) & --- & --- & $p = 0.021$ & $p = 0.005$ \\
 \bottomrule
 \end{tabular}
 \end{table*}

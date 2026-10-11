@@ -304,9 +304,13 @@ split, the epoch limit and early-stopping rule, and the nominal hyperparameters,
 but draws initial weights and batch order from its own random stream.
 % src: jax_twin.py module docstring; JaxTrainer.fit (optax.chain(clip_by_global_norm, adamw); batch order default_rng(seed + 10000); same val_frac split rule)
 The twin implements the strong-form loss with the nominal weight
-$\lambda_{\mathrm{phys}}$ applied directly: the gradient-norm calibration of
-\eqref{eq:calib} is not implemented in it, so the effective physics weight of the
-two implementations differs.
+$\lambda_{\mathrm{phys}}=0.3$ applied directly, since the gradient-norm calibration of
+\eqref{eq:calib} is not implemented in it. With $g$ between 0.13 and 0.22 in the
+PyTorch runs of this comparison, the physics term enters the PyTorch loss with the
+effective weight $\lambda_{\mathrm{phys}}g\approx0.05$, about one sixth of the weight used in JAX.
+The time per epoch does not depend on this weight, but the number of epochs to early
+stopping, and with it the total training time, depends on the loss, so only the time
+per epoch is compared between the two implementations.
 % FIXED: the draft claimed the twin "shares ... protocol ... hyperparameters" without qualification. jax_twin.py JaxTrainer.fit has no _calibrate / phys_gain (loss = data + lam_bc·bc + lam_p·log1p(...) with lam_p = cfg.lambda_physics = 0.3); runs_v2.csv logs phys_gain = 1.0 for all 10 backend/jax rows against 0.132–0.215 for the 10 backend/torch rows. Effective weight: 0.3 (JAX) vs 0.3 × 0.165 ≈ 0.05 (PyTorch).
 % TODO: either port _calibrate to jax_twin.py and rerun the 10 JAX runs, or state this difference explicitly in §3.2(2) — it is a confound of the "implementation" comparison.
 With identical weights copied into both networks, $\partial\hat\sigma_{rr}/\partial r$
@@ -317,7 +321,9 @@ differentiation.
 % src: PLAYBOOK.md §7.0.2 (forward 1.0e-15; gradient 8.7e-15, relative 9.8e-16); ERRATA.md E-19 (8.7e-15, 9.8e-16); jax_twin.py check_gradient_agreement (n_points=64, X ~ N(0,1), gradient w.r.t. column 5 = r)
 Each backend is then trained with five seeds on \texttt{random} and
 \texttt{extrap:alpha\_max} and compared by the paired test below, with wall-clock
-training time measured on CPU in double precision.
+training time measured on CPU in double precision. The runs were executed four at a
+time on one machine, the default of the launcher, with PyTorch restricted to one thread
+per run.
 % FIXED: "one CPU thread" → "CPU". run_matrix.py torch.set_num_threads(1) constrains PyTorch only; jax_twin.py sets no XLA thread flags.
 % TODO: establish the thread count actually used by the JAX runs before writing "one thread"; RESULTS_v1_vs_v2.md §7 states only "CPU, float64" (313 ± 102 s vs 516 ± 94 s, ×1.65 — consistent with runs_v2.csv seconds, stage backend).
 % src: runs_v2.csv (stage backend: backend ∈ {torch, jax}, seeds 0–4, splits random and extrap:alpha_max, 20 rows)

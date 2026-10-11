@@ -430,13 +430,20 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
 # ─────────────────────────────── T4 ──────────────────────────────────────
 
 BACKEND_LABEL = {"torch": "PyTorch", "jax": "JAX"}
-COST_COLS = [("macro_rmse", "macro-RMSE, MPa", 2), ("seconds", "wall time, s", 0),
+# The JAX twin has no gradient-norm calibration g (phys_gain = 1.0), so its physics term
+# carries lambda_phys instead of lambda_phys * g. The table reports that effective weight in
+# place of the total wall time, which depends on the loss through the number of epochs.
+COST_COLS = [("macro_rmse", "macro-RMSE, MPa", 2), ("w_phys", "effective physics weight", 3),
              ("epochs", "epochs", 0), ("sec_per_epoch", "s/epoch", 3)]
+JAX_NO_G = r"0.3 (no $g$)"
 
 
 def table_backend(df: pd.DataFrame, L: Ledger) -> str:
     d = df[df["stage"] == "backend"].copy()
     d["sec_per_epoch"] = d["seconds"] / d["epochs"]
+    d["w_phys"] = d["lambda_physics"] * d["phys_gain"]
+    if not (d.loc[d["backend"] == "jax", "phys_gain"] == 1.0).all():
+        raise ValueError("JAX backend runs are expected without calibration (phys_gain = 1)")
     fams = sorted(d["family"].unique())
     if fams != ["pinn"]:
         raise ValueError(f"backend stage expected family pinn only, got {fams}")
@@ -460,13 +467,16 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
                 src = f"{CSV_NAME}: stage=backend, split={sp}, backend={be} -> {cname} over {len(s)} seeds"
                 L.add(f"{m:.{nd}f}", f"{name} mean, {BACKEND_LABEL[be]}, {sp}", src + ", mean")
                 L.add(f"{sd:.{nd}f}", f"{name} sd, {BACKEND_LABEL[be]}, {sp}", src + ", sd(ddof=1)")
-                cells.append(fmt_ms(m, sd, nd))
+                cells.append(JAX_NO_G if (col == "w_phys" and be == "jax") else fmt_ms(m, sd, nd))
             body.append(" & ".join([tt(sp) if be == backends[0] else "", BACKEND_LABEL[be]] + cells) + r" \\")
         pcells = []
         for col, name, nd in COST_COLS:
             dm, dsd, t, p, n = paired(per[("jax", col)], per[("torch", col)])
             cname = col if col != 'sec_per_epoch' else 'seconds/epochs'
             src = f"{CSV_NAME}: stage=backend, split={sp} -> per-seed {cname}[jax]-[torch], ttest_rel, n={n}"
+            if col == "w_phys":
+                pcells.append("---")
+                continue
             L.add(fmt_p(p), f"paired p, JAX vs PyTorch, {name}, {sp}", src)
             pcells.append(f"$p = {fmt_p(p)}$")
         body.append(" & ".join(["", r"paired $p$ (JAX vs PyTorch)"] + pcells) + r" \\")
@@ -488,7 +498,7 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
             src = f"{CSV_NAME}: stage=backend, backend={be}, both splits ({len(s)} runs) -> {cname}"
             L.add(f"{m:.{nd}f}", f"{name} mean, {BACKEND_LABEL[be]}, pooled", src + ", mean")
             L.add(f"{sd:.{nd}f}", f"{name} sd, {BACKEND_LABEL[be]}, pooled", src + ", sd(ddof=1)")
-            cells.append(fmt_ms(m, sd, nd))
+            cells.append(JAX_NO_G if (col == "w_phys" and be == "jax") else fmt_ms(m, sd, nd))
         body.append(" & ".join([r"both splits" if be == backends[0] else "", BACKEND_LABEL[be]] + cells) + r" \\")
     rcells, pcells = ["---"], ["---"]
     n_pool = None
@@ -503,6 +513,10 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
         src = f"{CSV_NAME}: stage=backend, both splits -> {cname}: mean[jax]/mean[torch]; ttest_rel paired on (split, seed), n={n_pool}"
         L.add(f"{ratio:.2f}", f"ratio JAX/PyTorch, mean {name}, pooled", src)
         L.add(fmt_p(float(res.pvalue)), f"paired p, JAX vs PyTorch, {name}, pooled", src)
+        if col == "w_phys":
+            rcells.append(f"$\\times${ratio:.1f}")
+            pcells.append("---")
+            continue
         rcells.append(f"$\\times${ratio:.2f}")
         pcells.append(f"$p = {fmt_p(float(res.pvalue))}$")
     body.append(" & ".join(["", "ratio JAX/PyTorch"] + rcells) + r" \\")
@@ -510,10 +524,13 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
     L.add(n_seeds, "seeds per backend per split", f"{CSV_NAME}: stage=backend -> count(seed) per split, backend")
     L.add(n_pool, "runs per backend, both splits", f"{CSV_NAME}: stage=backend -> count per backend")
 
-    cap = (r"The same strong-form PINN implemented twice, in PyTorch and in JAX, on the "
+    cap = (r"The strong-form PINN in two implementations, PyTorch and JAX, on the "
            r"\texttt{random} and \texttt{extrap:alpha\_max} splits, " + str(n_seeds) +
-           r" seeds each: accuracy (macro-RMSE, MPa) and cost. Mean $\pm$ sd over seeds; "
-           r"$p$ from a seed-paired $t$-test. Timings are for CPU, double precision.")
+           r" seeds each: accuracy (macro-RMSE, MPa), effective weight of the physics term and cost. "
+           r"The JAX implementation applies $\lambda_{\mathrm{phys}}=0.3$ without the calibration $g$ "
+           r"of Eq.~\eqref{eq:calib}, so its epoch counts are not comparable with those of PyTorch "
+           r"and only the time per epoch is compared. Mean $\pm$ sd over seeds. The $p$-values are "
+           r"from a seed-paired $t$-test. Timings are for CPU, double precision, four runs at a time.")
     head = (r"\begin{table*}[t]" "\n"
             r"\centering" "\n"
             r"\caption[The strong-form PINN in PyTorch and in JAX]{" + cap + "}\n"
@@ -521,13 +538,13 @@ def table_backend(df: pd.DataFrame, L: Ledger) -> str:
             r"\small" "\n"
             r"\begin{tabular}{@{}llrrrr@{}}" "\n"
             r"\toprule" "\n"
-            r"Split & Backend & macro-RMSE, MPa & Wall time, s & Epochs & s/epoch \\" "\n"
+            r"Split & Backend & macro-RMSE, MPa & $\lambda_{\mathrm{phys}}g$ & Epochs & s/epoch \\" "\n"
             r"\midrule")
     tail = (r"\bottomrule" "\n"
             r"\end{tabular}" "\n"
             r"\end{table*}")
     src_note = (f"% T4 generated by publication/experiments/paper_tables.py from {CSV_NAME}\n"
-                f"% src: {CSV_NAME}: stage==backend (family pinn); macro_rmse, seconds, epochs, seconds/epochs;\n"
+                f"% src: {CSV_NAME}: stage==backend (family pinn); macro_rmse, lambda_physics*phys_gain, epochs, seconds/epochs;\n"
                 f"%      mean/sd(ddof=1) over seeds; scipy.stats.ttest_rel paired by seed (per split) and by (split, seed) (pooled)\n")
     return src_note + "\n".join([head] + body + [tail])
 
