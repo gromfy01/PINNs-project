@@ -317,7 +317,7 @@ The modelling approach follows established practice in the numerical analysis of
 \paragraph{Exported fields and their limits}
 Each report holds one frame of nodal values, the last one of the run: the coordinates $(r,z)$ and the stress components S11, S22, S33, S12, which in the CAX convention are $\sigma_{rr}$, $\sigma_{zz}$, $\sigma_{\theta\theta}$, $\tau_{rz}$. The export can be extended with further fields as the parameters under study require. The dedicated runs of Section~\ref{sec:res_fem_verification}, for instance, also carry the equivalent plastic strain PEEQ and the temperature, written as histories in time. % src: audit/RAW_AUDIT.md §1; QA_DATA_AND_Z.md §5 (one frame per file)
 % FIXED: "final, unloaded frame" → for the completed runs the frame is unloaded (VALIDATION.md §1: median |∫σzz dA|/A = 5.3 MPa on the 1756 cases); for the 158 unfinished runs the drawn part still carries F/A ≈ 232–237 MPa (VALIDATION.md §1). Those runs are removed below.
-The targets are read directly from these columns (present in 2443 of 2443 files), and the identity of every stored field is verified against all quantities of the report, not only the four expected ones. % src: QA_DATA_AND_Z.md §2; MANUSCRIPT.md §2; code/verify_pkl.py
+The targets are read directly from these columns, which are present in all 2443 exported reports, the raw set from which the 1756 cases of Section~\ref{sec:materials} are obtained by the filtering described below, and the identity of every stored field is verified against all quantities of the report, not only the four expected ones. % src: QA_DATA_AND_Z.md §2; MANUSCRIPT.md §2; code/verify_pkl.py
 The dataset was regenerated from the raw Abaqus reports, where the four components $(\sigma_{rr}, \sigma_{\theta\theta}, \sigma_{zz}, \tau_{rz})$ are read from the columns S.S11, S.S33, S.S22 and S.S12 respectively. % src: MANUSCRIPT.md §2 (Data availability); code/raw_probe.py (S.S11 = σ_rr, S.S22 = σ_zz, S.S33 = σ_θθ, S.S12 = τ_rz); code/dataset.py docstring % EDIT: data statement added
 Nodal averaging leaves a residual at the free surface: on the final dataset the mean $|\sigma_{rr}|$ at $r=R$ is 3.52~MPa and $|\tau_{rz}|$ 0.24~MPa. % src: RESULTS.md header (1756 cases)
 This is the accuracy with which the source itself satisfies the traction-free condition and is the baseline for every boundary-condition metric in Section~\ref{sec:res_fem}. % EDIT: \ref{sec:results-physics} → \ref{sec:res_fem} (label defined in sec32)
@@ -526,7 +526,7 @@ equilibrium equations
 \end{align}
 % src: trainer2d.py docstring; dataset2d.py docstring; ERRATA.md E-02
 can only be imposed with the axial terms dropped. Whether that is admissible was
-measured on the raw FEM fields (2443 cases, $20\times20$ $(z,r)$ grid, median per
+measured on the raw FEM fields (all 2443 exported cases before filtering, $20\times20$ $(z,r)$ grid, median per
 case): in \eqref{eq:eq_full_r} the dropped $|\partial\tau_{rz}/\partial z|$ is
 1.3\,\% of the retained terms (75th percentile 3.9\,\%). In \eqref{eq:eq_full_z}
 the dropped $|\partial\sigma_{zz}/\partial z|$ is 68\,\% (75th percentile 86\,\%).
