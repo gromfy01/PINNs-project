@@ -291,9 +291,9 @@ from the held-out slice is not comparable between regions.
 % src: trainer.py metrics() docstring (local vs global; macro_rmse = mean of component RMSE); make_results.py add_global_metrics; RESULTS.md §1.0б, §1.3б
 Physical admissibility is audited on the predictions with the operators of the
 loss (median $|R_1|$ over the profile by finite differences, and $|\hat\sigma_{rr}|$,
-$|\hat\tau_{rz}|$ at $r=1$), always beside the same quantity computed on the FEM
+$|\hat\tau_{rz}|$ at $r=1$), beside the same quantity computed on the FEM
 data of the same test cases, since the source itself satisfies the traction-free
-condition only approximately.
+condition only approximately. The one exception is the seed-replicated runs of the extended track, for which the source was evaluated only in an earlier single-seed training (Section~\ref{sec:res_fem}).
 % src: trainer.py equilibrium_audit (np.gradient, median |res| over interior points, then median over cases; r_clip 0.05), bc_audit; run_matrix.py (bc_audit at predict_at(r=1.0)); RESULTS.md §1.4 (FEM baseline rows: |σ_rr| 3.52, |τ_rz| 0.24 MPa overall)
 
 \paragraph{Backends}
