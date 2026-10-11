@@ -37,7 +37,13 @@ mean. The drawing stress is then
 \label{eq:sigma-d}
 \end{equation}
 where $F$ is the time-averaged axial reaction and $S$ the cross-section of the drawn wire, with
-the outlet radius $R_f$ taken as reached in the model rather than from the nominal reduction.
+the outlet radius $R_f$ taken as reached in the model rather than from the nominal reduction. It is
+the smallest radial coordinate of the surface node over the pass, and the reduction in diameter
+$1-R_f/R_0$ obtained with it is 10.2--11.5\,\% in the runs at the nominal 10\,\% and 15.1--15.5\,\%
+in those at 15\,\%. The same radius enters all analytical relations below.
+% src: recalc_2026-09-28.json (Q_real = 1 - Rf/R0: 0.1019-0.1040 at 8 deg, 0.1059-0.1091 at 12 deg,
+% 0.1105-0.1148 at 16 deg at Q = 10 %, 0.1512-0.1549 at Q = 15 %); drawing_force.py (Rf = minimum over the
+% history of the radial coordinate of the surface node)
 For a typical run, at a reduction of 10\,\% in
 diameter, a die semi-angle of $12^\circ$, a calibration ratio of 0.5, a drawing speed of 10~m/min and
 $\mu = 0.05$, the drawing stress is 121.7~MPa. This run appears in Table~\ref{tab:drawstress}
@@ -182,7 +188,13 @@ flow stress and the flow stress on the temperature, this is a fixed point, reach
 seven iterations. For the
 112 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
 314--331~MPa used in Table~\ref{tab:drawstress}, at $\Delta = 1.7$--4.7,
-$\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$. The closed
+$\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$, all obtained with the exit
+radius reached in the model. With the nominal exit radius $R_0(1-Q/100)$ instead, $\Delta$ would be
+1.7--5.2 and $\varepsilon_{\mathrm{eff}}$ 0.30--0.42, while the flow stress would stay within
+313--336~MPa.
+% src: Eq. delta and analytic_sigma_f.solve over the 112 runs with Q_real and with the nominal Q: Delta
+% 1.66-4.71 / 1.72-5.24, eps_eff 0.299-0.446 / 0.295-0.419, sigma_f 313.2-336.0 / 313.3-336.0 MPa
+The closed
 estimate is quoted with its own value throughout, and no column of Table~\ref{tab:drawstress}
 uses it.
 % src: publication/reexport/analytic_sigma_f.py via verification_recalc.py (Q_real, alpha, mu,
@@ -363,9 +375,16 @@ coefficient in all 88 runs with a bearing zone.
 % all 88 runs with k > 0; steady RF2/RF1 against the cone-only value, verify_land / critic).
 
 The region of the design covered by these runs limits what the comparison establishes. The
-inhomogeneity parameter lies within the range of 1 to 3, in which these solutions are normally
-applied and against which they have been validated, only at $8^\circ$ (1.7--2.6), and is 3.6--4.7
-at $12^\circ$ and $16^\circ$. The ideal work accounts for 45 to 68\,\% of the predicted drawing
+inhomogeneity parameter of Eq.~\eqref{eq:delta}, evaluated like the relations themselves with the
+exit radius reached in the model, lies within the range of 1 to 3, in which these solutions are
+normally applied and against which they have been validated, only at $8^\circ$, where it is
+2.5--2.6 at the reduction of 10\,\% and 1.7 at 15\,\%. At 10\,\% it is 3.6--3.7 at $12^\circ$
+and 4.5--4.7 at $16^\circ$. With the nominal exit radius it would be 2.64, 3.95 and 5.24 at
+$8^\circ$, $12^\circ$ and $16^\circ$ and the reduction of 10\,\%, and 1.72 at $8^\circ$ and 15\,\%,
+which leaves the same runs inside and outside that range.
+% src: recalc_2026-09-28.json, Delta with the reached Rf: 2.54-2.59 (8 deg), 3.60-3.72 (12 deg), 4.53-4.71
+% (16 deg) at Q = 10 %, 1.66-1.70 at 8 deg and Q = 15 %, Delta > 3 in 70 runs either way; with Rf = R0 (1 - Q):
+% 2.644 / 3.950 / 5.237 / 1.717; code/analytical.py delta_param (exact form) equals Eq. delta. The ideal work accounts for 45 to 68\,\% of the predicted drawing
 stress. The deviations of Table~\ref{tab:drawstress} therefore characterise the closed-form
 solutions within and somewhat beyond the range where they are expected to hold. They lie 11 to
 16\,\% above the numerical solution on average, with the upper bound above the slab estimate.
