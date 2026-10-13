@@ -37,7 +37,7 @@ verification_recalc.py подаёт Q_real = 1 - Rf/R0, как и во все о
 ПРОВЕРКА. Оценка разогрева сверена с измеренной по выгрузке: аналитические 13-17 К против
 измеренных по сечению 15-20 К в выгрузке из четырёх расчётов.
 
-    python publication/reexport/analytic_sigma_f.py --Q 0.0164 --alpha 12 --mu 0.1 --v 40
+    python verification/analytic_sigma_f.py --Q 0.0164 --alpha 12 --mu 0.1 --v 40
 """
 from __future__ import annotations
 

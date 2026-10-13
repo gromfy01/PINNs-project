@@ -1,7 +1,13 @@
 """
-make_report.py — audit_raw.npz → publication/audit/RAW_AUDIT.md.
+make_report.py — audit_raw.npz → RAW_AUDIT.md (отчёт аудита сырых данных).
 
-Все числа в ERRATA и в playbook берутся отсюда и только отсюда.
+Читает выход audit/run_raw_audit.py и записывает в Markdown измеренные по сырым
+.rpt числа: число наборов, статистику осевого окна, порядок компонент, уровни
+факторов и покрытие сетки, опечатку в метке μ, дубликаты по μ, долю отброшенных
+членов уравнений равновесия и нарушение условия свободной поверхности в самих
+данных МКЭ. По умолчанию отчёт пишется рядом со скриптом.
+
+    python audit/make_report.py --npz audit_raw.npz [--out RAW_AUDIT.md]
 """
 from __future__ import annotations
 

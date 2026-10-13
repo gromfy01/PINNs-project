@@ -1,9 +1,12 @@
 """
 run_raw_audit.py — один проход по всем сырым .rpt, который отвечает на
-вопросы, вынесенные в ERRATA. Результат: audit_raw.npz + печатный отчёт.
+вопросы о препроцессинге: осевое окно, порядок компонент, уровни факторов и
+дубликаты по μ, отброшенные члены уравнений равновесия.
+Результат: audit_raw.npz + печатный отчёт; Markdown-отчёт по нему строит
+audit/make_report.py.
 
 Запуск:
-    python publication/audit/run_raw_audit.py --root <dir с Vel_*> --out <npz>
+    python audit/run_raw_audit.py --root <dir с Vel_*> --out <npz>
 """
 from __future__ import annotations
 
@@ -68,7 +71,7 @@ def dropped_term_stats(arr, window="repo"):
     Полная форма:
         R_r = ∂σ_rr/∂r + ∂τ_rz/∂z + (σ_rr − σ_θθ)/r
         R_z = ∂τ_rz/∂r + ∂σ_zz/∂z + τ_rz/r
-    Реализовано в коде (редуцированная форма) — без ∂/∂z.
+    Редуцированная форма — те же уравнения без производных по z.
 
     Возвращает медианы |каждого члена| по узлам окна, МПа/м.
     """

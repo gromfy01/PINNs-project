@@ -33,7 +33,7 @@ flow_stress.py — представительный предел текучес�
 температуры: нагрев на 75 K даёт theta = 0.055, но theta^m = 0.095, то есть
 разупрочнение 9.5 %, а не 5 %. Пренебрегать этим членом нельзя.
 
-    python publication/reexport/flow_stress.py publication/reexport/history/*.rpt.gz
+    python verification/flow_stress.py <X-Y отчёты Abaqus>.rpt[.gz]
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ import numpy as np
 from read_history import parse, job_params
 
 A_JC, B_JC, N_JC = 2.13e8, 5.3e7, 0.345
-M_JC, T_MELT, T_TRANS = 0.81, 1386.0, 20.0   # градусы Цельсия, уточнено 13.09.2026
+M_JC, T_MELT, T_TRANS = 0.81, 1386.0, 20.0   # градусы Цельсия
 C_JC, EDOT0 = 0.055, 0.004
 
 

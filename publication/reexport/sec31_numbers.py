@@ -4,10 +4,11 @@ sec31_numbers.py — все числа раздела 3.1 по таблице п
 
 Читает results/recalc_2026-09-28.json (по прогону на строку) и, для величин по
 историям узлов (деформация, скорость деформации, температура, разброс предела
-текучести по сечению), сами отчёты выгрузки. Печатает каждую величину, которую
+текучести по сечению, член скорости Джонсона-Кука), сами отчёты выгрузки
+28.09.2026 из каталога DIR (*.rpt или *.rpt.gz). Печатает каждую величину, которую
 цитирует текст, с тем же округлением, — так текст сверяется с данными целиком.
 
-    python publication/reexport/sec31_numbers.py DIR [--json results/recalc_2026-09-28.json]
+    python verification/sec31_numbers.py DIR [--json verification/results/recalc_2026-09-28.json]
 """
 from __future__ import annotations
 
@@ -64,7 +65,8 @@ def main() -> None:
     P(f"  по историям, МПа: {rng([r['sigma_f'] for r in R], 0)}")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        fl = [representative(f) for f in sorted(glob.glob(os.path.join(a.dir, "*.rpt")))]
+        files = sorted(glob.glob(os.path.join(a.dir, "*.rpt")) + glob.glob(os.path.join(a.dir, "*.rpt.gz")))
+        fl = [representative(f) for f in files]
     P(f"  деформация на оси {rng([x['eps_axis'] for x in fl], 2)}, на поверхности (узел 151) {rng([x['eps_surface'] for x in fl], 2)},"
       f" максимум по сечению {rng([x['eps_max'] for x in fl], 2)}")
     P(f"  скорость деформации, 95-й процентиль по узлу, наибольший в прогоне, 1/с: {rng([x['edot_max'] for x in fl], 1)}")
