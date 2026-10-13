@@ -104,8 +104,8 @@ if not keep_star:
 # [!h] / [h!] make LaTeX warn "`!h' float specifier changed to `!ht'", and the two schematics
 # then fill a text page on their own ("Text page ... contains only floats"); [htbp] lets them
 # go to a float page instead
-st = '*' if keep_star else ''
-body = sub(body, '\\begin{table' + st + '}[!h]', '\\begin{table' + st + '}[htbp]', 1, 'float specifier [!h] -> [htbp]')
+body = sub(body, '\\begin{table}[!h]', '\\begin{table}[htbp]', 1, 'float specifier [!h] -> [htbp]')
+st = '*' if keep_star else ''  # the two schematics are figure* in the source
 body = sub(body, '\\begin{figure' + st + '}[h!]', '\\begin{figure' + st + '}[htbp]', 2, 'float specifier [h!] -> [htbp]')
 
 if not keep_small:
@@ -148,6 +148,16 @@ for lab, mode in wide.items():
         raise SystemExit('bad mode ' + mode)
     body = body.replace(whole, new)
     log.append(f'table {lab}: {mode}')
+
+# Table 14 (label-corruption results) stands after the Limitations paragraph in the source,
+# where asmejour flushes it with \clearpage before the Conclusions. Without that flush it
+# drifts into the Conclusions, so it is moved up to just before the Limitations paragraph.
+m = re.search(r'\\begin\{table\*?\}(?:(?!\\end\{table\*?\}).)*?\\label\{tab:corrupt\}.*?\\end\{table\*?\}\n', body, re.S)
+assert m and body.count('\\paragraph{Limitations}') == 1
+assert body.index('\\paragraph{Limitations}') < m.start()
+body = body[:m.start()] + body[m.end():]
+body = body.replace('\\paragraph{Limitations}', m.group(0) + '\n\\paragraph{Limitations}')
+log.append('table tab:corrupt moved before \\paragraph{Limitations}')
 
 # ---- appendices ------------------------------------------------------------
 appx = sub(appx, '\\appendix   %%% starting appendices',
