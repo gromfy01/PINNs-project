@@ -4,7 +4,7 @@
 
 Usage (from publication/manuscript/springer/):
     python3 convert.py [SRC] [OUT] [--refstyle sn-basic|sn-mathphys-num] [--keep-small]
-                       [--keep-clearpage] [--keep-comments] [--iicol] [--wide LABEL=MODE ...]
+                       [--keep-clearpage] [--keep-comments] [--flat] [--iicol] [--wide LABEL=MODE ...]
 
 Defaults: SRC = ../overleaf/original.tex, OUT = manuscript_sn.tex, the four wide tables
 rotated, three tables with a narrower column gap, the two-column float flush before the
@@ -27,6 +27,7 @@ if '--refstyle' in args:
 keep_small = '--keep-small' in args
 no_clearpage = '--keep-clearpage' not in args
 strip_comments = '--keep-comments' not in args
+flat = '--flat' in args  # submission package: figures and .bib next to the .tex, no subfolders
 iicol = '--iicol' in args
 keep_star = '--keep-star' in args
 # optional table-width fixes, applied by label: --wide LABEL=MODE (MODE: sideways | tabcolsep:<pt> | resize)
@@ -224,6 +225,12 @@ declarations = r'''
 
 doc = (preamble + body.rstrip() + '\n\n' + nomen + '\n' + declarations + appx +
        '\n\\bibliography{../overleaf/asmejour-sample}\n\n\\end{document}\n')
+if flat:
+    n = doc.count('{pictures/')
+    doc = doc.replace('{pictures/', '{')
+    doc = doc.replace('\\graphicspath{{../overleaf/}}% figures stay in overleaf/pictures (single source)\n', '')
+    doc = doc.replace('\\bibliography{../overleaf/asmejour-sample}', '\\bibliography{references}')
+    log.append(f'flat package: {n} figure paths without pictures/, bibliography references.bib')
 if strip_comments:
     doc = strip_tex_comments(doc)
     log.append('TeX comments stripped')

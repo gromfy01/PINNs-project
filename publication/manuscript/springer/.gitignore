@@ -6,3 +6,5 @@
 *.run.log
 *.bib.log
 manuscript_sn.pdf
+submission/
+submission.zip
