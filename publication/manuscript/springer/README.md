@@ -16,8 +16,9 @@ Springer Nature (`sn-jnl.cls`, версия 3, октябрь 2023): тело с
 - снят `\clearpage\clearpage` перед выводами (он нужен только двухколоночной ASME);
 - номенклатура — своим окружением (в sn-jnl её нет), приложения — `appendices`
   с нумерацией формул A1, B1…;
-- добавлен раздел Declarations с заглушками (Funding, Competing interests,
-  Data availability, Author contributions) — текст заполнить перед подачей;
+- добавлен раздел Declarations: Conflict of interest («The authors declare no competing
+  interests»), Data availability («available from the corresponding author on reasonable
+  request»). Funding не указывается: работа без стороннего финансирования;
 - все комментарии TeX вырезаются: в исходнике рабочие пометки, в файл для журнала
   они попасть не должны. `--keep-comments` оставляет их.
 

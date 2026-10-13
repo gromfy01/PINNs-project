@@ -210,16 +210,11 @@ preamble = r'''%% Springer Nature LaTeX template (sn-jnl.cls, template Version 3
 declarations = r'''
 \backmatter
 
-%% Springer requires these statements; placeholders only, text to be supplied by the authors.
 \section*{Declarations}
 
-\bmhead{Funding} \textit{[to be completed]}
+\bmhead{Conflict of interest} The authors declare no competing interests.
 
-\bmhead{Competing interests} \textit{[to be completed]}
-
-\bmhead{Data availability} \textit{[to be completed]}
-
-\bmhead{Author contributions} \textit{[to be completed]}
+\bmhead{Data availability} The data and code that support the findings of this study are available from the corresponding author on reasonable request.
 
 '''
 

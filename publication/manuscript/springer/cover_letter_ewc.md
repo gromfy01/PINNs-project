@@ -1,13 +1,12 @@
 # Cover letter — Engineering with Computers
 
-<!-- Draft 13.10.2026. Placeholders in angle brackets: <URL> of a clean public archive of the code and data
-(not the working repository, which holds internal notes), and the competing-interests statement. -->
+<!-- Draft 13.10.2026. Data availability as in the Declarations of the manuscript (on reasonable request); replace with an archive link if a public archive is made. -->
 
 Dear Professor Zhang,
 
 We submit the manuscript **"Physics-informed versus data-driven surrogates for residual stress after wire drawing: accuracy, physical admissibility and behaviour outside the training range"** for consideration as an original research article in *Engineering with Computers*.
 
-The manuscript addresses a question within the journal's scope of *data-driven and hybrid modeling methods*: what a physics term in the loss adds to a neural-network surrogate of finite-element results. A multilayer perceptron (MLP), a strong-form physics-informed network (PINN) and a weak-form variational PINN (VPINN) share one architecture, one optimiser and one training budget and differ only in the loss. The contribution is the evaluation protocol and what it shows, not the application of an established method to a new process. The protocol pairs each extrapolation split with a random control of the same size, compares the families over seeds (five in the one-dimensional track, three in the extended one) with seed-paired tests and a Holm correction, and audits the equilibrium residuals and the traction-free condition of the predicted fields with the same discrete operators that it applies to the finite-element source. Apart from the governing equations, none of these elements is specific to wire drawing. The finite-element simulations, 1756 axisymmetric runs of single-pass drawing of AISI 1020 steel, serve as the data source, with the drawing stress checked against the relations of Siebel and Avitzur on 112 dedicated runs. The code and the raw finite-element reports are available at <URL>.
+The manuscript addresses a question within the journal's scope of *data-driven and hybrid modeling methods*: what a physics term in the loss adds to a neural-network surrogate of finite-element results. A multilayer perceptron (MLP), a strong-form physics-informed network (PINN) and a weak-form variational PINN (VPINN) share one architecture, one optimiser and one training budget and differ only in the loss. The contribution is the evaluation protocol and what it shows, not the application of an established method to a new process. The protocol pairs each extrapolation split with a random control of the same size, compares the families over seeds (five in the one-dimensional track, three in the extended one) with seed-paired tests and a Holm correction, and audits the equilibrium residuals and the traction-free condition of the predicted fields with the same discrete operators that it applies to the finite-element source. Apart from the governing equations, none of these elements is specific to wire drawing. The finite-element simulations, 1756 axisymmetric runs of single-pass drawing of AISI 1020 steel, serve as the data source, with the drawing stress checked against the relations of Siebel and Avitzur on 112 dedicated runs. The code and the raw finite-element reports are available from the corresponding author on reasonable request.
 
 The main findings are as follows.
 
@@ -17,7 +16,7 @@ The main findings are as follows.
 
 The study follows two papers by the first author and co-workers in *The International Journal of Advanced Manufacturing Technology* (2024, 133:3461–3473, and 2025, 141:1847–1858), in which purely data-driven networks trained on finite-element results predicted the residual stresses after wire drawing. The present manuscript uses a new finite-element dataset, computed for a different material, takes the data-driven network as the baseline and examines what a physics term adds, together with the admissibility of the predicted fields and the behaviour outside the training range. The relation is stated in the Introduction.
 
-The manuscript has not been published and is not under consideration elsewhere. Both authors have approved the submission and declare no competing interests <to be confirmed>.
+The manuscript has not been published and is not under consideration elsewhere. Both authors have approved the submission and declare no competing interests.
 
 Yours sincerely,
 
