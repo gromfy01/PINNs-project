@@ -356,6 +356,27 @@ def table_paired(df: pd.DataFrame, L: Ledger) -> str:
 
 # ─────────────────────────────── T3 ──────────────────────────────────────
 
+def pct_list(rates: List[float]) -> str:
+    """Corruption fractions as '5\\,\\%', '5 and 10\\,\\%', '1, 5 and 10\\,\\%'."""
+    s = [f"{int(round(r * 100))}" for r in rates]
+    head = ", ".join(s[:-1])
+    return (head + " and " + s[-1] if head else s[-1]) + r"\,\%"
+
+
+def corrupt_holm_txt(sig_raw: Dict[str, List[float]], sig_holm: Dict[str, List[float]]) -> str:
+    """Caption sentence of tab:corrupt on what survives the Holm correction, from the p-values."""
+    def clause(f: str) -> str:
+        lab = FAMILY_LABEL[f] + r" $-$ MLP"
+        raw, holm = sig_raw[f], sig_holm[f]
+        if not raw:
+            return "no " + lab + " gap is significant before or after it"
+        if not holm:
+            return "the " + lab + " gap is no longer significant at any fraction"
+        only = "only " if len(holm) < len(raw) else ""
+        return "the " + lab + " gap remains significant " + only + "at " + pct_list(holm)
+    return " After the Holm correction " + clause("pinn") + ", and " + clause("vpinn") + "."
+
+
 def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
     d = df[df["stage"] == "corrupt"]
     splits = sorted(d["split"].unique())
@@ -390,6 +411,9 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
     body.append(r"\midrule")
     mlp = {r: by_seed(d, family="mlp", corrupt_rate=r) for r in rates}
     gap_points: List[Tuple[float, float]] = []
+    # rates at which each gap is significant before and after Holm, for the caption
+    sig_raw: Dict[str, List[float]] = {}
+    sig_holm: Dict[str, List[float]] = {}
     for f in ("pinn", "vpinn"):
         dcells, pcells, praw = [], [], []
         for r in rates:
@@ -412,6 +436,14 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
                   f"{CSV_NAME}: stage=corrupt -> holm_adjust over the {len(rates)} paired p of {FAMILY_LABEL[f]}-MLP")
         body.append(" & ".join([r"$p_{\mathrm{Holm}}$ (" + str(len(rates)) + " fractions)"]
                                + [fmt_p(pa) for pa in adj] + ["---"]) + r" \\")
+        sig_raw[f] = [r for r, p in zip(rates, praw) if p < ALPHA]
+        sig_holm[f] = [r for r, pa in zip(rates, adj) if pa < ALPHA]
+        src_sig = (f"{CSV_NAME}: stage=corrupt -> corrupt_rate with paired p < {ALPHA} "
+                   f"(raw / holm_adjust over the {len(rates)} p) of {FAMILY_LABEL[f]}-MLP")
+        L.add(",".join(f"{r:g}" for r in sig_raw[f]) or "none",
+              f"corruption rates with significant {FAMILY_LABEL[f]}-MLP gap, before Holm", src_sig)
+        L.add(",".join(f"{r:g}" for r in sig_holm[f]) or "none",
+              f"corruption rates with significant {FAMILY_LABEL[f]}-MLP gap, after Holm", src_sig)
 
     x = np.array([g[0] for g in gap_points])
     y = np.array([g[1] for g in gap_points])
@@ -442,7 +474,7 @@ def table_corrupt(df: pd.DataFrame, L: Ledger) -> str:
            r"the data-driven baseline with its two-sided paired $p$-value and the value "
            r"$p_{\mathrm{Holm}}$ adjusted by the Holm procedure over the four fractions of the same "
            r"comparison, the clean reference included, and the regression of the gap on the "
-           r"corrupted fraction, a single test that is not adjusted.")
+           r"corrupted fraction, a single test that is not adjusted." + corrupt_holm_txt(sig_raw, sig_holm))
     colspec = "@{}l" + "r" * len(rates) + "r@{}"
     head = (r"\begin{table*}[t]" "\n"
             r"\centering" "\n"

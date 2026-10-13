@@ -206,6 +206,9 @@ def _model_label(npz: str, d) -> str:
     if "family" in getattr(d, "files", []):
         return str(d["family"])
     base = os.path.basename(npz)
+    # "noncone" — прежняя метка «чистого» набора (без незавершённых расчётов) в
+    # именах файлов более ранних предсказаний полной формы; ключ оставлен, чтобы
+    # такие файлы подписывались по-прежнему
     for key, name in (("pinn2d_full", "PINN, полная форма"),
                       ("pinn2d_reduced", "PINN, редуц. форма"),
                       ("mlp2d", "MLP"),
@@ -543,7 +546,7 @@ def fig_model(npz: str, out: str, which: int = -1,
             tc = y_true_all[clean][..., c].ravel()
             qc = y_pred_all[clean][..., c].ravel()
             r2c = 1.0 - ((qc - tc) ** 2).sum() / ((tc - tc.mean()) ** 2).sum()
-            part += (f" (без конуса {np.sqrt(((qc - tc) ** 2).mean()):.1f} / "
+            part += (f" (чистые {np.sqrt(((qc - tc) ** 2).mean()):.1f} / "
                      f"{r2c:.2f})")
         summ.append(part)
 
@@ -624,8 +627,8 @@ def fig_model(npz: str, out: str, which: int = -1,
                  "масштаба указана в заголовке панели.\n")
     note += f"По всему тесту (n = {len(y_true_all)}):  " + ";  ".join(summ) + "."
     if clean is not None and not clean.all():
-        note += (f"\n«Без конуса» — {int(clean.sum())} наборов после снятия "
-                 f"{int((~clean).sum())} с конусом волоки в окне.")
+        note += (f"\n«Чистые» — {int(clean.sum())} наборов после снятия "
+                 f"{int((~clean).sum())} незавершённых расчётов.")
     fig.text(0.5, -0.015, note, ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)

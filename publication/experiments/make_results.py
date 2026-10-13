@@ -175,20 +175,27 @@ def section_main(df, L, dataset_path: str = ""):
       "сплитами несравним и на τ_rz даёт заведомо вводящие в заблуждение "
       "значения — см. §1.3б.\n")
     zero = constant_predictor(dataset_path, splits) if dataset_path else {}
-    rows = []
-    for sp in splits:
-        sub = d[d["split"] == sp]
-        r = {"сплит": f"`{sp}`",
-             "предсказание средним": f"{zero.get(sp, float('nan')):.1f}" if zero else "—"}
-        for f in fams:
-            v = sub[sub["family"] == f]
-            r[LABEL[f]] = "—" if v.empty else (
-                f"{v['macro_rmse'].mean():.2f} · R²={v['macro_r2_g'].mean():+.2f} · "
-                f"R²норм={v['r2_normal_g'].mean():+.2f}")
-        rows.append(r)
-    h2 = ["сплит", "предсказание средним"] + [LABEL[f] for f in fams]
-    L("macro-RMSE, МПа · R² (единый знаменатель) · R² только по нормальным компонентам\n")
-    L(md_table(rows, h2, h2) + "\n")
+    # R² с единым знаменателем считает add_global_metrics, и только при --dataset
+    has_g = "macro_r2_g" in d.columns and "r2_normal_g" in d.columns
+    if not has_g:
+        L("> Таблица пропущена: для единого знаменателя R² и нулевой модели нужен "
+          "датасет (`--dataset`). Ниже в этом разделе R²норм и нулевая модель "
+          "печатаются как «—».\n")
+    else:
+        rows = []
+        for sp in splits:
+            sub = d[d["split"] == sp]
+            r = {"сплит": f"`{sp}`",
+                 "предсказание средним": f"{zero.get(sp, float('nan')):.1f}" if zero else "—"}
+            for f in fams:
+                v = sub[sub["family"] == f]
+                r[LABEL[f]] = "—" if v.empty else (
+                    f"{v['macro_rmse'].mean():.2f} · R²={v['macro_r2_g'].mean():+.2f} · "
+                    f"R²норм={v['r2_normal_g'].mean():+.2f}")
+            rows.append(r)
+        h2 = ["сплит", "предсказание средним"] + [LABEL[f] for f in fams]
+        L("macro-RMSE, МПа · R² (единый знаменатель) · R² только по нормальным компонентам\n")
+        L(md_table(rows, h2, h2) + "\n")
 
     # По осям, а не в среднем: средняя цена экстраполяции — величина без смысла,
     # потому что по разным осям она различается на порядок.
@@ -205,7 +212,7 @@ def section_main(df, L, dataset_path: str = ""):
                 "RMSE вне": f"{ve['macro_rmse'].mean():.1f}",
                 "RMSE контроль": f"{vm['macro_rmse'].mean():.1f}",
                 "во сколько раз": f"×{ve['macro_rmse'].mean()/vm['macro_rmse'].mean():.2f}",
-                "R²норм вне": f"{ve['r2_normal_g'].mean():+.2f}",
+                "R²норм вне": f"{ve['r2_normal_g'].mean():+.2f}" if has_g else "—",
                 "нулевая модель": f"{zero.get(e, float('nan')):.0f}" if zero else "—",
             })
         if rows:
@@ -219,21 +226,38 @@ def section_main(df, L, dataset_path: str = ""):
               "выросла». Усреднять по осям бессмысленно: разброс между ними больше, "
               "чем разница между семействами моделей.\n")
 
-    interior = [sp for sp in splits if sp.startswith("interp:")]
-    if interior and "extrap:alpha_max" in splits and "random" in splits:
-        def mm(ss, col):
-            return d[d["split"].isin(ss)][col].mean()
-        L(f"> **Внутренний уровень против выхода за диапазон (ось α, объёмы почти "
-          f"равны).** Изъятие внутреннего уровня α = 12° даёт "
-          f"{mm(interior,'macro_rmse'):.1f} МПа при R²норм = "
-          f"{mm(interior,'r2_normal_g'):+.2f}; изъятие крайнего α = 20° — "
-          f"{mm(['extrap:alpha_max'],'macro_rmse'):.1f} МПа при R²норм = "
-          f"{mm(['extrap:alpha_max'],'r2_normal_g'):+.2f}, при том что случайный "
-          f"hold-out даёт {mm(['random'],'macro_rmse'):.1f} и "
-          f"{mm(['random'],'r2_normal_g'):+.2f}. То есть по этой оси платится за "
-          f"саму дыру в сетке фактора, а направление выхода почти ничего не "
-          f"добавляет — сетка из пяти уровней слишком редкая, чтобы модель могла "
-          f"продолжить зависимость.\n")
+    # Внутренний уровень против крайнего — по каждой оси отдельно: interp:alpha_mid
+    # сравнивается с extrap:alpha_max, interp:Q_mid — с extrap:Q_high (среднее по
+    # семействам и сидам одного сплита, без смешивания двух внутренних сплитов).
+    def mm(sp, col):
+        return d[d["split"] == sp][col].mean()
+
+    def r2n(sp):
+        return f" при R²норм = {mm(sp, 'r2_normal_g'):+.2f}" if has_g else ""
+
+    def n_test(sp):
+        return int(d[d["split"] == sp]["n_test"].iloc[0])
+
+    for axis, inner, inner_lvl, outer, outer_lvl in (
+            ("α", "interp:alpha_mid", "α = 12°", "extrap:alpha_max", "α = 20°"),
+            ("Q", "interp:Q_mid", "Q = 10 %", "extrap:Q_high", "Q = 20 %")):
+        if not {inner, outer, "random"} <= set(splits):
+            continue
+        e_in, e_out, e_rnd = mm(inner, "macro_rmse"), mm(outer, "macro_rmse"), mm("random", "macro_rmse")
+        hole, beyond = e_in - e_rnd, e_out - e_in
+        if beyond > hole:
+            concl = (f"Пропуск внутреннего уровня стоит {hole:+.1f} МПа к случайному "
+                     f"hold-out, выход за диапазон добавляет к нему ещё {beyond:+.1f} МПа: "
+                     f"по этой оси большая часть цены приходится на выход за диапазон.")
+        else:
+            concl = (f"Пропуск внутреннего уровня стоит {hole:+.1f} МПа к случайному "
+                     f"hold-out, выход за диапазон добавляет к нему лишь {beyond:+.1f} МПа: "
+                     f"по этой оси большая часть цены приходится на саму дыру в сетке фактора.")
+        L(f"> **Внутренний уровень против выхода за диапазон (ось {axis}, n_test = "
+          f"{n_test(inner)} и {n_test(outer)}).** Изъятие внутреннего уровня {inner_lvl} "
+          f"(`{inner}`) даёт {e_in:.1f} МПа{r2n(inner)}; изъятие крайнего {outer_lvl} "
+          f"(`{outer}`) — {e_out:.1f} МПа{r2n(outer)}; случайный hold-out — "
+          f"{e_rnd:.1f} МПа{r2n('random')}. {concl}\n")
     if zero:
         worst = max(((e, d[d['split'] == e]['macro_rmse'].mean()) for e, _ in axis_pairs),
                     key=lambda t: t[1], default=None)
@@ -354,11 +378,11 @@ def section_backend(df, L):
     L("**Считают ли движки одно и то же?** Да. На побитово одинаковых весах и "
       "входах `∂σ_rr/∂r` в torch и в JAX совпадает до **8.7e-15** по модулю "
       "(9.8e-16 относительно) — машинный ноль "
-      "(`code/jax_twin.py::check_gradient_agreement`). Вдобавок реализация "
-      "на DeepXDE сконфигурирована как `DDE_BACKEND=pytorch` и берёт производные "
-      "тем же `torch.autograd.grad`, то есть движков автодифференцирования два, "
-      "а не три. Отнести разницу в метриках на автодифференцирование "
-      "нельзя ни при каком результате ниже.\n")
+      "(`code/jax_twin.py::check_gradient_agreement`). Реализация той же сети "
+      "на DeepXDE работает на бэкенде PyTorch (`DDE_BACKEND=pytorch`) и берёт "
+      "производные через `torch.autograd.grad`, поэтому третьим движком "
+      "автодифференцирования она не является и отдельно не приводится. "
+      "Разницу в метриках ниже на автодифференцирование отнести нельзя.\n")
     L("**Различаются ли две независимые реализации?** Ниже — да, и в этом всё "
       "дело. Обе делят архитектуру, протокол, данные, разбиение и "
       "гиперпараметры, но начальные веса и порядок батчей берут из своих "
@@ -571,8 +595,7 @@ def main():
     lines: List[str] = []
     L = lines.append
 
-    # число наборов берём из САМОГО датасета, а не из константы: датасет
-    # пересобирался и чистился, и зашитая цифра успела устареть
+    # число наборов берётся из датасета (--dataset), а не из константы в коде
     n_sets = None
     if a.dataset:
         sys.path.insert(0, os.path.join(HERE, "..", "code"))

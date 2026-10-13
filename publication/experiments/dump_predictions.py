@@ -94,7 +94,13 @@ def recorded_run(runs_csv: str, family: str, split: str, seed: int) -> Optional[
 
 
 def removed_present(names, removed_csv: str) -> int:
-    """Сколько наборов из списка снятых незавершённых расчётов есть в наборе."""
+    """
+    Сколько из 92 снятых заданий removed_1848_to_1756.csv есть в наборе: 89
+    незавершённых расчётов, выявленных маской окна (разброс радиуса поверхности
+    > 0.1 мм), и 3 завершённых расчёта при Q = 1.5 %, v = 250 м/мин, снятых
+    вместе с ними более ранней проверкой хвоста (выпучивание головной части
+    проволоки 17.82–17.88 мм).
+    """
     if not removed_csv or not os.path.exists(removed_csv):
         return 0
     with open(removed_csv, encoding="utf-8") as fh:
@@ -131,7 +137,8 @@ def main():
     f = Field2D.load(a.dataset)
     n_bad = removed_present(f.names, a.removed)
     if n_bad:
-        print(f"⚠ в наборе {n_bad} незавершённых расчётов из {os.path.basename(a.removed)}; "
+        print(f"⚠ в наборе {n_bad} снятых заданий из {os.path.basename(a.removed)} "
+              f"(незавершённые расчёты и три завершённых при Q = 1.5 %, v = 250 м/мин); "
               f"стадия twod runs_v2.csv посчитана на наборе без них "
               f"(fem_row_2d.py --save-field2d)")
     suite = build_split_suite(f.proc)

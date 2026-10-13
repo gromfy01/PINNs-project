@@ -1,13 +1,14 @@
 """
-make_report.py — audit_raw.npz → RAW_AUDIT.md (отчёт аудита сырых данных).
+make_report.py — audit.npz → raw_audit_report.md (отчёт аудита сырых данных).
 
-Читает выход audit/run_raw_audit.py и записывает в Markdown измеренные по сырым
+Читает выход audit/run_raw_audit.py (audit.npz; code/build_datasets.py
+кладёт его в <out>/audit.npz) и записывает в Markdown измеренные по сырым
 .rpt числа: число наборов, статистику осевого окна, порядок компонент, уровни
 факторов и покрытие сетки, опечатку в метке μ, дубликаты по μ, долю отброшенных
 членов уравнений равновесия и нарушение условия свободной поверхности в самих
 данных МКЭ. По умолчанию отчёт пишется рядом со скриптом.
 
-    python audit/make_report.py --npz audit_raw.npz [--out RAW_AUDIT.md]
+    python audit/make_report.py --npz data/audit.npz [--out raw_audit_report.md]
 """
 from __future__ import annotations
 
@@ -30,7 +31,7 @@ def pct(x, p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--npz", required=True)
-    ap.add_argument("--out", default=os.path.join(HERE, "RAW_AUDIT.md"))
+    ap.add_argument("--out", default=os.path.join(HERE, "raw_audit_report.md"))
     a = ap.parse_args()
 
     d = np.load(a.npz, allow_pickle=True)

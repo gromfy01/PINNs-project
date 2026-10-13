@@ -12,10 +12,12 @@ raw_probe.py — независимая перепроверка препроц�
   * отношение |∂/∂z| к |∂/∂r| — численное обоснование редуцированной
     формы уравнений равновесия.
 
-Исходный препроцессинг, который здесь перепроверяется, — модуль
-preprocessing/rpt_utils.py репозитория проекта; ниже на его функции
-(preprocessing_res_np, average_val_np, read_rpt_np, r/c/f/v/h) ссылаются
-по имени.
+«Исходный препроцессинг» ниже — тот, которым был собран более ранний
+датасет проекта (в пакет он не входит). Его правила воспроизведены здесь:
+чтение .rpt — read_rpt, осевое окно — axial_window(mode='repo'), медианы по
+20 бинам — median_bins, параметры из имени задания — parse_job_name и
+mu_from_token. Исправленный вариант окна — отдельный режим
+axial_window(mode='fixed').
 
 Раскладка колонок .rpt (подтверждена по заголовку Field Output Report):
 
@@ -51,12 +53,12 @@ C_SRR, C_SZZ, C_STT, C_SRZ = 11, 12, 13, 14
 C_ERR, C_EZZ, C_ETT, C_ERZ = 3, 4, 5, 6
 
 #: порядок, в котором компоненты укладываются в ось `plane`
-#: ровно так, как это делает исходный препроцессинг (rpt_utils.preprocessing_res_np)
+#: ровно так, как это делает исходный препроцессинг
 STACK_ORDER = ("s_rr", "s_tt", "s_zz", "s_rz")
 
 
 def read_rpt(path: str) -> np.ndarray:
-    """Числовые строки .rpt → (n_nodes, 15). Копия read_rpt_np без исключений."""
+    """Числовые строки .rpt → (n_nodes, 15), как в исходном препроцессинге."""
     rows: List[List[float]] = []
     with open(path, "r", errors="ignore") as fh:
         for ln in fh:
@@ -82,7 +84,7 @@ def read_rpt(path: str) -> np.ndarray:
 
 def parse_job_name(name: str) -> Dict[str, float]:
     """
-    Параметры процесса из имени задания (аналог r/c/f/v/h в rpt_utils).
+    Параметры процесса из имени задания (по правилам исходного препроцессинга).
 
     ВНИМАНИЕ к смыслу `rd`. Токен `rd` — обжатие ПО ДИАМЕТРУ, а не по площади.
     Измерено по геометрии сетки (R₀ = 18 мм из имени волоки `DIE_..._D0_36`,
@@ -122,14 +124,14 @@ def parse_job_name(name: str) -> Dict[str, float]:
             out["alpha"] = float(s[i + 1]) / 2
         elif t in ("fric", "f"):
             tok = s[i + 1].split(".")[0]
-            out["mu_repo"] = float(tok[1:]) / 1000     # правило rpt_utils.f()
+            out["mu_repo"] = float(tok[1:]) / 1000     # правило из mu_from_token
             out["fric_token"] = tok
     return out
 
 
 def mu_from_token(token: str) -> float:
     """
-    Правило rpt_utils.f(): снять первый символ, поделить на 1000.
+    Правило исходного препроцессинга: снять первый символ, поделить на 1000.
       '025'  → 25/1000  = 0.025
       '050'  → 50/1000  = 0.050
       '0100' → 100/1000 = 0.100
@@ -160,7 +162,7 @@ def axial_window(z: np.ndarray, mode: str = "repo") -> Tuple[float, float]:
     """
     Осевое окно 25–75 %.
 
-    mode='repo'   — ровно то, что делает исходный препроцессинг (rpt_utils):
+    mode='repo'   — ровно то, что делает исходный препроцессинг:
                       lo = 0.25 * (zmax - zmin);  hi = 0.75 * (zmax - zmin)
                     порог берётся от РАЗМАХА, а не от zmin — если zmin != 0,
                     окно съезжает (win_lo/win_hi против z_min_all в
@@ -177,13 +179,14 @@ def axial_window(z: np.ndarray, mode: str = "repo") -> Tuple[float, float]:
 
 
 def median_bins(values: np.ndarray, nodes: int = 20) -> np.ndarray:
-    """Копия average_val_np: разбить на `nodes` последовательных чанков, медиана."""
+    """Медиана по `nodes` последовательным чанкам, как в исходном препроцессинге."""
     return np.array([np.median(ch) for ch in np.array_split(values, nodes)])
 
 
 def profile_from_rpt(arr: np.ndarray, nodes: int = 20, window: str = "repo"):
     """
-    Воспроизводит preprocessing_res_np + average_val_np и возвращает
+    Воспроизводит исходный препроцессинг (осевое окно + медианы по бинам) и
+    возвращает
 
         r_prof   (nodes,)              медианный радиус каждого бина, м
         stress   (nodes, 4)            в порядке STACK_ORDER, МПа

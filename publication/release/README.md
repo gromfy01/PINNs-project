@@ -36,34 +36,39 @@ and the data record, DOI: `<DOI>`. Machine-readable metadata are in `CITATION.cf
 |---|---|
 | `code/` | `build_datasets.py` (both datasets from the raw reports in one go), dataset classes (`dataset.py` 1D, `dataset2d.py` 2D), report reader (`raw_probe.py`), case filters, splits, PyTorch trainers (`trainer.py`, `trainer2d.py`), JAX twin of the strong-form PINN (`jax_twin.py`), label corruption, learning curves, statistics, physics checks, analytical drawing-stress relations |
 | `experiments/` | `run_matrix.py` (the experiment matrix), `hp_1d.json` and `hp_2d.json` (hyperparameters of the paper), `paper_tables.py`, `make_results.py` and `analyze.py` (tables and report), `fem_row_2d.py` (FEM reference row of Table 13), `contours.py`, `dump_predictions.py`, `residual_maps.py` (field figures), `figures.py` (supplementary plots of the run log) |
-| `audit/` | `run_raw_audit.py` (one pass over the raw reports; `build_datasets.py` uses it), `make_report.py` (Markdown report of that pass), `removed_1848_to_1756.csv` (the 92 runs removed from the 1848 filtered cases, with the reason) |
+| `audit/` | `run_raw_audit.py` (one pass over the raw reports; `build_datasets.py` uses it), `make_report.py` (Markdown report of that pass), `removed_1848_to_1756.csv` (the 92 runs removed from the 1848 filtered cases, with the reason; see step 2) |
 | `verification/` | drawing-stress verification of Section 3.1 from the 112 history reports: `read_history.py`, `drawing_force.py`, `flow_stress.py`, `analytic_sigma_f.py`, `verification_recalc.py`, `sec31_numbers.py`; `results/` holds the outputs the paper quotes |
 | `results/runs_v2.csv` | log of the 341 runs reported in the paper, one row per run: stage, family, backend, split, seed, training fraction, corruption rate, set sizes, epochs, run time, accuracy metrics, equilibrium and boundary-condition audits, hyperparameters |
 | `tests/` | invariant tests: `test_pipeline.py` (numpy and scipy only), `test_training.py` (PyTorch and JAX) |
 
 ## Data
 
-The finite-element data are not part of this repository. They are attached to the release and
-deposited at Zenodo, DOI `<DOI>`:
+The finite-element data are not part of the repository tree. They are published as two archives,
+attached to the GitHub release of this repository and deposited in the Zenodo record, DOI `<DOI>`:
 
 * **`Raw_Data.zip`** (1.2 GB), DOI `<DOI>` — 2443 Abaqus field output reports (`.rpt`), one per
   simulation, in the folders `Vel_5`, `Vel_10`, `Vel_20`, `Vel_40` and `Vel_250` (drawing speed in
-  m/min). The process parameters are encoded in the file name (`2a` twice the die semi-angle in
-  degrees, `rd` the reduction in diameter × 10⁴, `cal` the calibration ratio × 100, `v` the drawing
-  speed in m/min, `fric` or `f` a leading 0 followed by the friction coefficient × 1000) and are
-  parsed by `code/raw_probe.py`.
+  m/min). The five `Vel_*` folders lie at the root of the archive, with no enclosing folder, and
+  hold the `.rpt` files directly. The process parameters are encoded in the file name (`2a` twice
+  the die semi-angle in degrees, `rd` the reduction in diameter × 10⁴, `cal` the calibration ratio
+  × 100, `v` the drawing speed in m/min, `fric` or `f` a leading 0 followed by the friction
+  coefficient × 1000) and are parsed by `code/raw_probe.py`.
 * **`history_reports_112.zip`** (19 MB), DOI `<DOI>` — 112 Abaqus X-Y reports with time histories
   of the die reaction force, the nodal coordinates, the equivalent plastic strain and the
   temperature of a radial row of material points, used for the drawing-stress verification of
-  Section 3.1. The archive contains `MANIFEST.sha256`; check it after unpacking with
+  Section 3.1. The reports lie in the folder `history_reports_112` at the root of the archive,
+  together with `MANIFEST.sha256`; check it after unpacking with
   `cd history_reports_112 && sha256sum -c MANIFEST.sha256`.
 
-The license of the data archives is stated on their record. Unpack both and point the commands
-below at them:
+The license of the data archives is stated on their record. Unpack both in a working folder of
+your choice, `Raw_Data.zip` into a folder of its own since it has no top-level folder, and point
+the commands below at them:
 
 ```bash
-export RAW=/path/to/Raw_Data              # the folder that contains Vel_5 ... Vel_250
-export HIST=/path/to/history_reports_112  # the folder with the 112 reports
+unzip Raw_Data.zip -d Raw_Data            # gives Raw_Data/Vel_5 ... Raw_Data/Vel_250
+unzip history_reports_112.zip             # gives history_reports_112/
+export RAW=$PWD/Raw_Data                  # the folder that contains Vel_5 ... Vel_250
+export HIST=$PWD/history_reports_112      # the folder with the 112 reports
 ```
 
 ## Requirements
@@ -108,6 +113,11 @@ component next to the value implied by `results/runs_v2.csv` (`rmse_c / nrmse_c_
 agree to about 1e-16, and the last line reads `всё совпало` ("everything matched"); `--strict`
 turns any mismatch into exit code 1.
 
+Of the 92 runs in `audit/removed_1848_to_1756.csv` (column `group`), 89 are unfinished runs
+detected by the window mask (spread of the surface radius in the axial window above 0.1 mm), and
+3 are completed runs at Q = 1.5 %, v = 250 m/min that an earlier tail check (bulge of the wire
+head, 17.82–17.88 mm) removed together with them.
+
 **3. Experiment matrix** (about 20 run-hours; about 5 h wall-clock with `--workers 4`)
 
 ```bash
@@ -147,10 +157,14 @@ python experiments/fem_row_2d.py --field2d data/field2d_1848.npz --json data/fem
 `numbers_used.json`, which records the source of every printed number. `--field2d` adds the FEM
 row of Table 13; `--fem-json data/fem_row.json` does the same from the output of
 `fem_row_2d.py`. `make_results.py` writes a Markdown report (in Russian) that also contains the
-numbers of Table 9 (cost of holding out a factor level). `fem_row_2d.py` prints the FEM row of
-Table 13 on its own, with the 2D fingerprint; it takes the 1848-case set and removes the 92 runs
-itself (or use `--raw "$RAW"` instead of `--field2d`). Replace `results/runs_v2.csv` by `runs.csv`
-to tabulate your own rerun of step 3.
+numbers of Table 9 (cost of holding out a factor level); its `R²` and constant-predictor columns
+need `--dataset` and are printed as dashes without it. `fem_row_2d.py` prints the FEM row of Table 13 on
+its own, with the 2D fingerprint; it takes the 1848-case set and removes the 92 runs itself (or
+use `--raw "$RAW"` instead of `--field2d`). Replace `results/runs_v2.csv` by `runs.csv` to
+tabulate your own rerun of step 3. `paper_tables.py` needs the full matrix, all five stages: on
+a partial `runs.csv` (a stage missing, or a stage interrupted so that the families of a split
+were not run on the same seeds) it stops with an error and writes no tables. `make_results.py`
+also reports on a partial log, comparing the families only on the seeds that all of them have.
 
 **5. Fig. 4, FEM residual stress fields** (seconds)
 

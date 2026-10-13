@@ -136,7 +136,7 @@ class Trainer2D:
         self.res_r_scale = self._t(np.array((sd[IDX_SRR] + sd[IDX_STT]) / R_char))
         # осевая невязка нормируется ОСЕВЫМ масштабом: доминирующий член
         # ∂σ_zz/∂z имеет величину sd[σ_zz]/L_char, а не /R_char. При L/R ≈ 3.7
-        # ошибка масштаба делала член численно инертным, и абляция
+        # нормировка на R_char сделала бы член численно инертным, и абляция
         # «редуцированная против полной формы» ничего бы не показала.
         self.res_z_scale = self._t(np.array(sd[IDX_SZZ] / L_char + sd[IDX_TRZ] / R_char))
         self.L_char = L_char

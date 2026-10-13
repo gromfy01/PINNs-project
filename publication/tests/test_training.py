@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 
 import numpy as np
 
@@ -190,12 +191,14 @@ def test_2d_trainer_runs():
         check("Trainer2D проверяет семейство при создании", True)
 
 
-def test_dataset_roundtrip(tmp="/tmp/_ds_test.npz"):
+def test_dataset_roundtrip():
     print("dataset")
     proc, y, r, rp = toy(10)
     ds = StressDataset(proc, y, r, rp, np.array([f"job{i}" for i in range(10)]))
-    ds.save(tmp)
-    back = StressDataset.load(tmp)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = os.path.join(tmpdir, "ds_test.npz")
+        ds.save(tmp)
+        back = StressDataset.load(tmp)
     check("сохранение/загрузка не теряет данные",
           np.allclose(back.y, ds.y) and np.array_equal(back.names, ds.names))
     X, Y = ds.rows()
@@ -204,7 +207,6 @@ def test_dataset_roundtrip(tmp="/tmp/_ds_test.npz"):
     check("set_index = row // 20", np.allclose(X[N_R:2 * N_R, 0], proc[1, 0]))
     s = sanity(ds)
     check("sanity считает все ключи", "bc_sigma_rr_surface" in s and s["n_sets"] == 10)
-    os.remove(tmp)
 
 
 def main():

@@ -2,11 +2,12 @@
 run_raw_audit.py — один проход по всем сырым .rpt, который отвечает на
 вопросы о препроцессинге: осевое окно, порядок компонент, уровни факторов и
 дубликаты по μ, отброшенные члены уравнений равновесия.
-Результат: audit_raw.npz + печатный отчёт; Markdown-отчёт по нему строит
+Результат: audit.npz (имя задаёт --out; code/build_datasets.py пишет его как
+<out>/audit.npz) + печатный отчёт; Markdown-отчёт по нему строит
 audit/make_report.py.
 
 Запуск:
-    python audit/run_raw_audit.py --root <dir с Vel_*> --out <npz>
+    python audit/run_raw_audit.py --root <dir с Vel_*> --out audit.npz
 """
 from __future__ import annotations
 
