@@ -10,7 +10,13 @@ authors:
     given-names: Georgii
     affiliation: HSE University
 license: MIT
-# doi: <DOI>
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23352451
+    description: "Zenodo archive, all versions (concept DOI)"
+  - type: doi
+    value: 10.5281/zenodo.23352452
+    description: "Zenodo archive of version 1.0.0"
 version: 1.0.0
 date-released: 2026-10-14
 repository-code: "https://github.com/gromfy01/wire-drawing-pinn-surrogates"

@@ -1,5 +1,7 @@
 # Physics-informed versus data-driven surrogates for residual stress after wire drawing — code
 
+[![DOI](https://zenodo.org/badge/1417829495.svg)](https://doi.org/10.5281/zenodo.23352451)
+
 This package holds the code, the run log and the verification scripts behind the paper
 
 > D. Demin, G. Romanenko, *Physics-informed versus data-driven surrogates for residual stress
@@ -28,7 +30,9 @@ If you use this code or the data, please cite the paper:
 }
 ```
 
-and the data record, DOI: `<DOI>`. Machine-readable metadata are in `CITATION.cff`.
+and the Zenodo records of the code, DOI [10.5281/zenodo.23352452](https://doi.org/10.5281/zenodo.23352452)
+for version 1.0.0 ([10.5281/zenodo.23352451](https://doi.org/10.5281/zenodo.23352451) for all
+versions), and of the data, DOI `<DOI>`. Machine-readable metadata are in `CITATION.cff`.
 
 ## Contents
 
@@ -43,17 +47,17 @@ and the data record, DOI: `<DOI>`. Machine-readable metadata are in `CITATION.cf
 
 ## Data
 
-The finite-element data are not part of the repository tree. They are published as two archives,
-attached to the GitHub release of this repository and deposited in the Zenodo record, DOI `<DOI>`:
+The finite-element data are not part of the repository tree. They are published as two archives
+in a separate Zenodo record, DOI `<DOI>`:
 
-* **`Raw_Data.zip`** (1.2 GB), DOI `<DOI>` — 2443 Abaqus field output reports (`.rpt`), one per
+* **`Raw_Data.zip`** (1.2 GB) — 2443 Abaqus field output reports (`.rpt`), one per
   simulation, in the folders `Vel_5`, `Vel_10`, `Vel_20`, `Vel_40` and `Vel_250` (drawing speed in
   m/min). The five `Vel_*` folders lie at the root of the archive, with no enclosing folder, and
   hold the `.rpt` files directly. The process parameters are encoded in the file name (`2a` twice
   the die semi-angle in degrees, `rd` the reduction in diameter × 10⁴, `cal` the calibration ratio
   × 100, `v` the drawing speed in m/min, `fric` or `f` a leading 0 followed by the friction
   coefficient × 1000) and are parsed by `code/raw_probe.py`.
-* **`history_reports_112.zip`** (19 MB), DOI `<DOI>` — 112 Abaqus X-Y reports with time histories
+* **`history_reports_112.zip`** (19 MB) — 112 Abaqus X-Y reports with time histories
   of the die reaction force, the nodal coordinates, the equivalent plastic strain and the
   temperature of a radial row of material points, used for the drawing-stress verification of
   Section 3.1. The reports lie in the folder `history_reports_112` at the root of the archive,
