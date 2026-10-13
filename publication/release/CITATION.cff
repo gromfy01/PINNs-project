@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article given under preferred-citation."
+title: "Code for: Physics-informed versus data-driven surrogates for residual stress after wire drawing"
+type: software
+authors:
+  - family-names: Demin
+    given-names: Dmitriy
+    affiliation: HSE University
+  - family-names: Romanenko
+    given-names: Georgii
+    affiliation: HSE University
+license: MIT
+# doi: <DOI>
+keywords:
+  - physics-informed neural networks
+  - surrogate models
+  - wire drawing
+  - residual stress
+  - finite element method
+preferred-citation:
+  type: article
+  title: "Physics-informed versus data-driven surrogates for residual stress after wire drawing: accuracy, physical admissibility and behaviour outside the training range"
+  authors:
+    - family-names: Demin
+      given-names: Dmitriy
+      affiliation: HSE University
+    - family-names: Romanenko
+      given-names: Georgii
+      affiliation: HSE University
+  status: submitted
+  year: 2026

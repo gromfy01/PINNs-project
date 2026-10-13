@@ -63,7 +63,7 @@ CSV_NAME = "runs_v2.csv"
 FAMILY_LABEL = {"mlp": "MLP", "pinn": "PINN", "vpinn": "VPINN"}
 FAMILIES = ["mlp", "pinn", "vpinn"]
 
-# Order requested for Table 1: random, interp:*, extrap:*, extrap_joint:corner,
+# Order of the rows of Table 1: random, interp:*, extrap:*, extrap_joint:corner,
 # matched:*.  Within a group the factor order follows the input vector
 # [Q, k, α, μ, v]; μ has no held-out level (duplicates).
 SPLIT_ORDER = [
