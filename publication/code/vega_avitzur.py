@@ -42,7 +42,7 @@ vega_avitzur.py — решение Авитцура в кулоновской з
   при T_0 = 15.6 C, и абсцисса его рис. 4 идёт от 1.7 до 4.25. В Кельвинах
   отношение было бы 1.04-1.17 и калибровка mu_0, m потеряла бы смысл.
 
-    python publication/code/vega_avitzur.py
+    python code/vega_avitzur.py
 """
 from __future__ import annotations
 

@@ -5,12 +5,26 @@ run_matrix.py — прогон экспериментальной матрицы
 частичный результат должен оставаться пригодным. Повторный запуск с тем же
 --out пропускает уже посчитанные строки (ключ: stage+family+split+seed+frac+rate).
 
-Стадии:
-  tune      подбор гиперпараметров, один бюджет на все семейства (пункт 4)
-  main      6 регионов × контроли × сиды (пункты 1 и 3)
-  curves    кривые обучения по объёму данных (пункт 5)
-  corrupt   устойчивость к порче меток (пункт 6)
-  backend   torch против jax при идентичном протоколе (замечание Reviewer #2)
+Стадии (--stage):
+  main      все разбиения build_split_suite (random, interp, extrap,
+            extrap_joint и контроли matched того же объёма) × семейства × сиды
+  curves    кривые обучения по объёму данных: вложенные подвыборки обучающего
+            пула (learning_curves.nested_subsamples) на random и extrap:alpha_max
+  corrupt   устойчивость к порче меток (corruption.make_corruption_plans) на random
+  backend   сильная форма PINN в двух реализациях, PyTorch и JAX, при одном
+            протоколе, на random и extrap:alpha_max
+  twod      z во входе: абляция формы уравнений равновесия (dataset2d / trainer2d,
+            семейства mlp2d, pinn2d_reduced, pinn2d_full) на random и
+            extrap:alpha_max; --dataset здесь — Field2D .npz
+
+Семейства по умолчанию: mlp,pinn,vpinn; для стадии twod — mlp2d,pinn2d_reduced,
+pinn2d_full. --hp — json вида {семейство: {поле Config/Config2D: значение}};
+семейство, которого в нём нет, обучается с умолчаниями Config/Config2D.
+Гиперпараметры прогонов results/runs_v2.csv записаны в его колонках
+n_layers, n_units, learning_rate, lambda_physics, lambda_bc: n_layers = 3,
+n_units = 96, learning_rate = 3e-3 в одномерных стадиях и 2e-3 в twod, у MLP
+lambda_physics = lambda_bc = 0. Наибольшее записанное там число эпох — 800 в
+одномерных стадиях и 300 в twod.
 """
 from __future__ import annotations
 
@@ -243,13 +257,21 @@ def build_jobs(stage: str, ds, suite, hp_by_family: Dict[str, Dict],
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", required=True)
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--dataset", required=True,
+                    help="StressDataset .npz (одномерные стадии) или Field2D .npz (twod)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--stage", required=True,
-                    choices=["main", "curves", "corrupt", "backend", "twod"])
-    ap.add_argument("--hp", default="", help="json с гиперпараметрами по семействам")
-    ap.add_argument("--families", default="mlp,pinn,vpinn")
+                    choices=["main", "curves", "corrupt", "backend", "twod"],
+                    help="main — матрица разбиений; curves — объём обучающих данных; "
+                         "corrupt — порча меток; backend — PyTorch против JAX; "
+                         "twod — z во входе, форма уравнений равновесия")
+    ap.add_argument("--hp", default="",
+                    help="json {семейство: {поле Config/Config2D: значение}}")
+    ap.add_argument("--families", default=None,
+                    help="через запятую; по умолчанию mlp,pinn,vpinn, "
+                         "для --stage twod — mlp2d,pinn2d_reduced,pinn2d_full")
     ap.add_argument("--seeds", default="0,1,2,3,4")
     ap.add_argument("--splits", default="")
     ap.add_argument("--workers", type=int, default=4)
@@ -266,6 +288,9 @@ def main():
     else:
         ds = StressDataset.load(a.dataset)
     suite = build_split_suite(ds.proc)
+    if a.families is None:
+        a.families = ("mlp2d,pinn2d_reduced,pinn2d_full" if a.stage == "twod"
+                      else "mlp,pinn,vpinn")
     families = a.families.split(",")
     seeds = [int(s) for s in a.seeds.split(",")]
     splits = [s for s in a.splits.split(",") if s] or None

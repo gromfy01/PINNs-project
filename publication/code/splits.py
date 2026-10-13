@@ -2,7 +2,7 @@
 splits.py — экстраполяционные сплиты и контроли к ним.
 
 Зачем. Случайный hold-out из того же пространства параметров показывает
-интерполяцию, а не обобщение (Reviewer #1). Здесь из обучения выносится
+интерполяцию, а не обобщение. Здесь из обучения выносится
 целая ГРАНЬ факторного пространства, и качество меряется вне диапазона
 обучения.
 
@@ -20,7 +20,7 @@ train и test и колонку «вне диапазона?». Заявлять
 осям, где стоит ДА.
 
 μ как ось экстраполяции не используется: 13.2 % наборов сырой сетки — точные
-копии другого набора, отличающегося только меткой μ (publication/audit/),
+копии другого набора, отличающегося только меткой μ (audit/make_report.py),
 обобщать не по чему.
 """
 from __future__ import annotations
@@ -136,7 +136,7 @@ def make_matched_split(proc: np.ndarray, n_test: int, seed: int = 42,
 
 
 def make_random_split(proc: np.ndarray, frac: float = 0.15, seed: int = 42) -> Split:
-    """Исходный сплит статьи — случайный hold-out (интерполяция)."""
+    """Базовый сплит — случайный hold-out из того же пространства (интерполяция)."""
     n = proc.shape[0]
     return make_matched_split(proc, int(round(n * frac)), seed=seed, name="random")
 
@@ -145,7 +145,7 @@ def build_split_suite(proc: np.ndarray, seed: int = 42,
                       regions: Optional[Sequence[str]] = None) -> Dict[str, Split]:
     """
     Полный набор сплитов статьи: регионы + matched-контроль к каждому
-    экстраполяционному региону + исходный случайный сплит.
+    экстраполяционному региону + базовый случайный сплит.
     """
     regions = list(REGIONS) if regions is None else list(regions)
     out: Dict[str, Split] = {}

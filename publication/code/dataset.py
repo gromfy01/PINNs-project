@@ -4,8 +4,8 @@ dataset.py — сборка ФИЗИЧЕСКИ КОРРЕКТНОГО датас
 Зачем не использовать y_stress.pkl. Проверка по сырым данным показала, что в
 нём по плоскостям лежат (S.Max.Prin, S.Mid.Prin, S.Min.Prin, σ_rr) — три
 главных напряжения и σ_rr, а не четыре компоненты тензора. τ_rz, σ_θθ и σ_zz
-в нём отсутствуют вовсе (ERRATA E-18). Поэтому целевые поля собираются заново
-из колонок S.S11 / S.S33 / S.S22 / S.S12.
+в нём отсутствуют вовсе. Поэтому целевые поля собираются заново из колонок
+S.S11 / S.S33 / S.S22 / S.S12.
 
 Что здесь строится:
 
@@ -20,6 +20,12 @@ dataset.py — сборка ФИЗИЧЕСКИ КОРРЕКТНОГО датас
 хранятся поштучно, а не подразумеваются `linspace(0, 1, 20)`. Нормировка — на
 радиус крайнего бина того же набора, так что r = 1 есть свободная поверхность
 по построению.
+
+Чего здесь НЕТ. Незавершённые расчёты (92 набора, список
+audit/removed_1848_to_1756.csv, сопоставление по имени задания; см.
+filters.unfinished_draw_in_window) этот скрипт не снимает: после
+filter_dataset остаётся 1848 наборов, а не 1756. Это отдельный шаг — так же,
+как experiments/fem_row_2d.clean_1756 делает это для двумерной сетки.
 """
 from __future__ import annotations
 
@@ -78,9 +84,14 @@ class StressDataset:
 def build_from_allcols(allcols_npz: str, prof_r_npz: str,
                        apply_filters: bool = True) -> StressDataset:
     """
-    allcols_npz : выход publication/audit/probe над сырыми .rpt —
-                  data (n, 20, 14), params (n, 5), names, cols
-    prof_r_npz  : выход run_raw_audit.py — prof_r (n, 20) физические радиусы бинов
+    allcols_npz : npz с ключами data (n, 20, n_cols) — медианные профили по
+                  бинам, МПа; cols — имена колонок data (нужны 's_rr', 's_tt',
+                  's_zz', 's_rz'); params (n, 5); names. По формату подходит
+                  выход audit/run_raw_audit.py, переупакованный как
+                  data = prof_s, cols = raw_probe.STACK_ORDER, params и names
+                  без изменений.
+    prof_r_npz  : выход audit/run_raw_audit.py — prof_r (n, 20) физические
+                  радиусы бинов
     """
     A = np.load(allcols_npz, allow_pickle=True)
     B = np.load(prof_r_npz, allow_pickle=True)

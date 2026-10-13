@@ -12,7 +12,19 @@ contours.py — контурные карты напряжений в плоск
   --mode model  МКЭ против предсказания модели с z во входе и их разность,
                 на сетке (z, r) 8 × 20, для σ_rr, σ_zz и τ_rz; по умолчанию
                 берётся набор с МЕДИАННОЙ ошибкой, а не лучший;
+  --mode fields / errors
+                то же для одной модели: только поля (четыре компоненты) или
+                только невязки;
+  --mode compare / compare-errors
+                несколько семейств на одном наборе (--npzs, --labels): поля
+                или невязки;
   --mode alpha  одна компонента при разных полууглах волоки.
+
+Предсказания для режимов model, fields, errors, compare и compare-errors — npz
+с ключами y_true, y_pred (n, n_z, n_r, 4), test_sets (n,) — индексы наборов в
+Field2D, proc (n, 5), r (n, n_z, n_r), z (n, n_z) и необязательными family,
+clean_mask. Такой файл для одной конфигурации (семейство, сплит, сид) пишет
+experiments/dump_predictions.py.
 
 Цвет. Напряжения знакопеременные, поэтому шкала расходящаяся, симметричная
 относительно нуля, с нейтральной серединой: ноль всегда читается как «нет
@@ -334,7 +346,7 @@ def fig_errors(npz: str, out: str, which: int = -1,
             + f"\nПо всему тесту (n = {len(yt_all)}): " + ";  ".join(summ) + ".")
     if clean is not None and not clean.all():
         note += (f"\n«Чистые» — {int(clean.sum())} наборов после снятия "
-                 f"{int((~clean).sum())} незавершённых расчётов (E-24).")
+                 f"{int((~clean).sum())} незавершённых расчётов.")
     fig.text(0.5, -0.02, note, ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)
@@ -613,7 +625,7 @@ def fig_model(npz: str, out: str, which: int = -1,
     note += f"По всему тесту (n = {len(y_true_all)}):  " + ";  ".join(summ) + "."
     if clean is not None and not clean.all():
         note += (f"\n«Без конуса» — {int(clean.sum())} наборов после снятия "
-                 f"{int((~clean).sum())} с конусом волоки в окне (E-24).")
+                 f"{int((~clean).sum())} с конусом волоки в окне.")
     fig.text(0.5, -0.015, note, ha="center", va="top", fontsize=7, color=INK)
     fig.savefig(out)
     plt.close(fig)

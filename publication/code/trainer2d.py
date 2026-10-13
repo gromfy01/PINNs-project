@@ -1,16 +1,19 @@
 """
 trainer2d.py — PINN с координатой z во входе и ПОЛНОЙ формой равновесия.
 
-Расширенный вариант пункта 2 плана. Вход сети — [Q, k, α, μ, v, r, z], поэтому
-осевые производные существуют и обе невязки записываются целиком:
+Вход сети — [Q, k, α, μ, v, r, z], поэтому осевые производные существуют и
+обе невязки записываются целиком:
 
     R_r = ∂σ_rr/∂r + ∂τ_rz/∂z + (σ_rr − σ_θθ)/r
     R_z = ∂τ_rz/∂r + ∂σ_zz/∂z + τ_rz/r
 
-Семейства (ablation, отвечающий на замечание R1-c прямо):
+Семейства (абляция по форме уравнений равновесия):
     mlp2d           только data-loss
     pinn2d_reduced  только R_r без ∂τ_rz/∂z — ровно то, что считает 1D-код
     pinn2d_full     обе невязки целиком
+
+Любое другое имя семейства отвергается (ValueError), а не подменяется молча
+одним из этих трёх.
 
 Нормировка. r нормирован на радиус поверхности В ТОМ ЖЕ осевом сечении
 (r = 1 — поверхность при любом z), z — на длину окна. Цепное правило:
@@ -28,6 +31,12 @@ import torch.nn as nn
 from trainer import ACTS, FourierR, IDX_SRR, IDX_STT, IDX_SZZ, IDX_TRZ, Scalers, metrics
 
 FAMILIES_2D = ("mlp2d", "pinn2d_reduced", "pinn2d_full")
+
+
+def _check_family(family: str) -> None:
+    if family not in FAMILIES_2D:
+        raise ValueError(f"неизвестное семейство 2D-модели: {family!r}; "
+                         f"допустимы {FAMILIES_2D}")
 
 
 @dataclass
@@ -50,6 +59,9 @@ class Config2D:
     r_clip: float = 0.05
     seed: int = 0
     device: str = "cpu"
+
+    def __post_init__(self):
+        _check_family(self.family)
 
     def as_dict(self): return asdict(self)
 
@@ -90,6 +102,7 @@ class Trainer2D:
     """
 
     def __init__(self, cfg: Config2D):
+        _check_family(cfg.family)          # cfg мог быть изменён после создания
         self.cfg = cfg
         torch.manual_seed(cfg.seed); np.random.seed(cfg.seed)
         self.dtype = torch.float64
@@ -302,7 +315,8 @@ def equilibrium_audit_2d(y: np.ndarray, r_phys: np.ndarray, z_phys: np.ndarray,
     """
     Невязки полной и редуцированной формы на сетке (nz, nr).
     Отношение медиан показывает, сколько теряет редукция — та же величина,
-    что оценена по сырым данным в audit/RAW_AUDIT.md §6, но уже на предсказаниях.
+    что оценена по сырым данным в audit/run_raw_audit.py (dropped_term_stats),
+    но уже на предсказаниях.
     """
     n, nz, nr, _ = y.shape
     full_r, red_r, full_z, red_z = [], [], [], []

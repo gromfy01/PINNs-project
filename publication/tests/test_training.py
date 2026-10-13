@@ -1,8 +1,8 @@
 """
-Тесты тренеров и физики. Запуск: python publication/tests/test_training.py
+Тесты тренеров и физики. Запуск: python tests/test_training.py
 
 Проверяются свойства, ошибка в которых даёт правдоподобный, но неверный
-результат — то есть ровно тот класс дефектов, из-за которого статью отклонили.
+результат.
 """
 from __future__ import annotations
 
@@ -174,6 +174,20 @@ def test_2d_trainer_runs():
         m = T.evaluate(proc, y, r, z)
         check(f"{fam}: обучение проходит и метрики конечны",
               np.isfinite(m["macro_rmse"]) and res.epochs_run > 0)
+    # неизвестное семейство не подменяется молча редуцированной формой
+    for bad in ("pinn2d", "pinn", "mlp", ""):
+        try:
+            Config2D(family=bad)
+            check(f"семейство {bad!r} отвергнуто", False)
+        except ValueError:
+            check(f"семейство {bad!r} отвергнуто", True)
+    cfg = Config2D(family="pinn2d_full")
+    cfg.family = "pinn2d"
+    try:
+        Trainer2D(cfg)
+        check("Trainer2D проверяет семейство при создании", False)
+    except ValueError:
+        check("Trainer2D проверяет семейство при создании", True)
 
 
 def test_dataset_roundtrip(tmp="/tmp/_ds_test.npz"):

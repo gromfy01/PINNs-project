@@ -8,8 +8,8 @@ verify_pkl.py — «что на самом деле лежит в этом .pkl�
 со ВСЕМИ величинами, которые есть в отчёте Abaqus, а не с четырьмя ожидаемыми.
 
 Запуск:
-    python publication/code/verify_pkl.py --pkl data/processed/y_stress.pkl \\
-        --xpkl data/processed/X_stress.pkl --raw <каталог с Vel_*>
+    python code/verify_pkl.py --pkl y_stress.pkl --xpkl X_stress.pkl \\
+        --raw <каталог с Vel_*>
 
 Печатает таблицу «плоскость → величина» с mean|Δ|, корреляцией и долей
 побитовых совпадений, и отдельно — присутствует ли в массиве каждая из четырёх
