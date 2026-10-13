@@ -39,7 +39,7 @@
 
 \affil*[1]{\orgname{HSE University}, \orgaddress{\street{11 Pokrovsky Boulevard}, \city{Moscow}, \country{Russia}}}
 
-\abstract{\unboldmath A data-driven multilayer perceptron (MLP), a strong-form physics-informed neural network (PINN) and a weak-form variational PINN (VPINN), identical except for the loss, are compared as residual-stress surrogates on 1756 finite-element simulations of AISI~1020 wire drawing. All results refer to this finite-element reference, verified on 112 runs: without bearing terms or fitted parameters, Siebel's and Avitzur's relations exceed its drawing stress by 11--16\,\% on average. On radial profiles (one-dimensional track) the PINN has a lower error than the MLP on all thirteen splits, by under 0.4~MPa on random, interpolation and matched-control splits (errors 7--12~MPa), 0.6--1.9~MPa on three single-factor extrapolations and a joint semi-angle--reduction gap (8--26~MPa) and 7.5~MPa at the highest speed (48--56~MPa). The difference is significant on four splits, none surviving Holm correction, and learning curves show no data-scarcity advantage. With the axial coordinate as input (extended track) the PINN trails the MLP by 0.2~MPa on the random split (not significant). The physics term improves admissibility instead. In both tracks the PINN lowers the MLP's radial equilibrium residual by 40--52\,\%, both one-dimensional physics-informed networks lower its free-surface radial stress 3.9--5.3-fold, and the axial residual falls (33--41\,\%) only with the axial equation in the loss. A $+250$~MPa offset of $\sigma_{\theta\theta}$ in 10\,\% of training cases, the only defect tested, which the radial residual sees directly, raises the error 1.64-fold for the PINN against 1.79 (VPINN) and 1.81 (MLP), the PINN--MLP gap surviving Holm correction only at 5\,\%.}
+\abstract{\unboldmath A data-driven multilayer perceptron (MLP), a strong-form physics-informed neural network (PINN) and a weak-form variational PINN (VPINN), identical except for the loss, are compared as residual-stress surrogates on 1756 finite-element simulations of AISI~1020 wire drawing. All results refer to this reference, verified on 112 runs: without bearing terms or fitted parameters, Siebel's and Avitzur's relations exceed its drawing stress by 11--16\,\% on average. On radial profiles (one-dimensional track) the PINN has a lower error than the MLP on all thirteen splits, by under 0.4~MPa on random, interpolation and matched-control splits (errors 7--12~MPa), 0.6--1.9~MPa on three single-factor extrapolations and a joint semi-angle--reduction gap (8--26~MPa) and 7.5~MPa at the highest speed (48--56~MPa). The difference is significant on four splits, none surviving Holm correction, and with less training data no advantage is established. With the axial coordinate as input (extended track) the PINN trails the MLP by 0.2~MPa on the random split (not significant). Admissibility improves instead. On the random and semi-angle splits the PINN lowers the MLP's radial equilibrium residual by 40--52\,\% in both tracks, on the random split both one-dimensional physics-informed networks lower its free-surface radial stress 3.9--5.3-fold, and the axial residual falls significantly (33--41\,\%) only with the axial equation in the loss. A synthetic $+250$~MPa offset of $\sigma_{\theta\theta}$ in 10\,\% of training cases, which the radial residual sees directly, raises the error 1.64-fold for the PINN against 1.79 (VPINN) and 1.81 (MLP), the PINN--MLP gap surviving Holm correction only at 5\,\%.}
 
 \keywords{physics-informed neural networks, wire drawing, residual stresses, variational PINN, finite element simulation, surrogate modelling}
 
@@ -491,26 +491,24 @@ early-stopping subset of 15\,\% of the training cases with patience 40 (30), and
 restoration of the best state.
 Every configuration is trained with five seeds (0--4) on the thirteen splits of
 Table~\ref{tab:splits} and in the backend comparison, and with three seeds (0--2)
-in the learning-curve and label-corruption stages described below and in the
+in the training-set-size and label-corruption stages described below and in the
 extended track.
 The seed governs initialisation, batch order and the internal early-stopping subset,
 while the test cases of a split are the same for every seed (split seed 42).
-The learning-curve stage measures how the accuracy of each family depends on
+The training-set-size stage measures how the accuracy of each family depends on
 the amount of training data. On the \texttt{random} and
 \texttt{extrap:alpha\_max} splits each family is trained on group-aware
 subsamples of 10/25/50/100\,\% of the training pool, each smaller subsample
 being contained in the larger ones. The subsamples are the same for all
 families and seeds, and the test cases of the split are kept unchanged. The
 macro-RMSE on these test cases as a function of the fraction of the training
-pool is the learning curve, and its values are given in
-Section~\ref{sec:res_extrap}.
+pool is given in Section~\ref{sec:res_extrap}.
 The subsamples are nested but not stratified by $v$ (the launcher uses
 \texttt{nested\_subsamples}, not the stratified variant), so the sparsest level
 $v = 5$~m/min (122 cases) can be under-represented at 10\,\%.
-Label corruption adds $+250$\,MPa to $\sigma_{\theta\theta}$ of 0/1/5/10\,\% of
+Label corruption adds $+250$\,MPa to $\sigma_{\theta\theta}$ over the whole profile of 0/1/5/10\,\% of
 the training cases (0\,\% being the clean reference, with nested lists shared by all
-families and a clean hold-out), the morphology of a solver artefact found in the
-source rather than Gaussian noise, which averages out over a profile.
+families and a clean hold-out). The defect is a constant offset of one component over a whole case rather than Gaussian noise, which averages out over a profile. Its size is that of a defect found in the raw reports: in the runs that stopped before the wire had left the die (Section~\ref{sec:prep-data}) the drawn part still carries the drawing load, and its axial stress stays near $+280$~MPa almost uniformly over the radius. The offset is applied to $\sigma_{\theta\theta}$, which enters the radial equilibrium equation, so that the test probes the physics term on a defect that its residual can see. An offset of $\sigma_{zz}$, the component affected in those runs, does not enter the one-dimensional residual at all.
 
 
 \paragraph{Metrics and physical audit}
@@ -866,7 +864,7 @@ These tests verify the mesh, the contact and the solver of the model. The compar
 \subsection{ML models results}
 \label{sec:results}
 
-All seed-replicated results below were obtained on the cleaned dataset of 1756 cases (Section~\ref{sec:prep-data}) in 341 training runs: 195 for the split matrix, 72 for the learning curves, 36 for label corruption, 20 for the backend comparison and 18 for the two-dimensional ablation. The only results obtained otherwise, the field maps of the two-dimensional families and the single-seed training they were drawn from, are described in Section~\ref{sec:res_fem}.
+All seed-replicated results below were obtained on the cleaned dataset of 1756 cases (Section~\ref{sec:prep-data}) in 341 training runs: 195 for the split matrix, 72 for the training-set-size study, 36 for label corruption, 20 for the backend comparison and 18 for the two-dimensional ablation. The only results obtained otherwise, the field maps of the two-dimensional families and the single-seed training they were drawn from, are described in Section~\ref{sec:res_fem}.
 The three one-dimensional families -- the data-driven MLP, the strong-form PINN and the weak-form VPINN -- share the network, the optimiser, the epoch limit, the early-stopping rule, the mini-batch size and the seeds, and differ only in the composition of the loss (Section~\ref{sec:models}). Accuracy is reported as macro-RMSE, the mean of the four component RMSEs in MPa, as mean~$\pm$~standard deviation over five seeds. Differences between families are tested with a paired $t$-test over seeds \citep{demsar2006} and called established at $p<0.05$. The difference itself, the macro-RMSE of a physics-informed family minus that of the MLP averaged over the seeds, is denoted $\Delta$ in this section. It is a difference of errors in MPa, negative where the physics-informed family is more accurate, and is unrelated to the inhomogeneity parameter $\Delta$ of Section~\ref{sec:res_fem_verification}. Because $\tau_{rz}$ is two orders of magnitude smaller than the normal components, a coefficient of determination over the normal components only, $R^2_{\mathrm{n}}$, is given alongside. It is taken with a single global denominator, the variance of each component over the whole dataset, and where a per-component $R^2$ or NRMSE below uses the held-out slice as denominator, this is stated at the number.
 Throughout this section the finite-element solution serves as the reference field, and this sets the domain of applicability of the results reported below. They characterise the surrogate models with respect to that reference, namely their accuracy on it, their transferability beyond the training range and their sensitivity to corrupted labels in the source. The Limitations paragraph at the end of the section returns to this point.
 
@@ -968,7 +966,7 @@ Split & $\Delta$, MPa & $t$ & $p$ & verdict & $\Delta$, MPa & $t$ & $p$ & verdic
 \end{sidewaystable}
 
 \begin{table}[t]
-\caption[Learning curves against the fraction of the training pool]{Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}. After a Holm correction over the eight PINN $-$ MLP comparisons of the table none remains significant, the smallest adjusted $p$ being 0.26 (\texttt{extrap:alpha\_max}, 25\,\%).}
+\caption[Accuracy against the size of the training set]{Accuracy against the size of the training set: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}. After a Holm correction over the eight PINN $-$ MLP comparisons of the table none remains significant, the smallest adjusted $p$ being 0.26 (\texttt{extrap:alpha\_max}, 25\,\%).}
 \label{tab:curves}
 \centering
 \setlength{\tabcolsep}{5pt}%
