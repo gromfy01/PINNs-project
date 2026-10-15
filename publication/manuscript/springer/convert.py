@@ -238,7 +238,9 @@ declarations = r'''
 
 \bmhead{Conflict of interest} The authors declare no competing interests.
 
-\bmhead{Data availability} The data and code that support the findings of this study are available from the corresponding author on reasonable request.
+\bmhead{Data availability} The finite-element data of this study, the 2443 raw Abaqus reports and the 112 history reports used to verify the drawing stress, are deposited in Zenodo at \url{https://doi.org/10.5281/zenodo.23352871}.
+
+\bmhead{Code availability} The code, the log of all training runs and the verification scripts are available in Zenodo at \url{https://doi.org/10.5281/zenodo.23352452} and on GitHub at \url{https://github.com/gromfy01/wire-drawing-pinn-surrogates}.
 
 '''
 

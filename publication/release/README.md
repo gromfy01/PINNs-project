@@ -32,7 +32,7 @@ If you use this code or the data, please cite the paper:
 
 and the Zenodo records of the code, DOI [10.5281/zenodo.23352452](https://doi.org/10.5281/zenodo.23352452)
 for version 1.0.0 ([10.5281/zenodo.23352451](https://doi.org/10.5281/zenodo.23352451) for all
-versions), and of the data, DOI `<DOI>`. Machine-readable metadata are in `CITATION.cff`.
+versions), and of the data, DOI [10.5281/zenodo.23352871](https://doi.org/10.5281/zenodo.23352871). Machine-readable metadata are in `CITATION.cff`.
 
 ## Contents
 
@@ -48,7 +48,7 @@ versions), and of the data, DOI `<DOI>`. Machine-readable metadata are in `CITAT
 ## Data
 
 The finite-element data are not part of the repository tree. They are published as two archives
-in a separate Zenodo record, DOI `<DOI>`:
+in a separate Zenodo record, DOI [10.5281/zenodo.23352871](https://doi.org/10.5281/zenodo.23352871):
 
 * **`Raw_Data.zip`** (1.2 GB) — 2443 Abaqus field output reports (`.rpt`), one per
   simulation, in the folders `Vel_5`, `Vel_10`, `Vel_20`, `Vel_40` and `Vel_250` (drawing speed in
