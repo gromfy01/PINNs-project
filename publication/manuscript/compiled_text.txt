@@ -1,0 +1,2020 @@
+
+===== PAGE 1 =====
+Dmitriy Demin1
+HSE University,
+11 Pokrovsky Boulevard,
+Moscow, Russia
+email: ddemin@hse.ru
+Georgii Romanenko
+HSE University,
+11 Pokrovsky Boulevard,
+Moscow, Russia
+email: Georgii.v.romanenko@gmail.com
+Physics-informed versus
+data-driven surrogates for
+residual stress after wire
+drawing: accuracy, physical
+admissibility and behaviour
+outside the training range
+Residual stresses left by cold wire drawing govern the fatigue life and dimensional stabil-
+ity of the product, yet a finite-element evaluation is too slow for design-space exploration.
+We compare data-driven and physics-informed surrogates for the residual stress field of
+axisymmetric AISI 1020 drawing on a common dataset of 1756 finite-element simulations,
+cleaned from 2443 raw runs by removing friction-label duplicates, an adhered-to-die re-
+duction level, and runs that did not complete the draw. Three one-dimensional families—a
+data-driven multilayer perceptron (MLP), a strong-form physics-informed neural network
+(PINN) and a weak-form variational PINN (VPINN)—share one architecture, optimiser
+and training budget and differ only in the loss, so that any difference is attributable to
+the physics term. Across thirteen interpolation and extrapolation splits the PINN has a
+lower error than the MLP on every split, but the margin is small (0.3–1.9 MPa at an
+8–16 MPa error level) and does not survive a multiple-comparison correction; a data-
+scarcity advantage is not observed. Two backend implementations (PyTorch and JAX)
+are statistically indistinguishable in accuracy, so the cheaper one—here PyTorch, 1.65
+times faster—should be preferred. The physics term earns its place elsewhere: it roughly
+halves the equilibrium and free-surface residuals of the predicted field, and it makes the
+surrogate markedly more robust to corrupted training labels (the PINN–MLP gap grows
+by 14.2 MPa per unit corrupted fraction). The finite-element model itself was not experi-
+mentally validated; the study therefore characterises the surrogates relative to their data
+source.
+Keywords: physics-informed neural networks wire drawing residual stresses variational
+PINN finite element simulation surrogate modelling
+1
+Introduction
+Metal forming is a fundamental process in modern manufac-
+turing, significantly impacting the final geometry, microstructure,
+and mechanical properties of manufactured products. Among var-
+ious forming operations, wire drawing stands out as a widely em-
+ployed technique, yet one that demands exceptional attention to
+surface quality, dimensional precision, and performance stability.
+The critical factor determining the dimensional stability, fatigue
+resistance, and durability of cold-drawn wire lies in the residual
+stresses generated during intense and non-uniform plastic defor-
+mation processes [1–12].
+In particular, as demonstrated in [3]
+through precise finite-element analysis, the alternating loading pat-
+terns during multi-pass wire drawing result in intricate residual
+stress distributions that significantly influence the subsequent be-
+havior of the wire. Studies [4,5] indicate that the die geometry and
+the conditions of lubrication during the processing of ZnAl15%
+alloy significantly affect the magnitude and distribution of residual
+stresses. For austenitic stainless steel X5CrNi18-10, as demon-
+strated in [10], it has been both experimentally and numerically
+verified that adjusting the inlet die angle and drawing speed al-
+lows for precise control over the residual stress state. However,
+1Corresponding Author.
+Version 1.18, September 8, 2026
+this approach necessitates extensive computational resources. In
+the production of superconducting wires based on Nb3Sn, trans-
+verse deformations before heat treatment can lead to irreversible
+deterioration of critical current [1]. For high-strength, unalloyed
+steels like 30MnSi6, ensuring the stability of mechanical proper-
+ties after bi-directional drawing is crucial [2]. This imposes strict
+limits on the acceptable level of residual stresses, making it a crit-
+ical consideration in manufacturing processes. Thus, the capacity
+for swift and physically accurate prediction of residual stresses
+has become an indispensable aspect of contemporary drawing pro-
+cess design. Finite element analysis (FEM), rightfully regarded
+as the gold standard for stress-strain modelling during drawing,
+allows for highly accurate simulation of stress fields with the aid
+of axisymmetric and three-dimensional formulations. These ad-
+vanced methods enable the intricate evolution of stress patterns to
+be meticulously reproduced, taking into account intricate contact
+interactions, substantial plastic deformations, material hardening,
+and thermal effects. However, the computational expense associ-
+ated with a single FEM analysis remains prohibitively high, ren-
+dering it unsuitable for multi-parameter studies, rapid optimization,
+and real-time decision-making. This has spurred a surge in interest
+in surrogate models that promise orders-of-magnitude reduction in
+prediction time while maintaining acceptable levels of accuracy.
+The advancements in machine learning (ML) technology have
+Journal of Manufacturing Science and Engineering
+Copyright © 2026 by ASME
+PREPRINT FOR REVIEW / 1
+
+===== PAGE 2 =====
+opened up a whole new realm of possibilities for streamlining finite
+element analysis (FEA) in industrial settings [13–15]. By training
+artificial neural networks (ANNs) on representative datasets gen-
+erated through FEA, these networks can almost instantaneously
+approximate highly nonlinear mappings between process parame-
+ters and stress fields. In the realm of wire drawing, this approach
+has been systematically explored in several studies [16–18]. One
+integrated scheme involving both FEA and ANNs [16] showcased
+the potential to predict residual stresses with remarkable accuracy.
+Moreover, the research conducted in [18] demonstrated that ANNs
+are capable of not only predicting residual stresses but also accu-
+rately reproducing accumulated strains in wires. Further in-depth
+investigations have revealed that when hyperparameters are metic-
+ulously optimised using tools such as Optuna [19], BayesianOpt,
+or Scikit-optimize, a multi-layer perceptron (MLP) demonstrates
+an R² coefficient of determination exceeding 0.99 for all compo-
+nents of the residual stress tensor in low-carbon steel wire. Similar
+patterns are observed in related domains.
+Convolutional neural
+networks prove effective in indentation analysis, simultaneously
+predicting non-equiaxial residual stresses and plastic flow proper-
+ties [20,21]. For real-time estimation of three-dimensional resid-
+ual stress distributions during machining, architectures based on
+the Incepu-Net approach [22] are employed. Hybrid FEM-ANN-
+XGBoost models are utilised for predicting drawing forces [23].
+A comprehensive review [15] underscores the prevailing trend to-
+wards integrating machine learning techniques for optimising man-
+ufacturing processes.
+Nonetheless, purely data-driven models have a fundamental
+flaw: they cannot guarantee adherence to the laws of physics,
+specifically the equations of equilibrium, boundary conditions, and
+the governing principles of the mechanics of deformable materi-
+als. This issue becomes particularly critical when extending pre-
+dictions beyond the scope of the training data, raising legitimate
+concerns about the physical validity of the predicted stress pat-
+terns. To address this limitation, the concept of Physics-Informed
+Neural Networks (PINNs) was introduced. The idea was first pro-
+posed in [24] and has undergone rapid development in recent years
+[25]. The core concept behind PINNs lies in integrating differential
+equations that describe the physical principles of a process directly
+into the loss function. This allows the neural network to be penal-
+ized not only for discrepancies with the data but also for violating
+conservation laws, boundary conditions, and initial conditions. As
+demonstrated in [26], this methodology ensures enhanced general-
+ization capabilities and physical consistency in predictions for solid
+mechanics challenges. A comprehensive analysis [27] highlights
+the rapid expansion of physically informed machine learning in a
+wide range of manufacturing processes.
+There are already successful examples of PINN applications
+in predicting residual stresses during ultrasonic surface treatment
+of 20CrNiMo steel [28]. Additionally, PINNs have been used to
+identify subsurface residual stresses in sliding friction processes
+[29,30] and assess durability under high-temperature creep con-
+ditions [31]. A comparative analysis of pure neural networks and
+physically regularized models applied to sheet metal stamping [32]
+demonstrated that PINN-like architectures significantly improve
+generalization even with limited training data. The convergence of
+hybrid finite-element-machine learning models and physics-driven
+machine learning approaches for predicting the properties of addi-
+tive manufactured steels underscores a broader trend towards the
+integration of prior physical understanding into learning algorithms
+[33,34].
+Despite the general progress made, the full potential of physical
+informed neural networks (PINNs) for predicting residual stresses
+after wire drawing remains largely unexplored. In a study [17] that
+demonstrated unprecedented accuracy with a purely data-driven
+approach, no explicit equilibrium constraints were imposed on the
+neural network model. Consequently, it is still not clear whether
+physical regularization improves prediction quality, or whether the
+rigidity imposed by equilibrium equations reduces accuracy on
+real-world datasets. Moreover, the existing literature lacks a sys-
+tematic comparison of different PINN implementations, especially
+between the strong (differential) and weak (variational) formula-
+tions of physical laws for this class of problems. The present study
+seeks to bridge this gap by conducting a direct comparative analysis
+of six surrogate models, each trained on a unified dataset obtained
+through meticulous finite-element simulations of an axisymmetric
+wire-drawing process. Two of these models are fundamental data-
+centric approaches: a conventional multi-layer perceptron (MLP)
+with hyperparameters determined through manual grid search and
+an MLP optimized using Optuna, replicating the methodology out-
+lined in [17].
+The remaining four models represent physically-inspired archi-
+tectures: a powerful strong-form physically-informed neural net-
+work (PINN) implemented within the PyTorch framework; the
+same physical model reproduced using specialized libraries such as
+DeepXDE and JAX/Flax, which allows us to evaluate the impact
+of software backends on training performance; and a variational
+PINN (VPINN) based on the weak (integral) formulation of equi-
+librium equations. It is of paramount importance that all six models
+employ an identical representation of input features — process pa-
+rameters and point coordinates — as well as a uniform structure
+for the output vector — components of the residual stress tensor.
+Furthermore, a unified approach to clustering data, a consistent
+k-fold cross-validation procedure with fixed indices for withheld
+observations, and a shared set of quality indicators are employed.
+This experimental design guarantees that any statistically sig-
+nificant discrepancies in prediction accuracy can be exclusively
+attributed to the method of integrating physical knowledge and the
+specifics of software implementation, excluding the influence of
+extraneous factors. The evaluation is conducted in terms of both
+the accuracy in reproducing individual elements of the stress tensor
+averaged over the entire field of indicators and their statistical sig-
+nificance, which is assessed through the use of non-parametric tests
+such as Friedman’s and Neményi’s tests on a dataset comprising
+304 testing instances. The findings obtained enable us to furnish
+quantitatively supported recommendations regarding the selection
+of an appropriate surrogate model architecture for the purpose of
+forecasting residual stresses following drawing operations, as well
+as delineate the parameters within which the implementation of
+rigorous and relaxed forms of physical regularization in the realm
+of mechanical engineering processes is feasible.
+2
+Materials and methods
+2.1
+Materials and process parameters. The process mod-
+elled is axisymmetric cold drawing of a wire through a conical
+die. The computational domain and the notation used for its bound-
+aries are shown in Fig. 1(a). Five characteristic surfaces are dis-
+tinguished: 𝑆1 - is the axis of symmetry of the billet and of the
+finished product; 𝑆2 - is the outlet surface, on which the drawing
+velocity is prescribed; 𝑆3 - is the free lateral surface; 𝑆4 - is the
+contact surface between the wire and the die; and 𝑆5 - is the entry
+surface of the billet.
+The half-angle of the working cone of the die is denoted 𝛼;
+𝐷0 and 𝐷are the diameters of the billet and of the drawn wire;
+𝐿is the length of the calibration land. The radial coordinate 𝑟
+is measured from the axis and the axial coordinate 𝑧along the
+direction of metal flow. The three geometric parameters of Table 1
+are expressed through this notation: the reduction 𝑄= (𝑟0 −𝑟1)/𝑟0
+follows from 𝐷0 and 𝐷, the deformation-zone half-angle is 𝛼, and
+the calibration ratio 𝑘relates the land length 𝐿to the outlet radius.
+A series of axisymmetric FEM simulations of the wire-drawing
+process was carried out in Abaqus CAE. The workpiece was a rect-
+angular longitudinal section discretised with a CAX4RT element
+mesh. The geometry of the die was described by three parameters:
+the cross-section reduction (𝑄), the half-angle of the deformation
+zone (𝛼), and the ratio between the calibration-section length and
+the outlet radius (𝑘). Process parameters varied during the cam-
+paign were the Coulomb friction coefficient (𝜇) and the drawing
+velocity (𝑣). Their ranges are summarised in Table 1.
+2 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 3 =====
+(a) Axisymmetric wire-drawing process. S1 – axis of symmetry; S2 –
+outlet face of the finished product; S3 – free lateral surface; S4 – contact
+surface with the die; S5 – entry face of the billet; α – half-angle of the
+working cone of the die; D0 and D – diameters of the billet and of the
+drawn wire; L – length of the calibration land
+Material behaviour was specified with a Johnson–Cook constitu-
+tive model for AISI 1020 [35,36]. As recovered from the exported
+stress fields, however, the response over the range covered is effec-
+tively elastic–perfectly-plastic with a yield stress of 320 ± 10 MPa,
+with no detectable strain-rate or temperature sensitivity, consis-
+tent with an analysis that is not thermomechanically coupled; the
+Johnson–Cook hardening and softening constants therefore do not
+act on the exported result and are not used in the surrogate models.
+The same constitutive description was used in all simulations, so
+the resulting dataset reflects pure variation of geometry and pro-
+cess conditions. Spatial coordinates of mesh nodes and the four
+cylindrical components of the residual stress tensor were exported
+from the Abaqus Output Database (.odb) files through scripts writ-
+ten against the Abaqus CAE Python API. Only the nodes lying
+within 25–75% of the wire cross-section height were retained for
+surrogate-model training, because this region corresponds to the
+steady-state deformation regime and is most representative of the
+residual stress field of interest. Each retained set was downsampled
+to 20 radial points so that all simulations share the same spatial
+grid.
+Table 1
+Ranges of process parameters in the FEM cam-
+paign.
+Parameter Values
+Reduction 𝑄0.015, 0.025, 0.05, 0.10, 0.15, 0.20, 0.25
+Calibration ratio 𝑘0.0, 0.1, 0.3, 0.5, 0.75, 1.0
+Die half-angle 𝛼, ◦4, 8, 12, 16, 20
+Friction coefficient 𝜇0.025, 0.05, 0.10
+Drawing velocity 𝑣, m/min 5, 10, 20, 40, 250
+After removing friction-label duplicates, the highest reduction
+level 𝑄= 0.25 (at which several runs ceased to be drawing as the
+billet adhered to the die) and runs that did not complete the draw,
+the cleaning detailed in Section 2.2 leaves 1756 valid simulations
+for surrogate-model training.
+In this study, no direct experimental validation of the finite el-
+ement model was carried out (i.e. no measurement of the drag
+force or residual stresses using X-ray diffraction). The modelling
+approach employed in this study aligns with established practices
+in the numerical analysis of wire drawing. This approach encom-
+passes the utilisation of finite elements, a contact formulation, and a
+material description based on the Johnson–Cook model. This prac-
+tice, as demonstrated in previous independent studies [3,6,7,10], is
+in good agreement with experimental measurements, which serves
+as indirect confirmation of the model’s reliability. Nevertheless, it
+should be noted that such an agreement does not constitute direct
+validation of the specific dataset obtained here. Consequently, it is
+imperative that the resulting residual stress values are interpreted
+with this limitation in mind.
+2.2
+Preparing Data for Machine Learning.
+Exported fields and their limits.. Each report holds one frame
+of nodal values, the last one of the run: coordinates (𝑟, 𝑧), log-
+arithmic strains LE11, LE22, LE33, LE12, the von Mises and
+principal stresses, and the components S11, S22, S33, S12, which
+in the CAX convention are 𝜎𝑟𝑟, 𝜎𝑧𝑧, 𝜎𝜃𝜃, 𝜏𝑟𝑧. The targets are
+read directly from these columns (present in 2443 of 2443 files),
+and the identity of every stored field is verified against all quan-
+tities of the report, not only the four expected ones. The dataset
+was regenerated from the raw Abaqus reports; the four compo-
+nents (𝜎𝑟𝑟, 𝜎𝜃𝜃, 𝜎𝑧𝑧, 𝜏𝑟𝑧) are read from the columns S.S11, S.S33,
+S.S22 and S.S12 respectively. Nodal averaging leaves a residual
+at the free surface: on the final dataset the mean |𝜎𝑟𝑟| at 𝑟= 𝑅is
+3.52 MPa and |𝜏𝑟𝑧| 0.24 MPa. This is the accuracy with which the
+source itself satisfies the traction-free condition and is the base-
+line for every boundary-condition metric in Section 3.2.3.
+Not
+exported are PEEQ, temperature, displacements, the die reaction
+force, contact pressure and shear (CPRESS, CSHEAR), and inter-
+mediate frames. Hence the drawing force cannot be recovered from
+the dataset (in the retained runs the exported section is unloaded:
+median |
+∫
+𝜎𝑧𝑧d𝐴|/𝐴= 5.3 MPa against an rms 𝜎𝑧𝑧of 167 MPa),
+the friction term cannot be checked through contact stresses, and
+plastic strain is available only as a lower bound through the total
+logarithmic strain.
+Axial window.. Only nodes whose axial coordinate lies within
+25–75 % of the axial extent of the wire are used (median captured
+fraction 0.4985); the window is the steady-state part of the drawn
+wire, of median length 57.5 mm at a radius of 16.2 mm (𝐿/𝑅≈
+3.5). The choice was checked by measuring, per component, the
+share of the in-window variance that lies along 𝑧and the loss from
+collapsing the field along 𝑧(Table 2): 10–12 % and 2–4 % for the
+normal components, but 40 % and 79 % for 𝜏𝑟𝑧, which changes sign
+along 𝑧and cancels under averaging. The shear component is thus
+intrinsically unpredictable from a one-dimensional representation,
+a property of the data rather than of any model (Fig. 5: inside
+the window the mean |𝜏𝑟𝑧| of the shown run is 1.06 MPa against
+11.0 MPa outside).
+Coordinates in the field plots are dimensionless throughout. In
+Fig. 5 the radius is normalised by the billet radius 𝑅= 18 mm, so
+the drawn part of the wire ends at 𝑟/𝑅= 0.9, and 𝑧by the model
+length; in Figs. 6 and 7 the radius is normalised by the surface
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 3
+
+===== PAGE 4 =====
+Fig. 2
+Residual stress components from one finite-element run over the wire cross-section; the dashed lines mark
+the 25–75 % axial window retained for training.
+radius of the same cross-section, so that 𝑟/𝑅= 1 is the free surface
+at every axial position, and 𝑧by the window length. The radial
+axis is stretched relative to the axial one: at 𝐿/𝑅≈3.5–7.7 an
+equal-aspect panel degenerates into a strip.
+Profiles and grids.. For the main track the window nodes are
+sorted by radius and split into 20 equal-count bins; the bin radius
+and the four components are the medians within each bin. Radii
+are stored per case, and 𝑟is normalised by the outermost bin radius
+of the same case, so that 𝑟= 1 is the free surface by construction
+(median ratio of the outermost bin to the wire radius 0.996). Nodal
+noise yields slightly negative radii at the axis (|𝑟|/𝑅≤0.054); in
+all 1/𝑟terms 𝑟is clipped at 0.05𝑅. For the extended track the
+same nodes are binned on an 8 × 20 grid in (𝑧, 𝑟) by the median;
+𝑟is normalised by the surface radius of the same axial slice, 𝑧by
+the window (𝑧= 0 entry, 𝑧= 1 exit). Targets stay in MPa; since
+the components differ by two orders of magnitude (mean |𝜎| about
+79 MPa for the normal components against 0.67 MPa for 𝜏𝑟𝑧),
+per-component errors are always reported next to macro-averaged
+ones.
+Filtering.. Cases are removed whole, before any split, in the
+order of Table 3. The level 𝑄= 0.25 is excluded entirely: there
+the process ceased to be drawing in several runs (the billet adhered
+to the die and the step degenerated into tension), and 17.5 % of
+its runs did not complete against 4.3–6.0 % at the other levels.
+One run with a misspelled friction token is dropped. Cases whose
+profile is bit-identical to another case differing only in the friction
+label are dropped, keeping one per group (323 of the 2443 raw
+cases, 13.2 %; 319 of them survive the two preceding filters and
+are counted in Table 3). Finally, runs that stopped before the wire
+had passed through the die are removed: their tail retains the billet
+radius 𝑅0 and the die reference point lies inside the axial extent of
+the wire (153 of the 159 such runs on the raw grid). Where the
+undrawn part enters the window the surface radius varies along it
+(spread above 0.1 mm against a median of 0.0026 mm), and what
+the profile labels as free-surface 𝜎𝑟𝑟is contact pressure, down to
+−571.3 MPa against −19.7 MPa at worst in clean cases. These
+92 cases (89 detected through the window plus 3 with the tail
+outside it) are removed before splitting: on the random split of the
+uncleaned set 73 of the 89 fell into the training pool, where the
+data term contradicts the traction-free condition.
+The final dataset has 1756 cases: 35 120 radial points in the
+main track and 280 960 grid points in the extended track.
+Group-aware splits.. All partitions are made at the level of
+cases, so the 20 radial points (or 160 grid points) of a case
+never straddle training and test. A random 15 % hold-out mea-
+sures interpolation only; to measure transfer beyond the training
+range, entire factor levels are held out (Table 4).
+Each extrap-
+olation split has two controls:
+a matched control holds out a
+random subset of the same size from the whole pool, so that
+ΔRMSE = RMSE(extrap) −RMSE(matched) separates the cost
+of leaving the training range from that of a smaller training set; an
+interior control holds out an inner level of the same axis (𝛼= 12◦,
+𝑄= 0.10), separating the cost of a gap in the factor grid from
+that of leaving its range. The corner split removes the joint re-
+gion 𝛼= 20◦∧𝑄≥0.15; along each axis separately its test cases
+stay inside the training range, so it probes an uncovered region of
+the joint space, not extrapolation. A coverage report lists per axis
+whether the test range leaves the training range; transfer beyond
+the training range is claimed only for axes where it does.
+The
+partitions are fixed (seed 42); the five training seeds of Section 2.3
+vary the initialisation, the batch order and the 15 % early-stopping
+subset carved from the training pool.
+2.3
+Preparing Machine Learning models.
+Network and inputs.. All surrogates share one network, one op-
+timiser and one training budget; the families differ only in the
+composition of the loss (Table 5, Fig. 3). In the main track the
+input is x = (𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑟), with 𝑟∈[0, 1] the radius nor-
+malised by the free-surface radius of the same case (𝑟= 1 is
+the free surface). The radius is augmented by a Fourier embed-
+ding [sin(2𝜋𝑘𝑟), cos(2𝜋𝑘𝑟)], 𝑘= 1, . . . , 4; inputs and targets are
+standardised with training-set statistics; the body is a multilayer
+perceptron with three hidden layers of 96 tanh units and a linear
+head with four outputs ˆ𝝈= ( ˆ𝜎𝑟𝑟, ˆ𝜎𝜃𝜃, ˆ𝜎𝑧𝑧, ˆ𝜏𝑟𝑧), de-standardised
+before entering any physical term. All arithmetic is in double pre-
+cision in both backends.
+Each FEM case contributes 20 radial
+4 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 5 =====
+Table 2
+Share of the variance along z inside the axial window and effect of collapsing the field along z by the median
+(mean absolute value, MPa).
+Component
+Share along 𝑧
+Before collapse
+After collapse
+𝜎𝑟𝑟
+0.114
+47.9
+46.6
+𝜎𝜃𝜃
+0.116
+56.6
+54.4
+𝜎𝑧𝑧
+0.098
+140.2
+137.6
+𝜏𝑟𝑧
+0.397
+3.22
+0.68
+Table 3
+Case-level filtering applied before splitting.
+Step
+Removed
+Remaining
+Raw reports
+2443
+Level 𝑄= 0.25 excluded
+275
+2168
+Friction label outside the design (file-name typo)
+1
+2167
+Bit-identical duplicates differing only in 𝜇label
+319
+1848
+Runs that did not complete the pass through the die
+92
+1756
+Fig. 3
+Architecture of the data-driven MLP surrogate.
+points, always kept in the same partition (group-aware splitting).
+Two tracks and the role of 𝑧.. In the main track the axial coor-
+dinate is not an input: each case is one radial profile, the median
+along the steady-state axial window (25–75 % of the wire length,
+𝐿/𝑅≈3.5). Axial derivatives of the network therefore do not
+exist, and the axisymmetric equilibrium equations
+𝑅𝑟= 𝜕𝜎𝑟𝑟
+𝜕𝑟
++ 𝜕𝜏𝑟𝑧
+𝜕𝑧
++ 𝜎𝑟𝑟−𝜎𝜃𝜃
+𝑟
+= 0,
+(1)
+𝑅𝑧= 𝜕𝜏𝑟𝑧
+𝜕𝑟
++ 𝜕𝜎𝑧𝑧
+𝜕𝑧
++ 𝜏𝑟𝑧
+𝑟
+= 0
+(2)
+can only be imposed with the axial terms dropped. Whether that
+is admissible was measured on the raw FEM fields (2443 cases,
+20 × 20 (𝑧, 𝑟) grid, median per case): in (1) the dropped |𝜕𝜏𝑟𝑧/𝜕𝑧|
+is 1.3 % of the retained terms (75th percentile 3.9 %); in (2) the
+dropped |𝜕𝜎𝑧𝑧/𝜕𝑧| is 68 % (75th percentile 86 %).
+The radial
+equation is therefore used in the reduced form
+𝑅1(𝑟) = 𝜕𝜎𝑟𝑟
+𝜕𝑟
++ 𝜎𝑟𝑟−𝜎𝜃𝜃
+𝑟
+,
+(3)
+whereas the axial equation is not used in the main track, for a
+reason stronger than the size of the dropped term: the remainder
+is a total derivative,
+𝜕𝜏𝑟𝑧
+𝜕𝑟
++ 𝜏𝑟𝑧
+𝑟
+≡1
+𝑟
+𝜕(𝑟𝜏𝑟𝑧)
+𝜕𝑟
+,
+(4)
+so forcing it to zero means 𝑟𝜏𝑟𝑧= const and, with regularity on
+the axis (𝜏𝑟𝑧(0) = 0), 𝜏𝑟𝑧≡0 over the whole radius. That is not an
+approximate axial balance but the statement that shear is absent,
+which the FEM data contradict (median relative range of 𝑟𝜏𝑟𝑧
+along the radius 3.15). The term exists in the code under its true
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 5
+
+===== PAGE 6 =====
+Table 4
+The 13 case-level splits of the 1756 cases. ntrain is the training pool, including the early-stopping subset.
+Split
+Held-out cases
+Kind
+𝑛train
+𝑛test
+random
+random 15 %
+interpolation
+1493
+263
+extrap:alpha_max
+𝛼= 20◦
+extrapolation, 𝛼
+1377
+379
+extrap:Q_high
+𝑄= 0.20
+extrapolation, 𝑄
+1484
+272
+extrap:k_max
+𝑘= 1.0
+extrapolation, 𝑘
+1466
+290
+extrap:v_max
+𝑣= 250 m/min
+extrapolation, 𝑣
+1255
+501
+extrap_joint:corner
+𝛼= 20◦∧𝑄≥0.15
+joint-space gap
+1642
+114
+interp:alpha_mid
+𝛼= 12◦
+interior control
+1416
+340
+interp:Q_mid
+𝑄= 0.10
+interior control
+1438
+318
+matched:alpha_max
+random, same size
+matched control
+1377
+379
+matched:Q_high
+random, same size
+matched control
+1484
+272
+matched:k_max
+random, same size
+matched control
+1466
+290
+matched:v_max
+random, same size
+matched control
+1255
+501
+matched:corner
+random, same size
+matched control
+1642
+114
+Fig. 4
+Architecture of the physics-informed surrogate: shared trunk, physics residual and boundary-condition terms
+in the loss.
+name (zero-shear penalty, 𝜆shear) and is switched off, 𝜆shear = 0, in
+every run reported here.
+In the extended track the axial coordinate is added, x =
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑧, 𝑟); the field is sampled on an 8 × 20 (𝑧, 𝑟) grid
+inside the same window, one median per cell, without collaps-
+ing the axial direction; 𝑧is normalised to the window (0 = inlet,
+1 = outlet) and 𝑟to the surface radius of the same axial sec-
+tion. Both equations are then written in full, and three families
+are compared: mlp2d (no physics), pinn2d_reduced (𝑅𝑟without
+𝜕𝜏𝑟𝑧/𝜕𝑧, exactly the operator of the main track) and pinn2d_full
+(both residuals). Physical derivatives follow from the chain rule,
+𝜕/𝜕𝑟phys = 𝑅−1𝜕/𝜕𝑟, 𝜕/𝜕𝑧phys = 𝐿−1𝜕/𝜕𝑧, with 𝑅and 𝐿the sur-
+face radius and window length of the case; the 1/𝑟factor uses 𝑟
+clipped at 0.05𝑅, since nodal radii near the axis carry noise (worst
+|𝑟|/𝑅= 0.054).
+Loss function.. Every physics-informed family minimises
+L = Ldata + 𝜆bc Lbc + 𝜆phys 𝑔Lphys,
+(5)
+with Ldata the mean squared error in standardised output space.
+The boundary term enforces the traction-free condition at the free
+surface,
+Lbc =
+⟨︂(︁ˆ𝜎𝑟𝑟(𝑟=1)/𝑠𝑟𝑟
+)︁2 + (︁ˆ𝜏𝑟𝑧(𝑟=1)/𝑠𝑟𝑧
+)︁2⟩︂
+batch,
+(6)
+where 𝑠𝑐is the training standard deviation of component 𝑐; the
+condition is imposed and later audited at the same point, 𝑟= 1 (at
+every 𝑧in the extended track). The physics term is a log(1 + 𝑥2)
+transform of the dimensionless residual,
+Lphys =
+⟨︂
+log(︁1 + (𝑅/𝑠𝑅)2)︁⟩︂
+,
+(7)
+evaluated at the 20 data radii (collocation points coincide with
+data points), with scales 𝑠𝑅1 = (𝑠𝑟𝑟+ 𝑠𝜃𝜃)/𝑅char for the radial and
+𝑠𝑅𝑧= 𝑠𝑧𝑧/𝐿char + 𝑠𝑟𝑧/𝑅char for the axial equation, 𝑅char and 𝐿char
+being the mean surface radius and window length of the training
+set. Without this scaling the physics term falls several orders of
+magnitude below Ldata and is inert whatever 𝜆; scaling the axial
+residual with 𝑅char instead of 𝐿char has the same effect.
+The weights are fixed a priori and shared by all physics-informed
+families, 𝜆phys = 0.3, 𝜆bc = 0.5, but 𝜆phys is read as a share of the
+data gradient: before training, 𝑔is set once on the first mini-batch
+6 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 7 =====
+so that the gradient norms of the physics and data terms with
+respect to the network parameters coincide,
+𝑔= ∥∇𝜃Ldata∥2
+/︁∥∇𝜃Lphys∥2.
+(8)
+This balancing [37] is what makes strong and weak forms compa-
+rable: the weak residual projects the same residual onto oscillating
+test functions and is damped roughly two-hundred-fold, so that at
+equal nominal 𝜆the weak term contributed 0.36 % of the data-
+gradient norm against 37 % for the strong term, and “strong versus
+weak” degenerated into “physics on versus off”. The measured
+multipliers in the main stage are 𝑔≈0.165 (0.13–0.22) for the
+strong and 𝑔≈4.97 (2.8–8.0) for the weak form; 𝑔is logged with
+every PyTorch run.
+Weak form (VPINN).. Multiplying (3) by 𝑟𝑣𝑘(𝑟) with test func-
+tions 𝑣𝑘= sin(𝑘𝜋𝑟), 𝑘= 1, . . . , 8, 𝑣𝑘(0) = 𝑣𝑘(1) = 0, and integrat-
+ing by parts over [0, 1] gives [38]
+𝑊𝑘= −
+∫1
+0
+ˆ𝜎𝑟𝑟
+(︁𝑣𝑘+ 𝑟𝑣′
+𝑘
+)︁𝑑𝑟+
+∫1
+0
+(︁ˆ𝜎𝑟𝑟−ˆ𝜎𝜃𝜃
+)︁𝑣𝑘𝑑𝑟,
+(9)
+evaluated by 32-point Gauss–Legendre quadrature and inserted into
+(7) with scale 𝑠𝑊= 𝑠𝑟𝑟+ 𝑠𝜃𝜃. No derivative of the network is
+computed: this, not another way of computing the same derivative,
+is the substantive difference between the two families.
+Training protocol.. The protocol is enforced by construction
+rather than by configuration: every family is trained by the same
+trainer class, in which the family selects only the composition of the
+loss, and one launcher writes every run with its hyperparameters to
+a single log. It is identical for all families: AdamW, learning rate
+3×10−3 (2×10−3 in the extended track), no schedule, weight decay
+10−4, gradient-norm clipping at 1.0, mini-batches of 64 cases (32),
+at most 800 epochs (300), early stopping on the macro-RMSE of
+an internal early-stopping subset of 15 % of the training cases with
+patience 40 (30), and restoration of the best state. One architecture
+and one hyperparameter set were fixed before any held-out region
+was evaluated and were not tuned per family or per split, so no
+search could leak a held-out region. Every configuration is trained
+with five seeds (0–4) on the thirteen splits of Table 4 and in the
+backend comparison, and with three seeds (0–2) in the learning-
+curve, label-corruption and extended-track stages; the seed governs
+initialisation, batch order and the internal early-stopping subset,
+while the test cases of a split are the same for every seed (split
+seed 42). Learning curves use nested group-aware subsamples of
+10/25/50/100 % of the training pool, identical for all families; the
+subsamples are nested but not stratified by 𝑣(the launcher uses
+nested_subsamples, not the stratified variant), so the sparsest
+level 𝑣= 5 m/min (122 cases) can be under-represented at 10 %;
+label corruption adds +250 MPa to 𝜎𝜃𝜃of 0/1/5/10 % of the train-
+ing cases (0 % being the clean reference; nested lists shared by all
+families, hold-out clean), the morphology of a solver artefact found
+in the source rather than Gaussian noise, which averages out over
+a profile.
+Metrics and physical audit.. The primary metric is the macro-
+RMSE (mean over the four components of the component RMSE,
+MPa).
+𝑅2 is reported with a single denominator, the standard
+deviation of each component over the whole dataset, since a de-
+nominator taken from the held-out slice is not comparable between
+regions. Physical admissibility is audited on the predictions with
+the operators of the loss (median |𝑅1| over the profile by finite
+differences; | ˆ𝜎𝑟𝑟|, | ˆ𝜏𝑟𝑧| at 𝑟= 1), always beside the same quantity
+computed on the FEM data of the same test cases, since the source
+itself satisfies the traction-free condition only approximately.
+Backends.. The
+reference
+implementation
+is
+PyTorch
+(torch.autograd);
+an independent twin in JAX (jax.grad,
+optax.adamw) shares architecture, data, split, training budget
+and nominal hyperparameters but draws initial weights and batch
+order from its own random stream.
+The twin implements the
+strong-form loss with the nominal weight 𝜆phys applied directly:
+the gradient-norm calibration of (8) is not implemented in it, so
+the effective physics weight of the two implementations differs.
+With identical weights copied into both networks, 𝜕ˆ𝜎𝑟𝑟/𝜕𝑟at 64
+random inputs agrees to 8.7 × 10−15 absolute and 9.8 × 10−16
+relative (forward pass 1.0 × 10−15), i.e. to double-precision round-
+off, so no accuracy difference between backends can originate in
+automatic differentiation. Each backend is then trained with five
+seeds on random and extrap:alpha_max and compared by the
+paired test below, with wall-clock training time measured on CPU
+in double precision. The DeepXDE model of the previous version
+runs on the PyTorch backend and obtains its derivatives through
+torch.autograd.grad; it is not a third engine and is not reported
+separately [39].
+Statistical treatment.. The unit of replication is the training run
+(seed), not the test case. Within a split, two families are compared
+by a paired 𝑡-test over seeds (𝛼= 0.05; no verdict with fewer than
+three seeds), with |Δ| reported beside the pooled seed standard
+deviation as effect size. Ranking of the three families within a
+split uses Friedman with Nemenyi post hoc, blocks being seeds
+[40]; indistinguishability is not transitive, so distinguishable pairs
+are listed rather than “clusters”. Splits are never pooled: ranks in
+extrap:alpha_max and in random describe different tasks. The
+excess error of an extrapolation split over its matched control is
+tested by Welch’s unpaired 𝑡-test; trends across data fraction and
+corruption rate by least squares of the seed-wise PINN−MLP gap
+on log(fraction) and on the rate.
+The previous version trained
+each model once and applied Friedman–Nemenyi across the 304
+hold-out cases; that quantifies the sampling variance of the hold-
+out, on how many cases one model beats another, not whether an
+advantage reproduces on retraining, which is the question at issue.
+3
+Results and Discussion
+3.1
+FEM results. In place of experimental validation, five
+internal consistency tests were run on the 1756 retained cases. The
+exported cross-section is self-equilibrated to 3.2 %: the median
+|
+∫
+𝜎𝑧𝑧d𝐴|/𝐴is 5.3 MPa against an rms 𝜎𝑧𝑧of 167 MPa. Local
+equilibrium closes to 2.1 % of the sum of the moduli of its terms.
+At the free surface |𝜎𝑟𝑟| is 4.0 MPa against 54.0 MPa in the bulk,
+i.e. 7.4 % (a nodal value; the 3.52 MPa quoted below is the median
+of the outermost bin of the 20-bin profile), on the axis |𝜎𝑟𝑟−𝜎𝜃𝜃| =
+1.07 MPa (0.6 %), and the yield condition is violated nowhere: the
+maximum von Mises stress over the retained cases is 232.6 MPa
+at 𝜎𝑦= 320 MPa. Kinematically, the exit radius follows 𝑅0(1 −
+𝑄) to 0.11 % (ratio 1.0011) and |tr LE| = 5.1 × 10−4, i.e. plastic
+incompressibility holds to 0.05 %. These tests check the mesh, the
+contact and the solver of this model, not its correspondence to real
+wire.
+3.2
+ML models results. All seed-replicated results below
+were obtained on the cleaned dataset of 1756 cases (Section 2.2)
+in 341 training runs: 195 for the split matrix, 72 for the learning
+curves, 36 for label corruption, 20 for the backend comparison and
+18 for the two-dimensional ablation; the one exception, the single-
+run comparison of Table 8, is described in Section 3.2.3. The three
+one-dimensional families – the data-driven MLP, the strong-form
+PINN and the weak-form VPINN – share architecture, optimiser,
+budget, early stopping and seeds and differ only in the composition
+of the loss (Section 2.3). Accuracy is reported as macro-RMSE,
+the mean of the four component RMSEs in MPa, as mean ± stan-
+dard deviation over five seeds; differences between families are
+tested with a paired 𝑡-test over seeds [40] and called established at
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 7
+
+===== PAGE 8 =====
+Table 5
+Model families. All share the network, optimiser, budget, seeds and splits; only the loss composition differs.
+R1: reduced radial residual (3); Rr , Rz : full residuals (1)–(2); Wk : weak residual (9).
+Family
+Input
+Physics term
+BC term
+Network derivative
+MLP
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑟)
+–
+–
+none
+PINN (strong)
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑟)
+𝑅1, pointwise
+yes
+𝜕/𝜕𝑟(autodiff)
+VPINN (weak)
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑟)
+𝑊𝑘, 𝑘≤8, 32-pt quadrature
+yes
+none
+mlp2d
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑧, 𝑟)
+–
+–
+none
+pinn2d_reduced
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑧, 𝑟)
+𝑅𝑟without 𝜕𝜏𝑟𝑧/𝜕𝑧
+yes
+𝜕/𝜕𝑟
+pinn2d_full
+(𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑧, 𝑟)
+𝑅𝑟and 𝑅𝑧, full
+yes
+𝜕/𝜕𝑟, 𝜕/𝜕𝑧
+Fig. 5
+Distribution of residual stresses obtained from the FEM simulation at Q = 0.10 (10 % reduction in diameter,
+20.1 % in area), k = 0.5, α = 12◦, µ = 0.05, v = 10 m/min. Components σr r , σθθ, σzz and τr z over the full axial extent
+of the wire; r is normalised by the billet radius R = 18 mm, z by the model length L = 139.5 mm. Dashed lines mark
+the axial window 25–75 % of L from which the training data are taken.
+𝑝< 0.05. Because 𝜏𝑟𝑧is two orders of magnitude smaller than the
+normal components, a coefficient of determination over the normal
+components only, 𝑅2n, with a single denominator (global denomi-
+nator: the variance of each component over the whole dataset) is
+given alongside; where a per-component 𝑅2 or NRMSE below uses
+the held-out slice as denominator, this is stated at the number. The
+finite-element model is the reference throughout; no physical mea-
+surement enters, so the section characterises the surrogates relative
+to their data source, not to the process (see the closing paragraph
+of this section).
+3.2.1
+Extrapolation versus interpolation. Table 10 gives the
+macro-RMSE on all thirteen splits. On the random hold-out all
+three families reach 8.0 MPa with 𝑅2n = 0.99 (global denominator),
+against 66 MPa for the constant predictor, and are indistinguish-
+able. The informative contrast is between each region split and
+its matched control of the same size, which separates the cost of
+leaving the training range from the cost of having fewer training
+cases.
+The cost of extrapolation depends on the axis by almost an order
+of magnitude (Table 6). Holding out the longest die land (𝑘= 1.0)
+costs practically nothing: the excess over the control is 1.13 ±
+0.58 MPa for the MLP (established by Welch’s test, Section 2.3)
+and 0.11 ± 0.40 MPa for the PINN (not established).
+Holding
+out the largest semi-angle costs a factor of 1.6 with 𝑅2n (global
+denominator) still at 0.96, the largest reduction a factor of 3.2
+(𝑅2n = 0.78–0.83), the highest speed a factor of 5.9. The spread
+between axes is far larger than any difference between families, so
+a single “extrapolation error” would be uninformative.
+Removing an interior level is not free either. Along 𝛼, where the
+volumes are nearly equal, withholding the interior level 𝛼= 12◦
+gives 8.7–9.1 MPa (𝑅2n = 0.98, global denominator) and withhold-
+ing the extreme level 𝛼= 20◦gives 13.0–13.6 MPa (𝑅2n = 0.96–
+0.97), against 8.0 MPa on the random hold-out: most of the price
+is paid for the hole in a five-level factor grid, and the direction of
+the hole adds comparatively little. Along 𝑄the same pattern is
+steeper, 11.0–12.4 MPa for 𝑄= 0.10 against 23.4–26.3 MPa for
+𝑄= 0.20.
+The highest speed is where the surrogate breaks down. With
+𝑣= 250 m/min withheld the error is 48–56 MPa, still below the
+71 MPa of the constant predictor, but 𝑅2n (global denominator) falls
+to 0.23–0.45, the shear component is predicted worse than a con-
+stant (NRMSE 1.6–1.9, held-out standard deviation as denomina-
+tor) and the MLP becomes unstable across seeds (±19 MPa). This
+axis carries a further caveat: in the source simulations each speed
+level coincides with a separate simulation batch (Section 2.2), so
+the speed factor partly encodes batch identity, and no claim about
+the physical effect of speed is made from this split.
+Table 11 summarises the seed-paired tests.
+The PINN has
+a lower macro-RMSE than the MLP on all thirteen splits, and
+the difference is established on four: the semi-angle extrapola-
+tion (Δ = −0.58 MPa, 𝑝= 0.040), the land-length extrapolation
+(−1.16 MPa, 𝑝= 0.033), the joint corner (−1.06 MPa, 𝑝= 0.011)
+and the matched control of the speed split (−0.29 MPa, 𝑝= 0.006).
+With a Holm correction over the thirteen splits none of the pair-
+wise differences remains significant (smallest adjusted 𝑝= 0.079
+for PINN−MLP, 0.195 for VPINN−MLP); the four verdicts are
+read as a consistent direction, not as isolated proofs. The VPINN
+is established better than the MLP on two splits (interp:Q_mid,
+8 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 9 =====
+Table 6
+Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out
+region, on the matched control of the same size, their ratio, R2
+n (global denominator) on the held-out region, and the
+constant predictor (MPa).
+Held-out region
+Outside
+Control
+Ratio
+𝑅2n outside
+Constant
+𝑘= 1.0
+8.9
+8.3
+×1.08
++0.98
+67
+𝛼= 20◦
+13.2
+8.1
+×1.64
++0.96
+61
+𝛼= 20◦, 𝑄≥0.15
+16.1
+7.3
+×2.20
++0.94
+61
+𝑄= 0.20
+24.7
+7.8
+×3.15
++0.81
+60
+𝑣= 250 m/min
+50.9
+8.6
+×5.93
++0.36
+71
+𝑝= 0.015; matched:v_max, 𝑝= 0.022). The strong form is estab-
+lished better than the weak form on extrap:k_max (−0.70 MPa,
+𝑝= 0.018) and, by a margin smaller than the seed spread, on
+matched:v_max (−0.11 MPa, 𝑝= 0.046); on the remaining eleven
+splits the two physics-informed forms are indistinguishable.
+A
+Friedman test over seeds [40,41] rejects equality on three of the four
+splits where the paired test does (extrap:alpha_max, 𝑝= 0.041;
+extrap:k_max, 𝑝= 0.022; matched:v_max, 𝑝= 0.007; on the
+corner 𝑝= 0.091), with the Nemenyi post-hoc separating only the
+MLP–PINN pair; since indistinguishability there is not transitive,
+no “single cluster” is claimed. In absolute terms the advantage
+is small, 0.3–1.9 MPa at an error level of 8–16 MPa and of the
+same order as the seed spread; accuracy alone does not justify the
+physics term (Section 3.2.3).
+The learning curves (Table 7) do not support the expectation that
+a physics prior pays off mainly when data are scarce. On the ran-
+dom split the PINN–MLP gap shrinks with more data (−0.61 →
+−0.10 MPa), as that expectation predicts; on the semi-angle ex-
+trapolation it moves the other way (+0.24 →−0.54 MPa). Neither
+trend is established (slopes +0.20 MPa per log-unit, 𝑝= 0.21,
+and −0.35 MPa, 𝑝= 0.070); the two isolated significant points
+(𝑝= 0.048 at 50 %, 𝑝= 0.033 at 25 %) have opposite signs, as
+eight comparisons produce by chance, and at the smallest fraction
+the gap is not established on either split. The data-scarcity claim
+is therefore not made.
+3.2.2
+Backend
+comparison. The
+strong-form
+PINN
+was
+trained in two independent implementations of the same protocol,
+in PyTorch and in JAX, on the random split and the semi-angle
+extrapolation, five seeds each.
+The engines were checked first:
+on bit-identical weights and inputs the derivative 𝜕𝜎𝑟𝑟/𝜕𝑟from
+torch.autograd and from jax.grad agrees to 8.7 × 10−15 abso-
+lute (9.8×10−16 relative), i.e. to machine precision. The DeepXDE
+implementation of the previous version [39] runs on the PyTorch
+backend and differentiates with the same torch.autograd.grad,
+so this study contains two automatic-differentiation engines, not
+three.
+The two implementations share architecture, data, split,
+nominal hyperparameters and stopping rule; the JAX twin applies
+𝜆phys = 0.3 directly, without the gradient-norm calibration of
+Eq. (8) (effective weight 0.3 against ≈0.05 in PyTorch), and draws
+initial weights and batch order from its own random stream.
+The implementations are statistically indistinguishable in accu-
+racy (Table 12): +0.14 MPa on the random split (𝑝= 0.27) and
++0.43 MPa on the extrapolation (𝑝= 0.17), with the same sign
+on both. The second gap is of the order of the seed spread: a
+difference of this size arises between two implementations of one
+method that differ in their random streams and, here, in the effec-
+tive physics weight. The previous version attributed differences of
+0.4–0.8 MPa between backends to the differentiation engine; that
+attribution is not supported, and the conclusion “backend matters”
+is withdrawn. Where the results are equivalent the cheaper imple-
+mentation should be used. Here PyTorch completes a full training
+run 1.65 times faster (313 ± 102 against 516 ± 94 s pooled over
+both splits, paired 𝑝= 0.002; per split, 𝑝= 0.028 on random and
+𝑝= 0.047 on extrap:alpha_max, Table 12), for two roughly equal
+reasons: JAX needs 30 % more time per epoch (paired 𝑝= 0.005,
+𝑛= 10) and 29 % more epochs before early stopping (𝑝= 0.021;
+the 800-epoch cap was reached in two JAX runs and one PyTorch
+run). The ranking holds for CPU execution in double precision and
+must not be transferred elsewhere: on a GPU in single precision
+the just-in-time compilation of JAX is amortised over long uniform
+runs, whereas here early stopping cuts the runs short.
+3.2.3
+PINN, MLP and FEM. On individual components the
+families are as close as on the macro figure: on the random split
+of the one-dimensional track the component RMSE (five seeds)
+is 5.0–5.1 MPa for 𝜎𝑟𝑟, 7.0 MPa for 𝜎𝜃𝜃, 19.5–19.7 MPa for
+𝜎𝑧𝑧and 0.36–0.37 MPa for 𝜏𝑟𝑧for all three families; the low
+𝑅2 of the shear component (0.76–0.78 against 0.98–0.99 for the
+normal components; per-component 𝑅2 with the held-out standard
+deviation as denominator) reflects the axial collapse of the profile,
+which removes 79 % of its variance (Section 2.2). The comparison
+with the finite-element source is made on the extended track, where
+𝑧is an input and the full 8 × 20 field is predicted (Section 2.3),
+because only there can both equilibrium equations be evaluated on
+the prediction.
+This comparison uses an earlier single-seed training on 1498
+cases with a common hold-out of 261 cases: the 1848-case set
+cleaned by the window mask alone (89 cases removed, 1759 in to-
+tal), on whose random split of 1571/277 the mask removes 73 train-
+ing and 16 test cases. The 1756-case set of Section 2.2 removes in
+addition the three runs whose undrawn tail lies outside the window;
+the other stages of the matrix, including the seed-replicated ablation
+of Table 9, were run on it. The dimensionless residuals of Table 8
+and Fig. 7 are the equilibrium residuals 𝑅𝑟, 𝑅𝑧of Section 2.3 di-
+vided by the scales of the loss term (7), 𝑠𝑅1 = (𝑠𝑟𝑟+ 𝑠𝜃𝜃)/𝑅char
+and 𝑠𝑅𝑧= 𝑠𝑧𝑧/𝐿char + 𝑠𝑟𝑧/𝑅char, computed once from the FEM
+data and applied identically to all families, since otherwise each
+family would be normalised by itself and the rows would not be
+comparable; a value of 0.1 means that the equation fails to close
+by 10 % of the characteristic magnitude of its own terms. Medians
+are taken over the interior grid nodes, where the central difference
+is second-order accurate; at the edges of the grid it degenerates to
+a one-sided difference. The FEM row is the baseline against which
+every admissibility figure is read.
+Table 8 shows where the families part. In accuracy they are
+equivalent to within 0.35 MPa of macro-RMSE, and their fields
+are visually alike (Fig. 6, the case with the median error of the
+full PINN rather than the best). Within each component the colour
+scale is shared by the FEM reference and all families, so that the
+panels of one column are directly comparable; in Figs. 6 and 7 𝑟
+is normalised by the surface radius of the same cross-section and
+𝑧by the window length, and the radial axis is stretched (𝐿/𝑅≈
+3.5). In admissibility they are not (Fig. 7). This figure replaces
+Figs. 11–12 of the previous version, whose boundary metric was
+evaluated at 𝑟= 1.5𝑅, outside the material, on fields with wrong
+component labels. The MLP violates radial equilibrium 2.8 times
+more strongly than the finite-element source it was trained on, both
+PINNs about 1.5 times; a residual of 0.115 means that the radial
+equation fails to close by 11.5 % of the characteristic magnitude of
+its own terms. The axial equation is improved only by the full form,
+the one configuration whose loss contains 𝑅𝑧: 0.047 against 0.091
+for the source and 0.074 for the MLP. The separation is sharpest
+at the free surface: the MLP satisfies the traction-free condition
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 9
+
+===== PAGE 10 =====
+Table 7
+Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. ∆is PINN minus
+MLP with the seed-paired p-value. Slope of ∆on log(fraction): +0.20 MPa (p = 0.21) on random, −0.35 MPa (p = 0.070)
+on extrap:alpha_max.
+Split
+Fraction
+𝑛train
+MLP
+PINN
+VPINN
+Δ
+𝑝
+random
+10 %
+149
+13.09 ± 0.67
+12.48 ± 0.18
+12.98 ± 0.10
+−0.61
+0.317
+25 %
+373
+9.92 ± 0.40
+9.46 ± 0.39
+9.92 ± 0.18
+−0.46
+0.099
+50 %
+746
+8.80 ± 0.15
+8.34 ± 0.06
+8.53 ± 0.21
+−0.46
+0.048
+100 %
+1493
+8.19 ± 0.34
+8.09 ± 0.20
+8.03 ± 0.19
+−0.10
+0.718
+extrap:alpha_max
+10 %
+138
+20.48 ± 0.63
+20.72 ± 0.21
+20.68 ± 0.67
++0.24
+0.498
+25 %
+344
+16.74 ± 0.99
+17.33 ± 1.17
+17.03 ± 0.33
++0.59
+0.033
+50 %
+688
+14.01 ± 0.40
+14.06 ± 0.70
+14.17 ± 0.95
++0.05
+0.886
+100 %
+1377
+13.48 ± 0.58
+12.95 ± 0.36
+12.70 ± 0.48
+−0.54
+0.238
+Table 8
+Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261
+cases (one training run per family; training pool of 1498 cases, see text). Accuracy: component RMSE (MPa) / R2
+(held-out denominator) and macro-RMSE. Admissibility: median over interior grid nodes and over the test cases of
+the dimensionless equilibrium residuals |Rr | and |Rz | (definition in the text), and the mean traction-free violation
+|σr r (r =1)|. FEM row: the source.
+Accuracy, RMSE (MPa) / 𝑅2
+Admissibility
+𝜎𝑟𝑟
+𝜎𝜃𝜃
+𝜎𝑧𝑧
+𝜏𝑟𝑧
+macro
+|𝑅𝑟|
+|𝑅𝑧|
+| 𝜎𝑟𝑟(𝑟=1) |, MPa
+FEM (source)
+–
+–
+–
+–
+–
+0.041
+0.091
+3.54
+MLP
+3.52 / 0.994
+5.87 / 0.993
+19.45 / 0.984
+1.25 / 0.934
+10.33
+0.115
+0.074
+2.90
+PINN, reduced form
+3.69 / 0.993
+6.04 / 0.993
+20.12 / 0.983
+1.27 / 0.932
+10.68
+0.064
+0.064
+0.78
+PINN, full form
+3.53 / 0.994
+5.97 / 0.993
+20.15 / 0.982
+1.25 / 0.935
+10.67
+0.062
+0.047
+0.56
+no better than the source (2.90 against 3.54 MPa), whereas the
+reduced and full PINNs satisfy it 4.5 and 6.3 times more strictly
+than the data they were trained on. Since the finite-element field
+is affected by nodal extrapolation and averaging, a surrogate that
+violates equilibrium and the boundary condition by less than its
+source is, in this specific sense, more physically admissible than
+the data.
+The ordering is the same with seed statistics on the one-
+dimensional track. On the random split the median reduced ra-
+dial residual is 402 MPa/m for the source, 1351±146 for the MLP,
+749±42 for the PINN and 1071±26 for the VPINN, and |𝜎𝑟𝑟(𝑟=1)|
+is 3.48, 3.41 ± 0.61, 0.87 ± 0.21 and 0.64 ± 0.14 MPa respectively.
+The advantage persists with 𝛼= 20◦withheld (3.95 ± 0.82 MPa
+for the MLP against 1.74 ± 0.32 and 1.80 ± 0.66, source 3.35) and
+disappears only where the surrogate itself has failed, on the speed
+extrapolation (28–34 MPa for every family).
+The ablation in Table 9 isolates the axial equation; its residuals
+are evaluated by the training code in MPa/m on the 1756-case splits
+and are not numerically comparable to the dimensionless medians
+of Table 8. Both physics-informed forms reduce the radial resid-
+ual by 40–52 %, since both contain the radial equation. The axial
+residual falls by 33–41 % with the full form and by only 9–14 %
+with the reduced one, which drops 𝜕𝜎𝑧𝑧/𝜕𝑧, a term amounting to
+68 % of the retained ones, and therefore cannot enforce axial bal-
+ance. The gain in axial equilibrium thus comes from the axial term
+in the loss, not from “physics in general”, and costs no accuracy:
+the macro-RMSE changes by +0.2 MPa on the random split and
+−0.5 MPa on the extrapolation, within the seed spread.
+The corruption experiment (Table 13) yields the strongest and
+most interpretable effect of the physics term.
+On clean labels
+the PINN and the MLP are indistinguishable (Δ = −0.10 MPa,
+𝑝= 0.72): the term adds nothing where data and equations al-
+ready agree. As labels are corrupted the gap opens monotonically,
+−0.10 →−0.48 →−1.11 →−1.59 MPa, and is established at
+5 and 10 %. A regression of the gap on the corrupted fraction
+over the twelve seed-level points gives −14.2 MPa per unit fraction
+(𝑝= 0.00036, 𝑅2 = 0.74): the advantage grows by about 1.4 MPa
+for every 10 % of corrupted labels. At 10 % the MLP has degraded
+by a factor of 1.81 and the PINN by 1.64; the weak form (1.79) is
+not protected in the same way. The mechanism is the one seen in
+Table 8: the strong-form residual and the traction-free term pull the
+solution towards an admissible field, and the pull matters exactly
+when the labels contradict it. Taken together, Tables 8 and 13 lo-
+cate the benefit of the physics term not in accuracy against a clean
+finite-element field, where it is marginal, but in the admissibility
+of the solution and its resistance to defects of the data source.
+Limitations.. The surrogates are trained and evaluated against
+a single finite-element model that has not been validated against
+physical measurements (Section 2.2). This study therefore does
+not assess how accurately any of the models represents the wire-
+drawing process; it assesses properties of the surrogates relative
+to their data source, transferability beyond the training range and
+robustness to defects of that source, which are measurable with-
+out experimental validation and are what is claimed. The facto-
+rial grid is incomplete and unbalanced: the level 𝑣= 5 m/min
+is represented by 122 cases against 554–607 for the other levels,
+speed coincides with the simulation batch, and 13.2 % of the raw
+cases are bit-identical duplicates of another case differing only in
+the friction label, so friction cannot be used as an extrapolation
+axis. The shear component 𝜏𝑟𝑧is essentially not predicted from
+the one-dimensional representation: its NRMSE (held-out standard
+deviation as denominator) is 0.47–0.49 on the random hold-out and
+1.6–1.9 with the highest speed withheld, against a physical scale
+of 0.67 MPa mean absolute value, two orders of magnitude be-
+low the normal components; macro-averaged figures are therefore
+dominated by the normal components, and per-component figures
+are given alongside them.
+4
+Conclusions
+(1) On a cleaned dataset of 1756 axisymmetric finite-element
+simulations, three surrogate families sharing everything but
+the loss reach about 8 MPa macro-RMSE on a random hold-
+out with 𝑅2n = 0.99. The strong-form PINN is at least as
+accurate as the data-driven MLP on all thirteen interpolation
+and extrapolation splits, but the advantage (0.3–1.9 MPa) is
+small and does not survive a Holm correction for multiple
+comparisons.
+10 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 11 =====
+Table 9
+Ablation on the extended track (z as input, 8×20 grid), three seeds: macro-RMSE (MPa) and median full-form
+equilibrium residuals (MPa/m) on the held-out cases; in brackets, change relative to the MLP with the same input.
+The three configurations differ only in the physics terms of the loss.
+Split
+Configuration
+Macro-RMSE
+|𝑅𝑟|
+|𝑅𝑧|
+random
+MLP, 𝑧as input
+7.81 ± 0.22
+1040
+238
+PINN, reduced form
+8.05 ± 0.44
+626 (−40 %)
+217 (−9 %)
+PINN, full form
+8.02 ± 0.56
+553 (−47 %)
+140 (−41 %)
+extrap:alpha_max
+MLP, 𝑧as input
+12.70 ± 0.03
+1426
+281
+PINN, reduced form
+12.18 ± 0.34
+739 (−48 %)
+242 (−14 %)
+PINN, full form
+12.21 ± 0.51
+686 (−52 %)
+188 (−33 %)
+Table 10
+Macro-averaged RMSE of the four stress components on the held-out cases, MPa, mean ± sd over 5 seeds,
+for the 13 splits of the main track (input [Q, k, α, µ,v, r ]). random is a random hold-out; interp:* removes an interior
+factor level; extrap:* removes the highest level of one factor; extrap_joint:corner removes a corner of the joint (α, Q)
+space (each axis separately stays inside the training range); matched:* is a random hold-out of the same size as the
+corresponding extrap split, i.e. the control that separates the cost of leaving the range from the cost of a smaller
+training pool. The three families share the architecture, optimiser, budget, early stopping and seeds and differ only
+in the composition of the loss.
+Split
+Held-out region
+𝑛train
+𝑛test
+MLP
+PINN
+VPINN
+random
+random 15 % of all cases
+1493
+263
+8.04 ± 0.33
+7.98 ± 0.21
+7.98 ± 0.15
+interp:Q_mid
+𝑄= 0.10 (interior level)
+1438
+318
+12.40 ± 1.39
+12.20 ± 1.20
+10.96 ± 0.78
+interp:alpha_mid
+𝛼= 12◦(interior level)
+1416
+340
+9.06 ± 0.25
+8.69 ± 0.21
+8.99 ± 0.25
+extrap:Q_high
+𝑄= 0.20 (highest level)
+1484
+272
+26.27 ± 1.69
+24.35 ± 1.59
+23.41 ± 0.79
+extrap:k_max
+𝑘= 1.0 (highest level)
+1466
+290
+9.45 ± 0.56
+8.29 ± 0.38
+8.98 ± 0.16
+extrap:alpha_max
+𝛼= 20◦(highest level)
+1377
+379
+13.63 ± 0.51
+13.05 ± 0.49
+12.98 ± 0.64
+extrap:v_max
+𝑣= 250 m/min (highest level)
+1255
+501
+55.83 ± 19.04
+48.35 ± 6.99
+48.42 ± 4.80
+extrap_joint:corner
+𝛼= 20◦and 𝑄≥0.15
+1642
+114
+16.60 ± 0.84
+15.54 ± 0.37
+16.30 ± 0.85
+matched:Q_high
+random, 𝑛test of extrap:Q_high
+1484
+272
+7.96 ± 0.12
+7.80 ± 0.07
+7.74 ± 0.29
+matched:k_max
+random, 𝑛test of extrap:k_max
+1466
+290
+8.32 ± 0.15
+8.18 ± 0.12
+8.29 ± 0.11
+matched:alpha_max
+random, 𝑛test of extrap:alpha_max
+1377
+379
+8.11 ± 0.26
+7.88 ± 0.28
+8.18 ± 0.22
+matched:v_max
+random, 𝑛test of extrap:v_max
+1255
+501
+8.73 ± 0.12
+8.44 ± 0.12
+8.55 ± 0.14
+matched:corner
+random, 𝑛test of extrap_joint:corner
+1642
+114
+7.50 ± 0.16
+7.17 ± 0.38
+7.34 ± 0.14
+(2) A benefit of the physics prior specifically under data scarcity
+was not observed: the learning-curve trends are not statis-
+tically significant and are of opposite sign on the two splits
+examined.
+(3) The two software backends, PyTorch and JAX, are statisti-
+cally indistinguishable in accuracy and differ only in cost,
+PyTorch being 1.65 times faster on CPU in double precision.
+Backend choice is therefore a matter of computational cost,
+not of result; the earlier conclusion that the backend affects
+accuracy is withdrawn.
+(4) The clearest value of the physics term is physical admissibil-
+ity. At equal accuracy the strong-form and full-form PINNs
+reduce the dimensionless radial and axial equilibrium resid-
+uals and the traction-free violation of the predicted field well
+below the MLP, and below the finite-element source itself
+for the boundary condition.
+(5) The physics term makes the surrogate robust to defects of the
+data source: as training labels are corrupted the PINN–MLP
+accuracy gap grows monotonically, by 14.2 MPa per unit
+corrupted fraction (𝑝= 0.0004), whereas on clean labels
+the two are indistinguishable.
+(6) The shear component 𝜏𝑟𝑧cannot be recovered from a one-
+dimensional, window-averaged representation, because 79 %
+of its in-window variance lies along the axial coordinate
+and cancels under averaging; a two-dimensional formulation
+with 𝑧as an input predicts it with 𝑅2 = 0.94.
+(7) The finite-element model was not validated against physical
+measurements. These conclusions therefore concern the sur-
+rogates relative to their data source—accuracy on the finite-
+element field, transferability beyond the training range, and
+robustness to defects of that source—and not the accuracy
+of the drawing simulation itself.
+Acknowledgment
+Acknowledge individuals, institutions, or companies that sup-
+ported the authors in preparing the work. Those mentioned might
+have provided technical support, insightful comments or conversa-
+tions, materials used in the work, or access to facilities.
+Nomenclature
+𝑄= reduction of diameter, (𝐷0 −𝐷)/𝐷0
+𝑘= calibration ratio (land length over outlet radius)
+𝐿= length of the calibration land (m)
+𝑟, 𝑧= radial and axial coordinates (m)
+𝑅= billet radius (Fig. 2) or surface radius of the
+cross-section (Figs. 5–6)
+𝜎𝑟𝑟, 𝜎𝜃𝜃, 𝜎𝑧𝑧= normal residual stress components (MPa)
+𝜏𝑟𝑧= shear residual stress component (MPa)
+𝑅𝑟, 𝑅𝑧= radial and axial equilibrium residuals
+Greek Letters
+𝛼= half-angle of the die working cone (deg)
+𝜇= Coulomb friction coefficient
+Abbreviations
+MLP = multilayer perceptron (data-driven surrogate)
+PINN = physics-informed neural network (strong form)
+VPINN = variational physics-informed neural network
+(weak form)
+FEM = finite-element method
+A
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 11
+
+===== PAGE 12 =====
+Table 11
+Paired comparison of the physics-informed families with the data-driven baseline on every split of Table 10.
+∆is the mean over seeds of the per-seed difference in macro-RMSE (MPa; negative favours the physics-informed
+model), t and p are from a two-sided paired t-test with the seed as the block (n = 5 pairs, 4 degrees of freedom), and
+the verdict applies α = 0.05 without correction for the number of splits. Seeds, not held-out cases, are the replication
+unit: the test answers whether the advantage survives retraining, not on how many cases one model beats the other.
+With a Holm correction over the 13 splits, 0 of the PINN −MLP and 0 of the VPINN −MLP differences remain significant
+(smallest adjusted p = 0.079 and 0.195), so the verdicts should be read as consistent direction rather than as isolated
+proofs.
+PINN −MLP
+VPINN −MLP
+Split
+Δ, MPa
+𝑡
+𝑝
+verdict
+Δ, MPa
+𝑡
+𝑝
+verdict
+random
+−0.07
+−0.47
+0.664
+n.s.
+−0.06
+−0.48
+0.654
+n.s.
+interp:Q_mid
+−0.20
+−0.50
+0.643
+n.s.
+−1.44
+−4.09
+0.015
+VPINN better
+interp:alpha_mid
+−0.37
+−2.02
+0.113
+n.s.
+−0.07
+−0.45
+0.676
+n.s.
+extrap:Q_high
+−1.92
+−2.58
+0.062
+n.s.
+−2.87
+−2.74
+0.052
+n.s.
+extrap:k_max
+−1.16
+−3.18
+0.033
+PINN better
+−0.46
+−1.72
+0.161
+n.s.
+extrap:alpha_max
+−0.58
+−3.01
+0.040
+PINN better
+−0.66
+−2.59
+0.061
+n.s.
+extrap:v_max
+−7.48
+−0.73
+0.508
+n.s.
+−7.41
+−1.02
+0.366
+n.s.
+extrap_joint:corner
+−1.06
+−4.42
+0.011
+PINN better
+−0.30
+−0.62
+0.568
+n.s.
+matched:Q_high
+−0.16
+−2.20
+0.093
+n.s.
+−0.22
+−1.52
+0.204
+n.s.
+matched:k_max
+−0.14
+−1.83
+0.141
+n.s.
+−0.03
+−0.26
+0.809
+n.s.
+matched:alpha_max
+−0.23
+−2.15
+0.098
+n.s.
++0.07
+0.55
+0.613
+n.s.
+matched:v_max
+−0.29
+−5.31
+0.006
+PINN better
+−0.18
+−3.64
+0.022
+VPINN better
+matched:corner
+−0.33
+−1.59
+0.186
+n.s.
+−0.16
+−1.56
+0.195
+n.s.
+Table 12
+Two independent implementations of the same strong-form PINN (PyTorch and JAX; identical architecture,
+data, splits, nominal hyper-parameters and early-stopping rule; the JAX twin applies λphys = 0.3 directly, without the
+gradient-norm calibration of the PyTorch run, and each draws its own initialisation and batch order) on the random
+and extrap:alpha_max splits, 5 seeds each. Accuracy is the macro-RMSE on the held-out cases; cost is the wall time
+of the full training run, the number of epochs to early stopping and their ratio (mean of the per-run ratio). Mean ±
+sd over seeds; p from a two-sided paired t-test with the seed as the block. The bottom block pools the cost figures
+of both splits (10 runs per backend, paired on split and seed); accuracy is not pooled because the two splits are
+different tasks. Timings are for CPU, double precision; they are not transferable to GPU or single precision, where
+JIT compilation may repay itself differently.
+Split
+Backend
+macro-RMSE, MPa
+Wall time, s
+Epochs
+s/epoch
+random
+PyTorch
+7.98 ± 0.21
+311 ± 118
+548 ± 128
+0.554 ± 0.100
+JAX
+8.12 ± 0.18
+557 ± 76
+694 ± 86
+0.803 ± 0.044
+paired 𝑝(JAX vs PyTorch)
+𝑝= 0.269
+𝑝= 0.028
+𝑝= 0.110
+𝑝= 0.018
+extrap:alpha_max
+PyTorch
+13.05 ± 0.49
+316 ± 97
+528 ± 154
+0.596 ± 0.049
+JAX
+13.49 ± 0.30
+476 ± 100
+696 ± 97
+0.688 ± 0.131
+paired 𝑝(JAX vs PyTorch)
+𝑝= 0.169
+𝑝= 0.047
+𝑝= 0.155
+𝑝= 0.144
+both splits
+PyTorch
+—
+313 ± 102
+538 ± 134
+0.575 ± 0.078
+JAX
+—
+516 ± 94
+695 ± 86
+0.745 ± 0.110
+ratio JAX/PyTorch
+—
+×1.65
+×1.29
+×1.30
+paired 𝑝(𝑛= 10)
+—
+𝑝= 0.002
+𝑝= 0.021
+𝑝= 0.005
+Table 13
+Robustness to label corruption on the random split: macro-RMSE on the clean hold-out (MPa, mean ± sd
+over 3 seeds) when the given fraction of the training cases carries a systematic offset of one stress component, for
+the three families; the last column is the degradation factor between the highest and zero corruption. Below the rule:
+the paired gap to the data-driven baseline at each rate (∆< 0 favours the physics-informed model; paired t-test over
+seeds), and the linear regression of the seed-level gap PINN −MLP on the corruption fraction.
+Corrupted training labels, %
+Family
+0
+1
+5
+10
+MLP
+8.19 ± 0.34
+9.02 ± 0.34
+12.00 ± 0.57
+14.84 ± 0.15
+PINN
+8.09 ± 0.20
+8.54 ± 0.09
+10.89 ± 0.48
+13.25 ± 0.69
+VPINN
+8.03 ± 0.19
+9.13 ± 0.32
+11.11 ± 0.04
+14.34 ± 0.69
+Δ(PINN −MLP), MPa
+−0.10
+−0.48
+−1.11
+−1.59
+𝑝(paired, 3 seeds)
+0.718
+0.100
+0.010
+0.037
+Δ(VPINN −MLP), MPa
+−0.16
++0.11
+−0.89
+−0.50
+𝑝(paired, 3 seeds)
+0.478
+0.747
+0.123
+0.253
+Regression of the seed-level gap Δ(PINN −MLP) on the corruption fraction (𝑛= 12 points): slope = −14.20 MPa per unit fraction (−1.42 MPa per 10 percentage points)
+12 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 13 =====
+References
+[1] Burioli, S. et al., 2024, “A novel numerical approach for analyzing experimental
+data on critical current degradation in Nb3Sn wires caused by transverse de-
+formations preceding heat treatment,” Superconductor Science and Technology,
+37(9), p. 095007.
+[2] Lim, J., Lee, J., and Jang, B., 2026, “A Study of Effect of Bidirectional Drawing
+on the Mechanical Properties of 30MnSi6 Non-Heat-Treated Steel,” Metals,
+16(1), p. 118.
+[3] Shin, Y. et al., 2026, “Accurate Finite Element Simulation of Unidirectional
+and Alternate Multi-Pass Drawings, Focusing on Residual Stresses,” Applied
+Sciences, 16(4), p. 2154.
+[4] del Rey, J. C. et al., 2025, “Effect of Die Design and Lubricant on ZnAl15%
+Wire Drawing: An Experimental Approach with Pressure/Hydrodynamic and
+Conventional Drawing Dies,” Lubricants, 13(11), p. 481.
+[5] Del Rey, J. C. et al., 2026, “Advances on the optimization of the thermal treat-
+ment and modelization on the multi-stage wire drawing process with ZnAl15%
+alloy wires,” CIRP Journal of Manufacturing Science and Technology, 67, pp.
+29–47.
+[6] He, S., Van Bael, A., Li, S., Van Houtte, P., Mei, F., and Sarban, A., 2003,
+“Residual stress determination in cold drawn steel wire by FEM simulation
+and X-ray diffraction,” Materials Science and Engineering: A, 346(1-2), pp.
+101–107.
+[7] Överstam, H., 2006, “The influence of bearing geometry on the residual stress
+state in cold drawn wire, analysed by the FEM,” Journal of Materials Processing
+Technology, 171(3), pp. 446–450.
+[8] Aghdami, A. M. and Davoodi, B., 2020, “An inverse analysis to identify the
+Johnson-Cook constitutive model parameters for cold wire drawing process,”
+Mechanics & Industry, 21(5), p. 527.
+[9] Radionova, L., Lisovskiy, R., Svistun, A., Gromov, D., and Erdakov, I., 2022,
+“FEM simulation analysis of wire drawing process at different angles dies on
+straight-line drawing machines,” International Conference on Industrial Engi-
+neering, Springer, pp. 769–778.
+[10] Selbmann, R. et al., 2024, “Residual Stress Engineering for Wire Drawing of
+Austenitic Stainless Steel X5CrNi18-10 by Variation in Die Geometries—Effect
+of Drawing Speed and Process Temperature,” Materials, 17(5), p. 1174.
+[11] Suliga, M. et al., 2024, “The Influence of Temperature in the Wire Drawing
+Process on the Wear of Drawing Dies,” Materials, 17(20), p. 4949.
+[12] Rumiński, M., Skubisz, P., and Micek, P., 2025, “Effect of reduction ratio on
+die fill-out and hardness profile of cold-drawn polygonal rods made of acid
+resistant steel X6CrNiTi18-10,” Journal of Mining and Metallurgy, Section B:
+Metallurgy, 61(2), pp. 235–250.
+[13] Mozaffar, M. et al., 2022, “Mechanistic artificial intelligence (mechanistic-AI)
+for modeling, design, and control of advanced manufacturing processes: Current
+state and perspectives,” Journal of Materials Processing Technology, 302, p.
+117485.
+[14] Goodfellow, I., Bengio, Y., and Courville, A., 2016, Deep Learning, MIT Press,
+Cambridge, MA.
+[15] Weichert, D., Link, P., Stoll, A., Rüping, S., Ihlenfeldt, S., and Wrobel, S., 2019,
+“A review of machine learning for the optimization of production processes,”
+The International Journal of Advanced Manufacturing Technology, 104(5), pp.
+1889–1902.
+[16] Gromov, D. V., Radionova, L. V., and Lisovskaya, T. A., 2026, “Residual Stress
+Prediction in Wire Drawing by using Integrated Artificial Neural Networks and
+Finite Element Analysis,” 2026 International Russian Smart Industry Confer-
+ence (SmartIndustryCon), IEEE, pp. 1147–1152.
+[17] Demin, D., Grebenkin, I., and Barinov, A., 2025, “Forecasting the residual
+stress components in wires using an artificial neural network,” The International
+Journal of Advanced Manufacturing Technology, pp. 1–12.
+[18] Demin, D. and Grebenkin, I., 2024, “Application of ML methods to predict
+residual stresses and strains after wire drawing process,” International Journal
+of Advanced Manufacturing Technology, 133(7), pp. 3461–3473.
+[19] Akiba, T., Sano, S., Yanase, T., Ohta, T., and Koyama, M., 2019, “Optuna: A
+Next-generation Hyperparameter Optimization Framework,” 1907.10902, https:
+//arxiv.org/abs/1907.10902
+[20] Park, M. et al., 2026, “Indentation-informed convolutional neural network for
+simultaneous prediction of non-equibiaxial residual stress and plastic flow,” In-
+ternational Journal of Plasticity, p. 104606.
+[21] Han, G. et al., 2024, “Evaluation of plastic properties and equi-biaxial residual
+stress via indentation and ANN,” Materials & Design, 239, p. 112745.
+[22] Wang, Y. et al., 2025, “An online prediction method of three-dimensional ma-
+chining residual stress field based on incepu-net,” Measurement, 242, p. 115794.
+[23] Tsui, H. S. R., 2026, “Metrology-guided estimation and inverse design of draw-
+ing force in cold rod drawing using a FEM–ANN–XGBoost hybrid,” Measure-
+ment, 269, p. 120783.
+[24] Raissi, M., Perdikaris, P., and Karniadakis, G. E., 2019, “Physics-informed
+neural networks: A deep learning framework for solving forward and inverse
+problems involving nonlinear partial differential equations,” Journal of Compu-
+tational Physics, 378, pp. 686–707.
+[25] Karniadakis, G. E., Kevrekidis, I. G., Lu, L., Perdikaris, P., Wang, S., and Yang,
+L., 2021, “Physics-informed machine learning,” Nature Reviews Physics, 3, pp.
+422–440.
+[26] Haghighat, E., Raissi, M., Moure, A., Gomez, H., and Juanes, R., 2021, “A
+physics-informed deep learning framework for inversion and surrogate modeling
+in solid mechanics,” Computer Methods in Applied Mechanics and Engineering,
+379, p. 113741.
+[27] Ra, D. et al., 2026, “Physics-informed machine learning across manufacturing
+processes: Recent advances, challenges, and directions,” Journal of Manufac-
+turing Systems, 85, pp. 72–95.
+[28] Yang, T. et al., 2025, “Prediction of residual stress field of ultrasonic rolling
+processed 20CrNiMo based on physics-informed neural networks,” Journal of
+Manufacturing Processes, 149, pp. 841–851.
+[29] Mehedi Hasan, M. and Schoop, J., 2026, “Inverse Parameter Identification of
+Subsurface Residual Stress in Tractional Sliding Processes Using a Physics-
+Informed Neural Network,” Journal of Tribology, 148(6), p. 061501.
+[30] Hasan, M. M., 2025, “Machining-induced Residual Stress Modeling Using
+Physics-Informed Neural Networks,” .
+[31] Muransky, O., Tran, M. N., and Payten, W., 2026, “On the application of PINN-
+style physics-regularised neural networks to high-temperature creep rupture life
+prediction,” International Journal of Pressure Vessels and Piping, 219.
+[32] Munzone, F. et al., 2024, “Comparative study of artificial neural network and
+physics-informed neural network application in sheet metal forming,” 27th In-
+ternational ESAFORM Conference on Material Forming (ESAFORM 2024),
+Association of American Publishers, pp. 2278–2288.
+[33] Laakso, S. V. A. et al., 2024, “Hybrid FE-ML model for turning of 42CrMo4
+steel,” CIRP Journal of Manufacturing Science and Technology, 55, pp. 333–
+346.
+[34] Rahman, A. et al., 2025, “Physics-based machine learning framework for pre-
+dicting structure-property relationships in DED-fabricated low-alloy steels,”
+Metals, 15(9), p. 965.
+[35] Kui, C. F., Fei, L. Y., Xue, X. J., Peng, H. K., Ge, X. K., Yu, W., and Yan,
+L., 2017, “The dynamic characteristics and constitutive model of 1020 steel,”
+Emerging Materials Research, 6(1), pp. 124–131.
+[36] Shi, B. and Tounsi, N., 2006, “An Analytical Model for the Evaluation of
+Primary Shear Zone Thickness in Orthogonal Cutting,” Proceedings of the Third
+International Symposium on Aerospace Materials and Manufacturing Processes.
+[37] Wang, S., Yu, X., and Perdikaris, P., 2022, “When and why PINNs fail to train:
+A neural tangent kernel perspective,” Journal of Computational Physics, 449, p.
+110768.
+[38] Kharazmi, E., Zhang, Z., and Karniadakis, G. E., 2021, “hp-VPINNs: Varia-
+tional physics-informed neural networks with domain decomposition,” Computer
+Methods in Applied Mechanics and Engineering, 374, p. 113547.
+[39] Lu, L., Meng, X., Mao, Z., and Karniadakis, G. E., 2021, “DeepXDE: A deep
+learning library for solving differential equations,” SIAM Review, 63(1), pp.
+208–228.
+[40] Demšar, J., 2006, “Statistical comparisons of classifiers over multiple data sets,”
+Journal of Machine Learning Research, 7, pp. 1–30.
+[41] Friedman, M., 1937, “The use of ranks to avoid the assumption of normality
+implicit in the analysis of variance,” Journal of the American Statistical Asso-
+ciation, 32(200), pp. 675–701.
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 13
+
+===== PAGE 14 =====
+Fig. 6
+Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in
+the full and reduced formulations at Q = 0.025 (2.5 % in diameter, 5.4 % in area), k = 0.1, α = 8◦, µ = 0.10, v = 20 m/min.
+Rows: FEM reference and the three model families; columns: σr r , σθθ, σzz , τr z . The colour scale is common to all
+rows within a component. r is normalised by the surface radius in the same cross-section (r /R = 1 is the free
+surface), z by the window length. The case shown has the median test error of the full PINN.
+14 / PREPRINT FOR REVIEW
+Transactions of the ASME
+
+===== PAGE 15 =====
+Fig. 7
+Comparison of the equilibrium residual distributions Rr and Rz over the investigated region for FEM, MLP,
+and PINN in the full and reduced formulations at Q = 0.025, k = 0.1, α = 8◦, µ = 0.10, v = 20 m/min (same case as
+Fig. 6). (a) radial residual Rr , (b) axial residual Rz , both made dimensionless by the characteristic magnitude of the
+terms entering the respective equation; the panel titles give the median |R| over all 261 test cases. (c) distribution
+over the test cases of the traction-free violation |σr r | at r /R = 1, mean marked. The FEM column is the reference:
+the source itself does not satisfy the equations exactly.
+Journal of Manufacturing Science and Engineering
+PREPRINT FOR REVIEW / 15
+
+===== PAGE 16 =====
+List of Figures
+(a)
+Axisymmetric wire-drawing process. 𝑆1 – axis of symmetry; 𝑆2 – outlet face of the finished product; 𝑆3 – free
+lateral surface; 𝑆4 – contact surface with the die; 𝑆5 – entry face of the billet; 𝛼– half-angle of the working cone
+of the die; 𝐷0 and 𝐷– diameters of the billet and of the drawn wire; 𝐿– length of the calibration land
+. . . . .
+3
+2
+Residual stress components from one finite-element run over the wire cross-section; the dashed lines mark the 25–75 %
+axial window retained for training. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4
+3
+Architecture of the data-driven MLP surrogate. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5
+4
+Architecture of the physics-informed surrogate: shared trunk, physics residual and boundary-condition terms in the loss.
+6
+5
+Distribution of residual stresses obtained from the FEM simulation at 𝑄= 0.10 (10 % reduction in diameter, 20.1 % in
+area), 𝑘= 0.5, 𝛼= 12◦, 𝜇= 0.05, 𝑣= 10 m/min. Components 𝜎𝑟𝑟, 𝜎𝜃𝜃, 𝜎𝑧𝑧and 𝜏𝑟𝑧over the full axial extent of the
+wire; 𝑟is normalised by the billet radius 𝑅= 18 mm, 𝑧by the model length 𝐿= 139.5 mm. Dashed lines mark the axial
+window 25–75 % of 𝐿from which the training data are taken. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8
+6
+Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in the full
+and reduced formulations at 𝑄= 0.025 (2.5 % in diameter, 5.4 % in area), 𝑘= 0.1, 𝛼= 8◦, 𝜇= 0.10, 𝑣= 20 m/min.
+Rows: FEM reference and the three model families; columns: 𝜎𝑟𝑟, 𝜎𝜃𝜃, 𝜎𝑧𝑧, 𝜏𝑟𝑧. The colour scale is common to all
+rows within a component. 𝑟is normalised by the surface radius in the same cross-section (𝑟/𝑅= 1 is the free surface),
+𝑧by the window length. The case shown has the median test error of the full PINN. . . . . . . . . . . . . . . . . . . . .
+14
+7
+Comparison of the equilibrium residual distributions 𝑅𝑟and 𝑅𝑧over the investigated region for FEM, MLP, and PINN
+in the full and reduced formulations at 𝑄= 0.025, 𝑘= 0.1, 𝛼= 8◦, 𝜇= 0.10, 𝑣= 20 m/min (same case as Fig. 6). (a)
+radial residual 𝑅𝑟, (b) axial residual 𝑅𝑧, both made dimensionless by the characteristic magnitude of the terms entering
+the respective equation; the panel titles give the median |𝑅| over all 261 test cases. (c) distribution over the test cases of
+the traction-free violation |𝜎𝑟𝑟| at 𝑟/𝑅= 1, mean marked. The FEM column is the reference: the source itself does not
+satisfy the equations exactly. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+15
+List of Tables
+1
+Ranges of process parameters in the FEM campaign. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3
+2
+Share of the variance along 𝑧inside the axial window and effect of collapsing the field along 𝑧by the median (mean
+absolute value, MPa). . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5
+3
+Case-level filtering applied before splitting. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5
+4
+The 13 case-level splits of the 1756 cases. 𝑛train is the training pool, including the early-stopping subset.
+. . . . . . . .
+6
+5
+Model families. All share the network, optimiser, budget, seeds and splits; only the loss composition differs. 𝑅1: reduced
+radial residual (3); 𝑅𝑟, 𝑅𝑧: full residuals (1)–(2); 𝑊𝑘: weak residual (9). . . . . . . . . . . . . . . . . . . . . . . . . . .
+8
+6
+Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the
+matched control of the same size, their ratio, 𝑅2n (global denominator) on the held-out region, and the constant predictor
+(MPa). . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9
+7
+Learning curves: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. Δ is PINN minus MLP with
+the seed-paired 𝑝-value. Slope of Δ on log(fraction): +0.20 MPa (𝑝= 0.21) on random, −0.35 MPa (𝑝= 0.070) on
+extrap:alpha_max.
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+10
+8
+Accuracy and physical admissibility of the three two-dimensional families on a common hold-out of 261 cases (one
+training run per family; training pool of 1498 cases, see text). Accuracy: component RMSE (MPa) / 𝑅2 (held-out denom-
+inator) and macro-RMSE. Admissibility: median over interior grid nodes and over the test cases of the dimensionless
+equilibrium residuals |𝑅𝑟| and |𝑅𝑧| (definition in the text), and the mean traction-free violation |𝜎𝑟𝑟(𝑟=1)|. FEM row:
+the source. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+10
+9
+Ablation on the extended track (𝑧as input, 8 × 20 grid), three seeds: macro-RMSE (MPa) and median full-form
+equilibrium residuals (MPa/m) on the held-out cases; in brackets, change relative to the MLP with the same input. The
+three configurations differ only in the physics terms of the loss. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11
+10
+Macro-averaged RMSE of the four stress components on the held-out cases, MPa, mean ± sd over 5 seeds, for the 13
+splits of the main track (input [𝑄, 𝑘, 𝛼, 𝜇, 𝑣, 𝑟]). random is a random hold-out; interp:* removes an interior factor
+level; extrap:* removes the highest level of one factor; extrap_joint:corner removes a corner of the joint (𝛼, 𝑄)
+space (each axis separately stays inside the training range); matched:* is a random hold-out of the same size as the
+corresponding extrap split, i.e. the control that separates the cost of leaving the range from the cost of a smaller
+training pool. The three families share the architecture, optimiser, budget, early stopping and seeds and differ only in the
+composition of the loss.
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11
+11
+Paired comparison of the physics-informed families with the data-driven baseline on every split of Table 10. Δ is the
+mean over seeds of the per-seed difference in macro-RMSE (MPa; negative favours the physics-informed model), 𝑡and 𝑝
+are from a two-sided paired 𝑡-test with the seed as the block (𝑛= 5 pairs, 4 degrees of freedom), and the verdict applies
+𝛼= 0.05 without correction for the number of splits. Seeds, not held-out cases, are the replication unit: the test answers
+whether the advantage survives retraining, not on how many cases one model beats the other. With a Holm correction
+over the 13 splits, 0 of the PINN −MLP and 0 of the VPINN −MLP differences remain significant (smallest adjusted
+𝑝= 0.079 and 0.195), so the verdicts should be read as consistent direction rather than as isolated proofs.
+. . . . . . . .
+12
+12
+Two independent implementations of the same strong-form PINN (PyTorch and JAX; identical architecture, data, splits,
+nominal hyper-parameters and early-stopping rule; the JAX twin applies 𝜆phys = 0.3 directly, without the gradient-
+norm calibration of the PyTorch run, and each draws its own initialisation and batch order) on the random and ex-
+trap:alpha_max splits, 5 seeds each. Accuracy is the macro-RMSE on the held-out cases; cost is the wall time of the
+full training run, the number of epochs to early stopping and their ratio (mean of the per-run ratio). Mean ± sd over
+seeds; 𝑝from a two-sided paired 𝑡-test with the seed as the block. The bottom block pools the cost figures of both splits
+(10 runs per backend, paired on split and seed); accuracy is not pooled because the two splits are different tasks. Timings
+are for CPU, double precision; they are not transferable to GPU or single precision, where JIT compilation may repay
+itself differently. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12
+13
+Robustness to label corruption on the random split: macro-RMSE on the clean hold-out (MPa, mean ± sd over 3 seeds)
+when the given fraction of the training cases carries a systematic offset of one stress component, for the three families;
+the last column is the degradation factor between the highest and zero corruption. Below the rule: the paired gap to the
+data-driven baseline at each rate (Δ < 0 favours the physics-informed model; paired 𝑡-test over seeds), and the linear
+regression of the seed-level gap PINN −MLP on the corruption fraction. . . . . . . . . . . . . . . . . . . . . . . . . . .
+12
+16 / PREPRINT FOR REVIEW
+Transactions of the ASME
+,
