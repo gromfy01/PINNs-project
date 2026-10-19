@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article given under preferred-citation."
+title: "Code for: Physics-informed versus data-driven surrogates for residual stress after wire drawing"
+type: software
+authors:
+  - family-names: Demin
+    given-names: Dmitriy
+    affiliation: HSE University
+  - family-names: Romanenko
+    given-names: Georgii
+    affiliation: HSE University
+license: MIT
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23352451
+    description: "Zenodo archive, all versions (concept DOI)"
+  - type: doi
+    value: 10.5281/zenodo.23352452
+    description: "Zenodo archive of version 1.0.0"
+version: 1.0.0
+date-released: 2026-10-14
+repository-code: "https://github.com/gromfy01/wire-drawing-pinn-surrogates"
+abstract: >-
+  Code, run log and verification scripts behind the paper "Physics-informed versus
+  data-driven surrogates for residual stress after wire drawing: accuracy, physical
+  admissibility and behaviour outside the training range". Starting from the raw Abaqus
+  reports of 2443 axisymmetric finite-element simulations of single-pass drawing of
+  AISI 1020 steel wire, the code rebuilds the two datasets of the paper (1756 cases each),
+  reruns the matrix of 341 training runs that compares a multilayer perceptron, a
+  strong-form physics-informed network and a weak-form variational physics-informed
+  network, regenerates the result tables and field figures, and reproduces the
+  drawing-stress verification on 112 simulations. The finite-element data are deposited
+  in a separate Zenodo record.
+keywords:
+  - physics-informed neural networks
+  - surrogate models
+  - wire drawing
+  - residual stress
+  - finite element method
+preferred-citation:
+  type: article
+  title: "Physics-informed versus data-driven surrogates for residual stress after wire drawing: accuracy, physical admissibility and behaviour outside the training range"
+  authors:
+    - family-names: Demin
+      given-names: Dmitriy
+      affiliation: HSE University
+    - family-names: Romanenko
+      given-names: Georgii
+      affiliation: HSE University
+  status: submitted
+  year: 2026

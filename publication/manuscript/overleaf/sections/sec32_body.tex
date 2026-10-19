@@ -1,0 +1,314 @@
+% src: RESULTS.md header (341 runs, 1756 cases, identical protocol);
+% src: RESULTS_v1_vs_v2.md footer (main 195, curves 72, corrupt 36, backend 20, twod 18) — verified against runs_v2.csv stage counts;
+% src: RESULTS.md §1.0б (R² with a single global denominator; R²_n over normal components);
+% src: publication/code/trainer.py line 442 (macro_rmse = mean of the four component RMSEs); publication/code/stats.py line 147 (scipy ttest_rel over seeds).
+All seed-replicated results below were obtained on the cleaned dataset of 1756 cases (Section~\ref{sec:prep-data}) in 341 training runs: 195 for the split matrix, 72 for the training-set-size study, 36 for label corruption, 20 for the backend comparison and 18 for the two-dimensional ablation. The only results obtained otherwise, the field maps of the two-dimensional families and the single-seed training they were drawn from, are described in Section~\ref{sec:res_fem}. % EDIT (11.10): the comparison with the source is now part of tab:admissibility (three seeds) % EDIT: "all results ... 1756" qualified — tab:admissibility uses the 1498/261 run % EDIT (table order): forward \ref to tab:admissibility removed so that tables are numbered in the order of first reference % EDIT: "The one exception" → "The only result obtained otherwise", since a single-seed result is not an exception to a statement about seed-replicated ones, and "single-run" → "single-seed" as in Section 3.2.3
+The three one-dimensional families -- the data-driven MLP, the strong-form PINN and the weak-form VPINN -- share the network, the optimiser, the epoch limit, the early-stopping rule, the mini-batch size and the seeds, and differ only in the composition of the loss (Section~\ref{sec:models}). Accuracy is reported as macro-RMSE, the mean of the four component RMSEs in MPa, as mean~$\pm$~standard deviation over five seeds. Differences between families are tested with a paired $t$-test over seeds \citep{demsar2006} and called established at $p<0.05$. The difference itself, the macro-RMSE of a physics-informed family minus that of the MLP averaged over the seeds, is denoted $\Delta$ in this section. It is a difference of errors in MPa, negative where the physics-informed family is more accurate, and is unrelated to the inhomogeneity parameter $\Delta$ of Section~\ref{sec:res_fem_verification}. Because $\tau_{rz}$ is two orders of magnitude smaller than the normal components, a coefficient of determination over the normal components only, $R^2_{\mathrm{n}}$, is given alongside. It is taken with a single global denominator, the variance of each component over the whole dataset, and where a per-component $R^2$ or NRMSE below uses the held-out slice as denominator, this is stated at the number. % EDIT: denominator named
+Throughout this section the finite-element solution serves as the reference field, and this sets the domain of applicability of the results reported below. They characterise the surrogate models with respect to that reference, namely their accuracy on it, their transferability beyond the training range and their sensitivity to corrupted labels in the source. The Limitations paragraph at the end of the section returns to this point. % NOTE: the role of the finite-element solution is stated as the scope of the conclusions; the formulation "no physical measurement enters ... not to the process" is removed; no numbers involved. % EDIT: \ref{sec:limitations} replaced by plain text — no such section is written; a Limitations paragraph closes Section~\ref{sec:res_fem}
+
+% =====================================================================
+\subsubsection{Extrapolation versus interpolation}
+\label{sec:res_extrap}
+
+% src: RESULTS.md §1 (macro-RMSE table, n_test, 5 seeds) — all 39 entries verified; RESULTS.md §1.0б (constant predictor, all 13 values verified);
+% src: publication/code/splits.py REGIONS (alpha=20, alpha=12, Q=0.20, Q=0.10, k=1.0, v=250, corner = alpha=20 & Q>=0.15) and make_random_split frac=0.15 (0.15 × 1756 = 263);
+% src: PLAYBOOK.md §7.1 (matched = random hold-out of the same size; corner is a hole in the joint space, not out-of-range on any single axis);
+% src: ERRATA.md E-22 (Q is the reduction in diameter).
+% EDIT: the macro-RMSE table (a third \label{tab:splits}, duplicate of T1) deleted — see Table~\ref{tab:main} in tables/all_tables.tex. Its "Constant" column survives in Table~\ref{tab:axis} (five regions) and in the text (random: 66.0 MPa).
+
+% src: RESULTS.md §1 and §1.0б (random 8.0 MPa, R²_n = +0.99 all families; constant predictor 66.0 MPa).
+Table~\ref{tab:main} gives the macro-RMSE on all thirteen splits. On the random hold-out all three families reach 8.0~MPa with $R^2_{\mathrm{n}}=0.99$, against 66~MPa for the constant predictor, and are indistinguishable. The informative contrast is between each region split and its matched control of the same size, which separates the cost of leaving the training range from the cost of having fewer training cases.
+
+% >>> inlined sections/tab_main.tex
+% T1 generated by publication/experiments/paper_tables.py from runs_v2.csv
+% src: runs_v2.csv: stage==main; macro_rmse mean/sd(ddof=1) over seeds per split×family
+% src: held-out regions — publication/code/splits.py: REGIONS
+\begin{table*}[t]
+\centering
+\caption[Macro-averaged RMSE on the 13 splits of the main track]{Macro-averaged RMSE on the held-out cases for the 13 splits of the main track, MPa, mean $\pm$ sd over 5 seeds. Split types are defined in Section~\ref{sec:fem-dataset}.}
+\label{tab:main}
+\small
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+Split & Held-out region & $n_\mathrm{train}$ & $n_\mathrm{test}$ & MLP & PINN & VPINN \\
+\midrule
+\texttt{random} & random 15\,\% of all cases & 1493 & 263 & 8.04 $\pm$ 0.33 & 7.98 $\pm$ 0.21 & 7.98 $\pm$ 0.15 \\
+\addlinespace
+\texttt{interp:Q\_mid} & $Q = 10\,\%$ (interior level) & 1438 & 318 & 12.40 $\pm$ 1.39 & 12.20 $\pm$ 1.20 & 10.96 $\pm$ 0.78 \\
+\texttt{interp:alpha\_mid} & $\alpha = 12^\circ$ (interior level) & 1416 & 340 & 9.06 $\pm$ 0.25 & 8.69 $\pm$ 0.21 & 8.99 $\pm$ 0.25 \\
+\addlinespace
+\texttt{extrap:Q\_high} & $Q = 20\,\%$ (highest level) & 1484 & 272 & 26.27 $\pm$ 1.69 & 24.35 $\pm$ 1.59 & 23.41 $\pm$ 0.79 \\
+\texttt{extrap:k\_max} & $k = 1.0$ (highest level) & 1466 & 290 & 9.45 $\pm$ 0.56 & 8.29 $\pm$ 0.38 & 8.98 $\pm$ 0.16 \\
+\texttt{extrap:alpha\_max} & $\alpha = 20^\circ$ (highest level) & 1377 & 379 & 13.63 $\pm$ 0.51 & 13.05 $\pm$ 0.49 & 12.98 $\pm$ 0.64 \\
+\texttt{extrap:v\_max} & $v = 250$ m/min (highest level) & 1255 & 501 & 55.83 $\pm$ 19.04 & 48.35 $\pm$ 6.99 & 48.42 $\pm$ 4.80 \\
+\addlinespace
+\texttt{extrap\_joint:alpha\_Q} & $\alpha = 20^\circ$ and $Q \ge 15\,\%$ & 1642 & 114 & 16.60 $\pm$ 0.84 & 15.54 $\pm$ 0.37 & 16.30 $\pm$ 0.85 \\
+\addlinespace
+\texttt{matched:Q\_high} & random, $n_\mathrm{test}$ of \texttt{extrap:Q\_high} & 1484 & 272 & 7.96 $\pm$ 0.12 & 7.80 $\pm$ 0.07 & 7.74 $\pm$ 0.29 \\
+\texttt{matched:k\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:k\_max} & 1466 & 290 & 8.32 $\pm$ 0.15 & 8.18 $\pm$ 0.12 & 8.29 $\pm$ 0.11 \\
+\texttt{matched:alpha\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:alpha\_max} & 1377 & 379 & 8.11 $\pm$ 0.26 & 7.88 $\pm$ 0.28 & 8.18 $\pm$ 0.22 \\
+\texttt{matched:v\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:v\_max} & 1255 & 501 & 8.73 $\pm$ 0.12 & 8.44 $\pm$ 0.12 & 8.55 $\pm$ 0.14 \\
+\texttt{matched:alpha\_Q} & random, $n_\mathrm{test}$ of \texttt{extrap\_joint:alpha\_Q} & 1642 & 114 & 7.50 $\pm$ 0.16 & 7.17 $\pm$ 0.38 & 7.34 $\pm$ 0.14 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+% <<< end sections/tab_main.tex
+
+% src: RESULTS.md §1.0б "Цена экстраполяции зависит от оси" table (family-averaged RMSE outside / control / ratio / R²_n / null model) — all 25 entries verified.
+\begin{table*}[t]
+\caption[Cost of holding out a whole factor level]{Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the matched control of the same size, their ratio, $R^2_{\mathrm{n}}$ on the held-out region, and the constant predictor (MPa).} % EDIT: denominator named
+\label{tab:axis}
+\centering\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Held-out region & Outside & Control & Ratio & $R^2_{\mathrm{n}}$ outside & Constant \\
+\midrule
+$k=1.0$                              & 8.9  & 8.3 & $\times1.08$ & $+0.98$ & 67 \\
+$\alpha=20^\circ$                    & 13.2 & 8.1 & $\times1.64$ & $+0.96$ & 61 \\
+$\alpha=20^\circ$, $Q\ge15\,\%$        & 16.1 & 7.3 & $\times2.20$ & $+0.94$ & 61 \\
+$Q=20\,\%$                             & 24.7 & 7.8 & $\times3.15$ & $+0.81$ & 60 \\
+$v=250$~m/min                        & 50.9 & 8.6 & $\times5.93$ & $+0.36$ & 71 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% src: RESULTS.md §1.0б (ratios ×1.08, ×1.64, ×2.20, ×3.15, ×5.93; R²_n on Q_high: MLP +0.78, PINN +0.81, VPINN +0.83);
+% src: RESULTS.md §1.1 (ΔRMSE vs control: MLP k_max 1.13 ± 0.58 established; PINN k_max 0.11 ± 0.40 not established).
+The cost of extrapolation differs between the process parameters by almost an order of magnitude, as Tables~\ref{tab:main} and \ref{tab:axis} show. Withholding the highest calibration ratio, $k=1.0$, affects the accuracy only slightly and costs a factor of 1.08. Relative to the matched control, the error of the MLP grows by $1.13\pm0.58$~MPa, a small but statistically significant increase, whereas that of the PINN grows by $0.11\pm0.40$~MPa, which lies within the scatter between seeds. % EDIT: "within the seed spread" held only for the PINN; RESULTS.md §1.1 marks MLP/k_max as established % NOTE: the values are read from the tables; the manuscript contains no separate extrapolation figure % EDIT (table order): ratio ×1.08 of tab:axis (family average, as for the other axes in the next sentence) stated here, previously only in the Conclusions (runs_v2.csv stage main: family-averaged 8.908 / 8.262 = 1.078), two decimals kept, since 1.1 would overstate the cost % EDIT: "maximum bearing length" replaced by the name of the parameter, k being a ratio (L_b = kD_0 = 36k mm)
+Holding out the largest semi-angle costs a factor of 1.64 with $R^2_{\mathrm{n}}$ still at 0.96, and holding out only its combination with reductions of at least 15\,\% costs a factor of 2.20 with $R^2_{\mathrm{n}}$ of 0.94. The largest reduction costs a factor of 3.15 with $R^2_{\mathrm{n}}$ of 0.78--0.83, and the highest speed a factor of 5.93. The spread between axes is far larger than any difference between families, so a single ``extrapolation error'' would be uninformative. % EDIT (table order): ratios given to two decimals as in tab:axis and the Conclusions, and the joint row of tab:axis stated (runs_v2.csv stage main, family-averaged: 13.220 / 8.056 = 1.641, 16.150 / 7.338 = 2.201, 24.676 / 7.832 = 3.151, 50.863 / 8.574 = 5.932, and R²_n of the joint region 0.936 / 0.946 / 0.940, mean 0.941)
+
+% src: RESULTS.md §1 (interp:alpha_mid 8.69–9.06 vs extrap:alpha_max 12.98–13.63 vs random 7.98–8.04; interp:Q_mid 10.96–12.40 vs extrap:Q_high 23.41–26.27);
+% src: RESULTS.md §1.0б per family: alpha_mid R²_n +0.98/+0.98/+0.98; alpha_max +0.96 (MLP) / +0.97 (PINN) / +0.97 (VPINN) — the family average +0.96 is what tab:axis quotes.
+% NOTE: RESULTS.md text quotes "10.4 MPa" for the interior alpha level; that figure is the mean over BOTH interior splits (alpha_mid 8.91 and Q_mid 11.85 → 10.38) — a text-generation slip in make_results.py; the table values are used here.
+Removing an interior level is not free either. Along $\alpha$, where the volumes are nearly equal, withholding the interior level $\alpha=12^\circ$ gives 8.7--9.1~MPa at $R^2_{\mathrm{n}}=0.98$ and withholding the extreme level $\alpha=20^\circ$ gives 13.0--13.6~MPa at $R^2_{\mathrm{n}}=0.96$--$0.97$, against 8.0~MPa on the random hold-out. The hole inside the grid thus costs 0.7--1.1~MPa, and most of the price, a further 4--5~MPa, is paid for leaving the range.
+% EDIT (13.10): conclusion reversed to match the numbers in the same sentence (random 7.98-8.04, interp:alpha_mid 8.69-9.06, extrap:alpha_max 12.98-13.63 MPa, tab:main): interior hole +0.7-1.1, leaving the range +3.9-4.9 MPa; the old wording came from a 10.4 MPa average of both interp splits
+Along $Q$ the same pattern is steeper, 11.0--12.4~MPa for $Q=10\,\%$ against 23.4--26.3~MPa for $Q=20\,\%$.
+
+% src: RESULTS.md §1.0б (v_max: 48–56 vs 71.4 constant; R²_n +0.23 / +0.45 / +0.40); RESULTS.md §1.3б (τ_rz NRMSE 1.622 / 1.945 / 1.879 on v_max); RESULTS.md §1 (MLP sd 19.04); VALIDATION.md §6 (speed level coincides with simulation batch).
+Withholding the highest drawing speed gives the largest loss of accuracy, and its interpretation requires care. In the source simulations each batch of runs holds a single level of $v$ and the highest level forms a batch of its own (Section~\ref{sec:prep-data}), so withholding it removes not only the extreme level of a factor but an entire batch: extrapolation along $v$ is here inseparable from a transfer to a batch that is not represented in training. With $v=250$~m/min withheld the error is 48--56~MPa, still below the 71~MPa of the constant predictor, but $R^2_{\mathrm{n}}$ falls to 0.23--0.45 and the shear component is reproduced no better than by a constant: its NRMSE, normalised here by the standard deviation over the held-out cases, is 1.6--1.9. The MLP, in addition, % EDIT: denominators named % NOTE: the batch confound is stated first and the figures are read as a joint effect, in place of "the surrogate breaks down" (VALIDATION.md §6: each speed level coincides one-to-one with the simulation batch); numbers unchanged
+becomes unstable, with a spread of $\pm19$~MPa between seeds. These figures thus measure the joint effect of leaving the range of $v$ and of changing the batch of runs, and the loss of accuracy on this split cannot be attributed to extrapolation in speed alone. No claim about the physical effect of speed is made from it. % NOTE: only the attribution of the loss of accuracy is qualified, not the loss itself, which RESULTS.md §1.0б records on extrap:v\_max
+
+% src: RESULTS.md §1.3 (paired t-tests over seeds, all 13 splits; sign flipped to PINN − MLP and VPINN − MLP) — all 26 Δ/p pairs verified; RESULTS_v1_vs_v2.md §2 (four significant splits).
+% EDIT: the paired-test table (tab:tests, duplicate of T2) deleted — see Table~\ref{tab:paired} in tables/all_tables.tex, which also carries the t-statistics and the Holm correction. Its Δ(VPINN−MLP) on matched:Q_high read −0.23; T2 (and the csv, −0.2248) give −0.22.
+
+% src: RESULTS.md §1.3 (all 13 mlp−pinn differences positive; p-values as in table; pinn−vpinn established on extrap:k_max Δ = −0.695, p = 0.018, AND on matched:v_max Δ = −0.111, p = 0.046 with |Δ| below the seed σ = 0.126);
+% src: RESULTS.md §1.2 (Friedman p = 0.04076 extrap:alpha_max, 0.02237 extrap:k_max, 0.006738 matched:v_max; extrap_joint:corner p = 0.09072; Nemenyi separates only MLP–PINN; non-transitivity, ERRATA E-15);
+% src: RESULTS_v1_vs_v2.md §3 and §8 (differences 0.3–1.9 MPa at a level of 8–16 MPa).
+Table~\ref{tab:paired} summarises the seed-paired tests. On the thirteen splits of the one-dimensional track the PINN has a lower macro-RMSE than the MLP, and the difference is established on four: the semi-angle extrapolation ($\Delta=-0.58$~MPa, $p=0.040$), the calibration-ratio extrapolation ($-1.16$~MPa, $p=0.033$), the joint departure from the range in semi-angle and reduction ($-1.06$~MPa, $p=0.011$) and the matched control of the speed split ($-0.29$~MPa, $p=0.006$). With a Holm step-down correction \citep{holm1979,demsar2006} over the thirteen splits none of the pairwise differences remains significant: the smallest adjusted $p$ is 0.079 for PINN$-$MLP and 0.195 for VPINN$-$MLP. The four verdicts are therefore read as a consistent direction, not as isolated proofs. In the extended track, with $z$ as an input, the direction is not reproduced on the random split, where both forms of the PINN are 0.2~MPa less accurate than the MLP, while on the semi-angle extrapolation they are 0.5~MPa more accurate. None of these differences is established over three seeds (Section~\ref{sec:res_fem}). % src: tables/all_tables.tex tab:paired caption (paper_tables.py, Holm over 13 splits: smallest adjusted p = 0.079 / 0.195) % EDIT: Holm sentence added % NOTE: a reference is supplied for the Holm step-down procedure; the source already cited in this section for the comparison of models over multiple splits describes it. % TODO: if the bibliography is extended, Holm's original paper (Scandinavian Journal of Statistics) may be cited alongside; the .bib file is not part of this section % EDIT (table order): "bearing-length extrapolation" renamed after the parameter, as in the k = 1.0 sentence of the cost paragraph above, the nomenclature and the Conclusions
+The VPINN is established better than the MLP on two splits (\texttt{interp:Q\_mid}, $p=0.015$, and \texttt{matched:v\_max}, $p=0.022$). The strong form is established better than the weak form on \texttt{extrap:k\_max} ($-0.70$~MPa, $p=0.018$) and, by a margin smaller than the seed spread, on \texttt{matched:v\_max} ($-0.11$~MPa, $p=0.046$). On the remaining eleven splits the two physics-informed forms are indistinguishable. A Friedman test over seeds \citep{friedman1937,demsar2006} rejects equality on three of the four splits where the paired test does (\texttt{extrap:alpha\_max}, $p=0.041$, \texttt{extrap:k\_max}, $p=0.022$, and \texttt{matched:v\_max}, $p=0.007$, against $p=0.091$ on \texttt{extrap\_joint:alpha\_Q}), with the Nemenyi post-hoc separating only the MLP--PINN pair. Since indistinguishability there is not transitive, no ``single cluster'' is claimed. In absolute terms the advantage is small, 0.3--1.9~MPa at an error level of 8--16~MPa and of the same order as the seed spread. On accuracy alone the physics term therefore gives no decisive gain, and its other effects are examined in Section~\ref{sec:res_fem}.
+
+% >>> inlined sections/tab_paired.tex
+% T2 generated by publication/experiments/paper_tables.py from runs_v2.csv
+% src: runs_v2.csv: stage==main; per-seed macro_rmse differences, scipy.stats.ttest_rel, alpha=0.05
+\begin{table*}[t]
+\centering
+\caption[Seed-paired comparison with the data-driven baseline]{Seed-paired comparison of the physics-informed families with the data-driven baseline on every split of Table~\ref{tab:main}. $\Delta$ is the mean over seeds of the per-seed difference in macro-RMSE, MPa. Negative favours the physics-informed model. Two-sided paired $t$-test, $n = 5$ pairs, $\alpha = 0.05$. After a Holm correction over the 13 splits, 0 PINN $-$ MLP and 0 VPINN $-$ MLP differences remain significant.}
+\label{tab:paired}
+\small
+\begin{tabular}{@{}lrrrlrrrl@{}}
+\toprule
+ & \multicolumn{4}{c}{PINN $-$ MLP} & \multicolumn{4}{c}{VPINN $-$ MLP} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9}
+Split & $\Delta$, MPa & $t$ & $p$ & verdict & $\Delta$, MPa & $t$ & $p$ & verdict \\
+\midrule
+\texttt{random} & $-0.07$ & $-0.47$ & 0.664 & n.s. & $-0.06$ & $-0.48$ & 0.654 & n.s. \\
+\addlinespace
+\texttt{interp:Q\_mid} & $-0.20$ & $-0.50$ & 0.643 & n.s. & $-1.44$ & $-4.09$ & 0.015 & VPINN better \\
+\texttt{interp:alpha\_mid} & $-0.37$ & $-2.02$ & 0.113 & n.s. & $-0.07$ & $-0.45$ & 0.676 & n.s. \\
+\addlinespace
+\texttt{extrap:Q\_high} & $-1.92$ & $-2.58$ & 0.062 & n.s. & $-2.87$ & $-2.74$ & 0.052 & n.s. \\
+\texttt{extrap:k\_max} & $-1.16$ & $-3.18$ & 0.033 & PINN better & $-0.46$ & $-1.72$ & 0.161 & n.s. \\
+\texttt{extrap:alpha\_max} & $-0.58$ & $-3.01$ & 0.040 & PINN better & $-0.66$ & $-2.59$ & 0.061 & n.s. \\
+\texttt{extrap:v\_max} & $-7.48$ & $-0.73$ & 0.508 & n.s. & $-7.41$ & $-1.02$ & 0.366 & n.s. \\
+\addlinespace
+\texttt{extrap\_joint:alpha\_Q} & $-1.06$ & $-4.42$ & 0.011 & PINN better & $-0.30$ & $-0.62$ & 0.568 & n.s. \\
+\addlinespace
+\texttt{matched:Q\_high} & $-0.16$ & $-2.20$ & 0.093 & n.s. & $-0.22$ & $-1.52$ & 0.204 & n.s. \\
+\texttt{matched:k\_max} & $-0.14$ & $-1.83$ & 0.141 & n.s. & $-0.03$ & $-0.26$ & 0.809 & n.s. \\
+\texttt{matched:alpha\_max} & $-0.23$ & $-2.15$ & 0.098 & n.s. & $+0.07$ & $0.55$ & 0.613 & n.s. \\
+\texttt{matched:v\_max} & $-0.29$ & $-5.31$ & 0.006 & PINN better & $-0.18$ & $-3.64$ & 0.022 & VPINN better \\
+\texttt{matched:alpha\_Q} & $-0.33$ & $-1.59$ & 0.186 & n.s. & $-0.16$ & $-1.56$ & 0.195 & n.s. \\
+\bottomrule
+\end{tabular}
+\end{table*}
+% <<< end sections/tab_paired.tex
+
+% src: RESULTS.md §3 (learning curves, macro-RMSE at 10/25/50/100 %) — all 24 entries verified; RESULTS_v1_vs_v2.md §5 (gaps, slopes on log fraction, p-values);
+% src: runs_v2.csv stage=curves (n_train 149/373/746/1493 random, 138/344/688/1377 alpha_max; 3 seeds); paired p-values recomputed from the csv: 0.317/0.099/0.048/0.718 and 0.498/0.033/0.886/0.238; slopes +0.197 (p = 0.211) and −0.355 (p = 0.070).
+\begin{table*}[t]
+\caption[Accuracy against the size of the training set]{Accuracy against the size of the training set: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}. After a Holm correction over the eight PINN $-$ MLP comparisons of the table none remains significant, the smallest adjusted $p$ being 0.26 (\texttt{extrap:alpha\_max}, 25\,\%).} % src: runs_v2.csv stage=curves, paired ttest_rel by seed; Holm (paper_tables.py holm_adjust) over the eight PINN-MLP p-values: random 1.000/0.596/0.336/1.000, extrap:alpha_max 1.000/0.261/1.000/1.000 (10/25/50/100 %)
+\label{tab:curves}
+\centering\small
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+Split & Fraction & $n_{\mathrm{train}}$ & MLP & PINN & VPINN & $\Delta$ & $p$ \\
+\midrule
+\texttt{random} & 10\,\%  & 149  & $13.09\pm0.67$ & $12.48\pm0.18$ & $12.98\pm0.10$ & $-0.61$ & 0.317 \\
+                & 25\,\%  & 373  & $9.92\pm0.40$  & $9.46\pm0.39$  & $9.92\pm0.18$  & $-0.46$ & 0.099 \\
+                & 50\,\%  & 746  & $8.80\pm0.15$  & $8.34\pm0.06$  & $8.53\pm0.21$  & $-0.46$ & 0.048 \\
+                & 100\,\% & 1493 & $8.19\pm0.34$  & $8.09\pm0.20$  & $8.03\pm0.19$  & $-0.10$ & 0.718 \\
+\addlinespace
+\texttt{extrap:alpha\_max} & 10\,\%  & 138  & $20.48\pm0.63$ & $20.72\pm0.21$ & $20.68\pm0.67$ & $+0.24$ & 0.498 \\
+                           & 25\,\%  & 344  & $16.74\pm0.99$ & $17.33\pm1.17$ & $17.03\pm0.33$ & $+0.59$ & 0.033 \\
+                           & 50\,\%  & 688  & $14.01\pm0.40$ & $14.06\pm0.70$ & $14.17\pm0.95$ & $+0.05$ & 0.886 \\
+                           & 100\,\% & 1377 & $13.48\pm0.58$ & $12.95\pm0.36$ & $12.70\pm0.48$ & $-0.54$ & 0.238 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% src: RESULTS_v1_vs_v2.md §5 (opposite signs; slopes +0.197 p = 0.211, −0.355 p = 0.070; isolated significances at random 50 % and alpha_max 25 %; thesis not supported);
+% src: RESULTS.md §3 quotes p = 0.255 at 10 % random: that is an unpaired Welch test (recomputed 0.2549 from the csv); the seed-paired test used throughout gives 0.317.
+% NOTE: the learning curves are referred to the table that carries their values; no figure of them is set in the manuscript.
+% TODO: should a figure of the learning curves be wanted, it is produced by publication/experiments/figures.py; at present the numbers are given by Table~\ref{tab:curves}.
+Table~\ref{tab:curves} shows how the accuracy changes with the size of the training set. It is often expected that physical constraints in the loss are most useful when the data are scarce, and the present results do not confirm this. On the random split the gap between the PINN and the MLP narrows as the training set grows, from $-0.61$ to $-0.10$~MPa, in line with that expectation, but on the semi-angle extrapolation it changes in the opposite direction, from $+0.24$ to $-0.54$~MPa. Neither trend is statistically significant: the slope is $+0.20$~MPa per unit of the logarithm of the fraction with $p=0.21$ on the first split and $-0.35$~MPa with $p=0.070$ on the second. Of the eight individual comparisons only two are significant, at 50\,\% of the data with $p=0.048$ and at 25\,\% with $p=0.033$, and they have opposite signs, as may happen by chance. Neither survives a Holm correction over the eight comparisons, the adjusted $p$-values being 0.34 and 0.26. At the smallest fraction the gap is not significant on either split. The claim that the physics term is most useful when the data are scarce is therefore not made.
+
+% =====================================================================
+\subsubsection{Backend comparison}
+\label{sec:res_backend}
+
+% src: RESULTS.md §2 and ERRATA.md E-19 (derivative agreement 8.7e-15 abs, 9.8e-16 rel, jax_twin.py::check_gradient_agreement; DeepXDE configured with DDE_BACKEND=pytorch → two engines, not three);
+% src: RESULTS.md §2 (implementations share everything but draw initial weights and batch order from their own RNGs: torch.manual_seed vs numpy default_rng).
+The strong-form PINN was trained in two independent implementations, in PyTorch and in JAX, on the random split and the semi-angle extrapolation, five seeds each. Apart from their random streams, the two differ in the weight of the physics term: the JAX implementation applies $\lambda_{\mathrm{phys}}$ without the calibration of Eq.~\eqref{eq:calib}, so that its physics term carries about six times the weight it has in PyTorch (Section~\ref{sec:models}). The engines were checked first: on bit-identical weights and inputs the derivative $\partial\sigma_{rr}/\partial r$ from \texttt{torch.autograd} and from \texttt{jax.grad} agrees to $8.7\times10^{-15}$ absolute ($9.8\times10^{-16}$ relative), i.e.\ to machine precision. A DeepXDE implementation \citep{lu2021} of the same network runs on the PyTorch backend and differentiates with the same \texttt{torch.autograd.grad}, so the comparison involves two automatic-differentiation engines, not three.
+% NOTE: reference to an earlier version of the text removed. The two implementations share architecture, data, split, nominal hyperparameters and stopping rule; the JAX twin applies $\lambda_{\mathrm{phys}} = 0.3$ directly, without the gradient-norm calibration of Eq.~\eqref{eq:calib} (effective weight 0.3 against $\approx 0.05$ in PyTorch), and draws initial weights and batch order from its own random stream. % src: jax_twin.py JaxTrainer.fit (no _calibrate; lam_p = 0.3); runs_v2.csv stage backend (phys_gain = 1.0 in all 10 jax rows, 0.132–0.215 in the 10 torch rows; 0.3 × 0.165 ≈ 0.05) % EDIT: the calibration confound named explicitly. The caption of tab:backend (paper_tables.py) carries the same wording.
+
+% src: RESULTS_v1_vs_v2.md §7 (JAX 8.12 ± 0.18 vs PyTorch 7.98 ± 0.21, Δ +0.14, p = 0.269; 13.49 ± 0.30 vs 13.05 ± 0.49, Δ +0.43, p = 0.169;
+%      full training 313 ± 102 vs 516 ± 94 s, ×1.65; per epoch 0.575 vs 0.745 s, ×1.30, p = 0.0009; epochs 538 vs 695, ×1.29); all recomputed from runs_v2.csv stage=backend (per-epoch p = 0.00086, unpaired).
+% EDIT: the p = 0.0009 of RESULTS_v1_vs_v2.md §7 is an UNPAIRED equal-variance t-test (Welch 0.0010); the protocol declares the seed as the block, so the text uses the paired value of T4, p = 0.005 (n = 10, paired on split × seed); wall time p = 0.002, epochs p = 0.021 (tables/all_tables.tex tab:backend).
+% src: runs_v2.csv (n_test 263 and 379; max epochs = 800, reached by jax/random seed 1, jax/alpha_max seed 0, torch/alpha_max seed 2); trainer.py line 172 / jax_twin.py line 40 (float64, jax_enable_x64); run_matrix.py lines 87/129 (torch.set_num_threads(1); JAX thread count not pinned — TODO state in §2.3).
+% NOTE: RESULTS.md §2 marks the alpha_max gap as "established" under its |Δ| > σ_seed effect-size criterion (0.434 > 0.406); the paired t-test used throughout (p = 0.169) does not, and the text follows the test.
+% NOTE: publication/code/protocol.py declares PROTOCOL.max_epochs = 400, whereas the recorded runs use an 800-epoch cap (set per job by run_matrix.py --max_epochs); the protocol description in §2.3 must say 800.
+% EDIT: the backend table (second \label{tab:backend}, duplicate of T4) deleted — see Table~\ref{tab:backend} in tables/all_tables.tex, which carries the per-split timings and the paired p-values.
+
+% src: RESULTS_v1_vs_v2.md §7 (agreement; cheaper implementation; two roughly equal contributions; CPU/float64 caveat; JIT amortised on long uniform runs, interrupted by early stopping);
+% src: RESULTS.md §2, ERRATA.md E-19 and PLAYBOOK.md §2.7 (v1 attributed 0.4–0.8 MPa to the backend; the same gap arises between two implementations of one method); MANUSCRIPT.md §4.1.
+The implementations are statistically indistinguishable in accuracy (Table~\ref{tab:backend}): $+0.14$~MPa on the random split ($p=0.27$) and $+0.43$~MPa on the extrapolation ($p=0.17$), with the same sign on both. The second gap is of the order of the seed spread: a difference of this size arises between two implementations of one method that differ in their random streams and, here, in the effective physics weight. % EDIT: "differ only in their random streams" contradicted the calibration confound stated above
+Differences of a few tenths of a megapascal between backends are of the same order as the
+spread between two implementations of one method and cannot be attributed to the differentiation
+engine, so no conclusion about a preferred backend follows from accuracy.
+The physical audit is consistent with the larger physics weight of the JAX runs. On the random split the median reduced radial residual $|R_1|$ of their predictions is $608\pm41$~MPa/m against $749\pm42$~MPa/m for PyTorch (paired $p=0.008$), whereas on the extrapolation the two do not differ significantly, $991\pm123$ against $1077\pm77$~MPa/m ($p=0.17$).
+% NOTE: stated as a result of the present comparison rather than as a withdrawal.
+% EDIT (table order): the cost result below had become part of the preceding comment line in this file (commit cf34a15, whereas sec32_results.tex, edited in d89e6ff, kept it as text) and is restored as text, without semicolons. Numbers unchanged, recomputed from runs_v2.csv stage=backend (wall time 313.1 / 516.4 s, ×1.649, s/epoch 0.575 / 0.745, ×1.296, epochs 538.1 / 694.8, ×1.291, cap of 800 reached by jax/random seed 1, jax/alpha_max seed 0, torch/alpha_max seed 2).
+Since accuracy does not separate the two implementations, the choice rests on cost, and of the cost only the time per epoch is compared, because it does not depend on the weight of the physics term. An epoch takes 0.745~s in JAX against 0.575~s in PyTorch, that is, 30\,\% longer (paired $p=0.005$, $n=10$, and per split $p=0.018$ on \texttt{random} and $p=0.144$ on \texttt{extrap:alpha\_max}, Table~\ref{tab:backend}). The number of epochs before early stopping, 695 against 538 (paired $p=0.021$, including three runs that stopped at the 800-epoch cap, two with JAX and one with PyTorch), and with it the total training time are not compared, since they depend on the loss. In the split matrix, for instance, the PINN, whose loss differs from that of the MLP only by the physics and boundary terms, stops after 596 epochs on average against 418 for the MLP. The timings also depend on the load of the machine, on which four runs were executed at once. The PyTorch runs of this comparison reproduce the corresponding runs of the split matrix to the last recorded digit of the error and of the epoch count, yet took between 0.86 and 1.56 times as long. % src: tables/all_tables.tex tab:backend (wall time: random p = 0.028, extrap:alpha_max p = 0.047, pooled p = 0.002; s/epoch pooled p = 0.005; epochs pooled p = 0.021) % EDIT: p = 0.0009 (unpaired) → paired 0.005; per-split T4 rows cited instead of the pool alone % EDIT: first sentence reworded so that it does not repeat "accuracy" from the end of the preceding sentence
+The difference of 30\,\% per epoch is therefore a property of the two implementations on CPU in double precision under this load, not a ranking of the differentiation engines, and it is not transferred to other hardware or precision.
+
+% >>> inlined sections/tab_backend.tex
+% T4 generated by publication/experiments/paper_tables.py from runs_v2.csv
+% src: runs_v2.csv: stage==backend (family pinn); macro_rmse, seconds, epochs, seconds/epochs;
+%      mean/sd(ddof=1) over seeds; scipy.stats.ttest_rel paired by seed (per split) and by (split, seed) (pooled)
+\begin{table*}[t]
+\centering
+\caption[The strong-form PINN in PyTorch and in JAX]{The strong-form PINN in two implementations, PyTorch and JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa), effective weight of the physics term and cost. The JAX implementation applies $\lambda_{\mathrm{phys}}=0.3$ without the calibration $g$ of Eq.~\eqref{eq:calib}, so its epoch counts are not comparable with those of PyTorch and only the time per epoch is compared. Mean $\pm$ sd over seeds. The $p$-values are from a seed-paired $t$-test. Timings are for CPU, double precision, four runs at a time.}
+\label{tab:backend}
+\small
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Split & Backend & macro-RMSE, MPa & $\lambda_{\mathrm{phys}}g$ & Epochs & s/epoch \\
+\midrule
+\texttt{random} & PyTorch & 7.98 $\pm$ 0.21 & 0.050 $\pm$ 0.010 & 548 $\pm$ 128 & 0.554 $\pm$ 0.100 \\
+ & JAX & 8.12 $\pm$ 0.18 & 0.3 (no $g$) & 694 $\pm$ 86 & 0.803 $\pm$ 0.044 \\
+ & paired $p$ (JAX vs PyTorch) & $p = 0.269$ & --- & $p = 0.110$ & $p = 0.018$ \\
+\addlinespace
+\texttt{extrap:alpha\_max} & PyTorch & 13.05 $\pm$ 0.49 & 0.050 $\pm$ 0.009 & 528 $\pm$ 154 & 0.596 $\pm$ 0.049 \\
+ & JAX & 13.49 $\pm$ 0.30 & 0.3 (no $g$) & 696 $\pm$ 97 & 0.688 $\pm$ 0.131 \\
+ & paired $p$ (JAX vs PyTorch) & $p = 0.169$ & --- & $p = 0.155$ & $p = 0.144$ \\
+\midrule
+both splits & PyTorch & --- & 0.050 $\pm$ 0.009 & 538 $\pm$ 134 & 0.575 $\pm$ 0.078 \\
+ & JAX & --- & 0.3 (no $g$) & 695 $\pm$ 86 & 0.745 $\pm$ 0.110 \\
+ & ratio JAX/PyTorch & --- & $\times$6.0 & $\times$1.29 & $\times$1.30 \\
+ & paired $p$ ($n = 10$) & --- & --- & $p = 0.021$ & $p = 0.005$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+% <<< end sections/tab_backend.tex
+
+% =====================================================================
+\subsubsection{PINN, MLP and FEM}
+\label{sec:res_fem}
+
+% src: runs_v2.csv stage=main, split=random, 5 seeds (per-component RMSE / R², MLP/PINN/VPINN: σ_rr 5.05/5.03/5.07, R² 0.987; σ_θθ 7.04/7.03/6.97, R² 0.990; σ_zz 19.72/19.48/19.53, R² 0.982–0.983; τ_rz 0.363/0.374/0.367, R² 0.778/0.765/0.773 → 0.76–0.78);
+% src: QA_DATA_AND_Z.md §4 (axial collapse removes 79 % of τ_rz variance in the 1D track; 2–4 % for normal components); RESULTS.md §5 (8 × 20 grid).
+On individual components the families are as close as on the macro figure: on the random split of the one-dimensional track the component RMSE (five seeds) is 5.0--5.1~MPa for $\sigma_{rr}$, 7.0~MPa for $\sigma_{\theta\theta}$, 19.5--19.7~MPa for $\sigma_{zz}$ and 0.36--0.37~MPa for $\tau_{rz}$ for all three families. The low $R^2$ of the shear component (0.76--0.78 against 0.98--0.99 for the normal components, with the held-out standard deviation as the denominator of the per-component $R^2$) reflects % EDIT: denominator named — csv columns r2_* are local
+the axial collapse of the profile, under which the mean absolute value of $\tau_{rz}$ falls by 79\,\% because the component changes sign along $z$ (Section~\ref{sec:prep-data}). The comparison with the finite-element source is made on the extended track, where $z$ is an input and the full $8\times20$ field is predicted (Section~\ref{sec:models}), because only there can both equilibrium equations be evaluated on the prediction.
+
+% src: git commit 6e7a228 (per-component RMSE/R² and macro on the common 261-case test: MLP 3.52/0.994, 5.87/0.993, 19.45/0.984, 1.25/0.934, 10.33; PINN reduced 3.69/0.993, 6.04/0.993, 20.12/0.983, 1.27/0.932, 10.68; PINN full 3.53/0.994, 5.97/0.993, 20.15/0.982, 1.25/0.935, 10.67);
+% src: git commit 89fc7a0 and manuscript/captions.md (dimensionless medians R_r: FEM 0.041, MLP 0.115, PINN reduced 0.064, PINN full 0.062; R_z: 0.091, 0.074, 0.064, 0.047);
+% src: git commit 6e7a228, ERRATA.md E-24 and QA_DATA_AND_Z.md §5 (|σ_rr(r=1)|: FEM 3.54, MLP 2.90, PINN reduced 0.78, PINN full 0.56 MPa; ratios ×2.78 and ×1.5 for R_r; BC 4.5 and 6.3 times stricter);
+% src: ERRATA.md E-24 "Переобучение подтвердило причину" / commit a79f197: the 1571 → 1498 training pool with the common 261-case test (window-mask cleaning, not the 1756-case union) is documented for the FULL-FORM PINN only.
+% TODO: commit 6e7a228 states only that mlp2d and pinn2d_reduced were trained "with the same protocol on the cleaned dataset, common test 261 cases" — the 1498-case pool and the single-seed setting for these two are inferred, not recorded; confirm from the training logs/npz metadata, and consider re-running all three with 5 seeds on the 1756/263 split.
+% EDIT: the dataset of this comparison is stated explicitly; numbers checked against ERRATA.md E-24.
+The field maps of Figs.~\ref{fig:compare-fields} and \ref{fig:residual-maps} were drawn from an earlier single-seed training on 1498 cases with a common hold-out of 261 cases: the 1848-case set cleaned by the window mask alone (89 cases removed, 1759 in total), on whose random split of 1571/277 the mask removes 73 training and 16 test cases. % EDIT (11.10): "The source itself was evaluated, and" removed, the source is now evaluated in tab:admissibility % src: ERRATA.md E-24 (89 cases with spread > 0.1 mm; 1759 clean; 1571 → 1498 training pool, 261 test; 73 / 16 on the 1848-case random split); code/filters.py unfinished_draw_in_window docstring
+The 1756-case set of Section~\ref{sec:prep-data} removes in addition the three runs flagged by the earlier check of the tail. The other stages of the matrix were run on it, including the seed-replicated runs of the three two-dimensional families. % EDIT (table order): forward \ref to tab:ablation2d removed % src: ERRATA.md E-24 (3 runs with the tail outside the window; union 92 → 1756); runs_v2.csv stage twod (1493/263, 1377/379)
+
+% src: runs_v2.csv stage twod (18 runs = 3 families × 2 splits × seeds 0–2; n_train/n_test 1493/263 and 1377/379; columns macro_rmse, eq_res_median = |R_r| full form, eq_z_full = |R_z| full form, bc_sigma_rr, bc_tau_rz); experiments/run_matrix.py one_run_2d (equilibrium_audit_2d on the test predictions; predict_surface at r = 1 on the axial nodes, mean |.| over the cases and nodes); code/trainer2d.py equilibrium_audit_2d (np.gradient on the 8 × 20 grid, median over all nodes of each case, then median over the cases; MPa/m since r_phys, z_phys are in metres). Mean ± sd (ddof = 1) over seeds; bracketed changes = ratio of the seed means − 1.
+% EDIT (11.10): rebuilt on the 1756-case set with three seeds; tab:ablation2d (the same 18 runs) merged into it. FEM row added after the 2D set was rebuilt from raw-data-v1 (correspondence/2026-10-11_table13_fem_row.md): random 415.8 / 272.9 MPa/m, 3.529 / 0.5377 MPa; extrap:alpha_max 528.4 / 388.3 MPa/m, 3.525 / 0.8158 MPa.
+Table~\ref{tab:admissibility} gives the accuracy and the physical admissibility of these runs on the held-out cases of the random split (263) and of the semi-angle extrapolation (379), three seeds each. The equilibrium residuals are taken in the full form, with all terms, by finite differences on the $8\times20$ grid of the predicted field. Their median is taken over all nodes of each case and then over the cases, in MPa/m. The traction-free violations are the mean absolute values of the predicted $\sigma_{rr}$ and $\tau_{rz}$ on the material surface, $r/R=1$, over the axial nodes and the cases. For the source the same quantities are computed from the finite-element data of the same held-out cases, on the same grid and with the same operators, the surface values being those of the outermost radial node. % src: correspondence/2026-10-11_table13_fem_row.md (Field2D rebuilt from raw-data-v1, n_z = 8, n_r = 20, 1756 cases; equilibrium_audit_2d on y; mean |y[:, :, -1, 0]| and |y[:, :, -1, 3]|)
+\begin{table*}[t]
+\caption[Accuracy and physical admissibility of the two-dimensional families]{Accuracy and physical admissibility of the three two-dimensional families ($z$ as input, $8\times20$ grid) on the held-out cases of the 1756-case set, mean~$\pm$~sd over three seeds: macro-RMSE (mean of the four component RMSEs), median full-form equilibrium residuals and mean traction-free violations at $r/R=1$. In brackets, change of the mean residual relative to the MLP on the same split. The three configurations differ only in the physics terms of the loss. FEM: the same quantities for the finite-element data of the same held-out cases.}
+\label{tab:admissibility}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+ & & & \multicolumn{2}{c}{Equilibrium residual, MPa/m} & \multicolumn{2}{c}{Traction-free violation, MPa} \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Split & Configuration & Macro-RMSE, MPa & $|R_r|$ & $|R_z|$ & $|\sigma_{rr}(r{=}1)|$ & $|\tau_{rz}(r{=}1)|$ \\
+\midrule
+\texttt{random} & FEM                & ---           & 416 & 273 & 3.53 & 0.538 \\
+                & MLP                & $7.81\pm0.22$ & $1040\pm81$ & $238\pm9$ & $3.19\pm0.57$ & $0.337\pm0.013$ \\
+                & PINN, reduced form & $8.05\pm0.44$ & $626\pm26$ ($-40\,\%$) & $217\pm5$ ($-9\,\%$) & $0.83\pm0.57$ & $0.061\pm0.019$ \\
+                & PINN, full form    & $8.02\pm0.56$ & $553\pm72$ ($-47\,\%$) & $140\pm5$ ($-41\,\%$) & $0.56\pm0.25$ & $0.132\pm0.041$ \\
+\addlinespace
+\texttt{extrap:alpha\_max} & FEM                & ---            & 528 & 388 & 3.53 & 0.816 \\
+                           & MLP                & $12.70\pm0.03$ & $1426\pm93$ & $281\pm26$ & $5.35\pm1.42$ & $0.547\pm0.123$ \\
+                           & PINN, reduced form & $12.18\pm0.34$ & $739\pm41$ ($-48\,\%$) & $242\pm4$ ($-14\,\%$) & $1.02\pm0.44$ & $0.107\pm0.021$ \\
+                           & PINN, full form    & $12.21\pm0.51$ & $686\pm54$ ($-52\,\%$) & $188\pm26$ ($-33\,\%$) & $0.78\pm0.12$ & $0.090\pm0.015$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
+% Figure labels: fig:compare-fields = figures/paper/fig5_compare_fields.png; fig:residual-maps = figures/paper/fig6_residual_maps.png — the replacement for Figs. 11–12 of the previous version (MANUSCRIPT.md §6.2); captions in manuscript/captions.md. % EDIT: labels renamed fig:compare_fields/fig:residual_maps → fig:compare-fields/fig:residual-maps (one label set for the paper/ figures)
+% src: runs_v2.csv stage twod, seed-paired t-tests over seeds 0–2 (scipy.stats.ttest_rel): macro-RMSE PINN − MLP on random +0.24 (reduced, p = 0.441) and +0.21 (full, p = 0.409), on extrap:alpha_max −0.53 (p = 0.102) and −0.49 (p = 0.229); random component RMSE (MLP/reduced/full) 4.72/4.96/4.97, 6.72/6.88/6.94, 18.62/19.14/18.92, 1.183/1.204/1.231 MPa; r2_* (trainer.metrics: 1 − SS_res/SS_tot over the held-out grid nodes) 0.988–0.989, 0.991, 0.984–0.985 for the normal components and 0.938/0.935/0.932 for τ_rz.
+In accuracy the families do not part, and in the extended track the PINN is not more accurate than the MLP on the random split. There its macro-RMSE is $8.05\pm0.44$~MPa in the reduced form and $8.02\pm0.56$~MPa in the full form against $7.81\pm0.22$~MPa for the MLP. Both forms are thus 0.2~MPa less accurate, a difference that is not established ($p=0.44$ and $0.41$, three seed pairs). On the semi-angle extrapolation both forms are 0.5~MPa more accurate than the MLP, which is not established either ($p=0.10$ and $0.23$). In this track the physics terms therefore neither cost nor add accuracy that three seeds can resolve. The families are as close on individual components. On the random split the component RMSE is 4.7--5.0~MPa for $\sigma_{rr}$, 6.7--6.9~MPa for $\sigma_{\theta\theta}$, 18.6--19.1~MPa for $\sigma_{zz}$ and 1.18--1.23~MPa for $\tau_{rz}$, and, with the variance over the 263 held-out cases as the denominator, $R^2$ is 0.98--0.99 for the normal components and 0.93--0.94 for $\tau_{rz}$ in all three families.
+
+% src: runs_v2.csv stage twod, changes of the seed means against the MLP and seed-paired t-tests (n = 3): |R_r| −39.8 % / −46.9 % on random (p = 0.0064 / 0.0090) and −48.2 % / −51.9 % on extrap:alpha_max (p = 0.0021 / 0.0091); |R_z| full form −41.4 % / −33.2 % (p = 0.0015 / 0.0022), reduced form −9.2 % / −13.9 % (p = 0.085 / 0.148); |σ_rr(r=1)| MLP/reduced 3.82 (p = 0.069) and 5.27 (p = 0.056), MLP/full 5.72 (p = 0.028) and 6.89 (p = 0.028); reduced form per seed 1.474 / 0.393 / 0.633 MPa on random; |τ_rz(r=1)| MLP/PINN 5.54 and 2.55 on random, 5.13 and 6.07 on extrap:alpha_max (p = 0.0045–0.018);
+% code/trainer2d.py docstring (pinn2d_reduced: R_r without ∂τ_rz/∂z only, as in the 1D code; trainer.py lambda_shear = 0); QA_DATA_AND_Z.md §4 (dropped axial term = 68 % of the retained terms, the axial equation is not written in the 1D track).
+In admissibility they do. Both forms of the PINN reduce the median radial residual of the MLP, by 40 and 47\,\% on the random split and by 48 and 52\,\% on the extrapolation ($p<0.01$), since the loss of both contains the radial equation. The axial residual falls by 41 and 33\,\% with the full form ($p=0.0015$ and $0.0022$) but by only 9 and 14\,\% with the reduced one ($p=0.085$ and $0.15$). The loss of the reduced form, like that of the one-dimensional PINN, contains the radial equation alone, since without $\partial\sigma_{zz}/\partial z$, a term amounting to 68\,\% of the retained ones, the axial equation cannot be written. The gain in axial equilibrium thus comes from the axial term in the loss, not from ``physics in general''. The separation is sharpest at the free surface. On the random split the mean $|\sigma_{rr}(r{=}1)|$ is 3.19~MPa for the MLP against 0.83 and 0.56~MPa for the reduced and full forms, 3.8 and 5.7~times lower, and on the extrapolation it is 5.35~MPa against 1.02 and 0.78~MPa, 5.3 and 6.9~times lower. The reduction is established for the full form on both splits ($p=0.028$) but not for the reduced form ($p=0.069$ and $0.056$), whose violation varies strongly between seeds, from 0.39 to 1.47~MPa on the random split. The shear traction $|\tau_{rz}(r{=}1)|$ falls by a factor of 2.6--6.1 in both forms on both splits ($p\le0.018$).
+
+% src: tab:admissibility FEM row (correspondence/2026-10-11_table13_fem_row.md) against the seed means of runs_v2.csv stage twod (MLP / reduced / full): |R_r| model/FEM 2.50 / 1.51 / 1.33 on random, 2.70 / 1.40 / 1.30 on extrap:alpha_max; |R_z| model/FEM 0.874 / 0.793 / 0.512 and 0.723 / 0.623 / 0.483; |σ_rr(r=1)| FEM/model 1.11 / 4.23 / 6.34 and 0.66 / 3.47 / 4.54; |τ_rz(r=1)| model/FEM 0.63 / 0.11 / 0.25 and 0.67 / 0.13 / 0.11.
+The source row of Table~\ref{tab:admissibility} sets these values against the finite-element data of the same held-out cases. The radial residual of the source is 416~MPa/m on the random split and 528~MPa/m on the extrapolation. The MLP exceeds it 2.5 and 2.7~times, the reduced form of the PINN 1.5 and 1.4~times and the full form 1.3~times on both splits. The axial residual of all three families lies below that of the source, by 13 and 28\,\% for the MLP, 21 and 38\,\% for the reduced form and 49 and 52\,\% for the full form, presumably because a smooth surrogate does not reproduce the node-to-node scatter of the finite-element field, which a finite difference over the eight axial nodes amplifies. At the free surface the source violates the traction-free condition by 3.53~MPa on both splits. The MLP stays near this level on the random split (3.19~MPa) and exceeds it 1.5~times on the extrapolation (5.35~MPa), whereas the reduced and full forms of the PINN satisfy the condition 4.2 and 6.3~times more strictly than the source on the random split and 3.5 and 4.5~times on the extrapolation. The shear traction of all three families lies below that of the source, 0.538 and 0.816~MPa. Since the finite-element field is affected by nodal extrapolation and averaging, a surrogate that violates the boundary condition by less than its source is, in this specific sense, more physically admissible than the data.
+
+% src: git commit 6e7a228 (component RMSE 3.52/5.87/19.45/1.25, 3.69/6.04/20.12/1.27, 3.53/5.97/20.15/1.25 MPa; the "macro" 10.33/10.68/10.67 printed there and in the earlier tab:admissibility is the root mean square of the four component RMSEs; the mean defined in Section 2.3 and in trainer.metrics is (3.52 + 5.87 + 19.45 + 1.25)/4 = 7.52, (3.69 + 6.04 + 20.12 + 1.27)/4 = 7.78, (3.53 + 5.97 + 20.15 + 1.25)/4 = 7.725 → 7.73, spread 0.26);
+% commit 89fc7a0 and captions.md (dimensionless medians R_r 0.041/0.115/0.064/0.062, R_z 0.091/0.074/0.064/0.047); commit 6e7a228 and ERRATA.md E-24 (|σ_rr(r=1)| 3.54/2.90/0.78/0.56 MPa); ratios 0.115/0.041 = 2.8, 0.064/0.041 and 0.062/0.041 = 1.5–1.6, 3.54/0.78 = 4.5, 3.54/0.56 = 6.3;
+% experiments/residual_maps.py (scales from the FEM data, one set for all families; pooled median over the interior nodes, inner = [:, 1:-1, 1:-1]); captions.md ("Колорбары и сравнимость", "Нормировка координат", "Обезразмеривание невязок"); QA_DATA_AND_Z.md §4 (L/R ≈ 3.5).
+Figures~\ref{fig:compare-fields} and \ref{fig:residual-maps} show the fields of the earlier single-seed training, in which the source was evaluated on the same 261 held-out cases as the three families, for the case with the median error of the full PINN rather than the best. The predicted stress fields of the three families are visually alike, whereas their residual fields are not. Within each component the colour scale is shared by the FEM reference and all families, so that the panels of one column are directly comparable, and the radial axis is stretched, the window being about 3.5 radii long.
+
+In these figures the residuals are made dimensionless. The equilibrium residuals $R_r$, $R_z$ of Section~\ref{sec:models} are divided by the scales of the loss term \eqref{eq:lphys}, $s_{R_1}=(s_{rr}+s_{\theta\theta})/R_{\mathrm{char}}$ and $s_{R_z}=s_{zz}/L_{\mathrm{char}}+s_{rz}/R_{\mathrm{char}}$, computed once from the FEM data and applied identically to the source and all families, since otherwise each family would be normalised by itself and the values would not be comparable. A value of 0.1 means that the equation fails to close by 10\,\% of the characteristic magnitude of its own terms. Medians are taken over the interior grid nodes of all held-out cases together, where the central difference is second-order accurate. At the edges of the grid it degenerates to a one-sided difference.
+
+In that training the macro-RMSE, the mean of the four component RMSEs, was 7.52~MPa for the MLP against 7.78 and 7.73~MPa for the reduced and full forms of the PINN, a spread of 0.26~MPa in favour of the MLP. The median dimensionless radial residual was 0.041 for the source, 0.115 for the MLP and 0.064 and 0.062 for the reduced and full forms, the axial residual 0.091, 0.074, 0.064 and 0.047, and $|\sigma_{rr}(r{=}1)|$ was 3.54, 2.90, 0.78 and 0.56~MPa. The single-seed training thus orders the source and the three families as Table~\ref{tab:admissibility} does. % EDIT (11.10): the source comparison now rests on tab:admissibility (three seeds); this paragraph is reduced to the figures' training and its agreement with the table
+
+% src: RESULTS.md §1.4 (1D physics audit, 5 seeds; random: |R_1| FEM 402, MLP 1351 ± 146, PINN 749 ± 42, VPINN 1071 ± 26 MPa/m; |σ_rr(r=1)| FEM 3.48, MLP 3.41 ± 0.61, PINN 0.87 ± 0.21, VPINN 0.64 ± 0.14;
+%      extrap:alpha_max: |σ_rr(r=1)| FEM 3.35, MLP 3.95 ± 0.82, PINN 1.74 ± 0.32, VPINN 1.80 ± 0.66; extrap:v_max: 31.40 / 33.70 / 28.23 MPa vs FEM 3.10) — all verified.
+% src: runs_v2.csv stage=main, 5 seeds, sd with ddof = 1 (random: eq_res_median 1350.9 +- 145.9 / 749.4 +- 42.0 / 1070.9 +- 26.1,
+% bc_sigma_rr 3.409 +- 0.607 / 0.872 +- 0.211 / 0.641 +- 0.135; alpha_max: bc 3.954 +- 0.823 / 1.741 +- 0.321 / 1.804 +- 0.661;
+% v_max: bc 31.40 / 33.70 / 28.23); source 402 MPa/m, 3.48 / 3.35 / 3.10 MPa: RESULTS.md 1.4 (make_results.fem_baseline);
+% MPa/m because trainer.equilibrium_audit differentiates over r_phys in metres (dataset.py); 1351/402 = 3.4, 749/402 = 1.9, 1071/402 = 2.7
+The ordering is the same on the one-dimensional track over five seeds.
+% EDIT (11.10): "rather than in the dimensionless form of that comparison" removed, Table 13 now gives the two-dimensional comparison in MPa/m as well
+On the random split the median reduced radial residual $|R_1|$, Eq.~\eqref{eq:eq_red}, taken over the interior points of each held-out profile and then over the cases, is 402~MPa/m for the source, $1351\pm146$~MPa/m for the MLP, $749\pm42$~MPa/m for the PINN and $1071\pm26$~MPa/m for the VPINN (mean~$\pm$~standard deviation over five seeds), that is, 3.4, 1.9 and 2.7 times that of the source. The traction at the free surface, $|\sigma_{rr}(r{=}1)|$, is 3.48~MPa for the source, $3.41\pm0.61$~MPa for the MLP, $0.87\pm0.21$~MPa for the PINN and $0.64\pm0.14$~MPa for the VPINN. The advantage persists with $\alpha=20^\circ$ withheld, where $|\sigma_{rr}(r{=}1)|$ is $3.95\pm0.82$~MPa for the MLP against $1.74\pm0.32$~MPa for the PINN and $1.80\pm0.66$~MPa for the VPINN and 3.35~MPa for the source. It disappears only on the speed extrapolation discussed above, where all three families lose accuracy and $|\sigma_{rr}(r{=}1)|$ reaches 28--34~MPa for every family against 3.10~MPa for the source. % NOTE: wording aligned with the speed paragraph, which no longer reads that split as a property of the surrogate alone
+
+% EDIT (11.10): tab:ablation2d merged into tab:admissibility (the same 18 twod runs, traction-free columns added); its paragraph is folded into the two paragraphs after that table. Radial percentages use the full-form column eq_res_median (RESULTS.md §5), not eq_r_reduced (−38…−49 % in RESULTS_v1_vs_v2.md §4).
+
+% src: RESULTS.md §4 (corruption: +250 MPa shift of σ_θθ in a fraction of the training sets, morphology of artefact #439; hold-out clean; macro-RMSE 0/1/5/10 % — all 12 entries verified; degradation ×1.81/×1.64/×1.79, csv 1.813/1.638/1.786);
+% src: RESULTS_v1_vs_v2.md §6 (gaps −0.10/−0.48/−1.11/−1.59, p = 0.718/0.100/0.010/0.037; slope −14.20 MPa per unit fraction, p = 0.000363, R² = 0.735) — recomputed from runs_v2.csv stage=corrupt (12 seed-level points): identical.
+% NOTE: RESULTS.md §4 quotes p = 0.052 at 10 %: that is an unpaired Welch test (recomputed 0.0518); the seed-paired test used throughout gives 0.037.
+% EDIT: the corruption table (tab:corruption, duplicate of T3) deleted — see Table~\ref{tab:corrupt} in tables/all_tables.tex, which also carries the VPINN gap rows and the regression.
+
+% NOTE: the corruption experiment is referred to the table that carries its values; no figure of it is set in the manuscript.
+% src: runs_v2.csv stage=corrupt (random split, 3 seeds); paired ttest_rel by seed; Holm (paper_tables.py holm_adjust) over the four fractions of each comparison: PINN-MLP 0.718/0.200/0.039/0.111, VPINN-MLP 0.956/0.956/0.492/0.760; mean macro-RMSE 0 -> 10 %: MLP 8.19 -> 14.84 (+6.65 MPa, x1.81), PINN 8.09 -> 13.25 (+5.16 MPa, x1.64), VPINN 8.03 -> 14.34 (x1.79); rmse_sigma_tt 0 -> 10 %: MLP 7.28 -> 31.29, PINN 7.18 -> 26.34, VPINN 7.04 -> 30.12, other components change by at most 1.58 MPa (MLP sigma_zz); corruption.py (constant offset of sigma_tt on all 20 radii, sigma_rr and tau_rz untouched); trainer.py: _radial_residual and the weak form both contain (sigma_rr - sigma_tt)/r, and _bc_loss is added for pinn and vpinn alike.
+The corruption experiment of Table~\ref{tab:corrupt} gives the clearest effect of the physics term on the error in this study, for the one kind of label defect that was tested. On clean labels the PINN and the MLP are indistinguishable ($\Delta=-0.10$~MPa, $p=0.72$): the term adds nothing where data and equations already agree. When 1, 5 and 10\,\% of the training cases carry corrupted labels, the gap $\Delta$ widens monotonically to $-0.48$, $-1.11$ and $-1.59$~MPa. Both errors are measured on the clean hold-out and both grow with the corrupted fraction, that of the MLP faster, so that the increasingly negative gap is a growing advantage of the PINN. Taken one fraction at a time, this advantage is significant at 5 and 10\,\% ($p=0.010$ and $0.037$) but not at 1\,\% ($p=0.10$). After a Holm correction over the four fractions, the clean reference included, only the 5\,\% level remains significant (adjusted $p=0.039$, against 0.111 at 10\,\% and 0.200 at 1\,\%), and no difference between the VPINN and the MLP is significant at any fraction, before or after the correction. The growth of the gap with the corrupted fraction is better supported than the gap at any single fraction. A regression of the gap on the corrupted fraction over the twelve seed-level points (four fractions, three seeds each) gives $-14.2$~MPa per unit fraction ($p=0.00036$, $R^2=0.74$): the advantage grows by about 1.4~MPa for every 10\,\% of corrupted labels. In relative terms the protection is partial. At 10\,\% the error of the MLP has grown by a factor of 1.81 (from 8.19 to 14.84~MPa) and that of the PINN by 1.64 (from 8.09 to 13.25~MPa), so that the PINN still loses most of the accuracy that the MLP loses. The weak form is hardly protected (1.79), although its loss contains the same radial term and the same traction-free term. The result also rests on a single kind of corruption, a constant offset of $\sigma_{\theta\theta}$ over the whole profile of a corrupted case, and the loss of accuracy is concentrated in that component. At 10\,\% its RMSE on the clean hold-out is 31.3~MPa for the MLP and 26.3~MPa for the PINN, against 7.3 and 7.2~MPa on clean labels, whereas the RMSE of each of the other components changes by less than 2~MPa. Such an offset leaves $\sigma_{rr}$ and $\tau_{rz}$ at $r=1$ unchanged, so the traction-free term does not see it. A prediction that followed the corrupted labels would, however, violate the radial equation \eqref{eq:eq_red} at every radius through the term $(\sigma_{rr}-\sigma_{\theta\theta})/r$, which the strong-form residual penalises point by point. Defects that this residual does not see, such as an offset of $\sigma_{zz}$, which does not enter \eqref{eq:eq_red}, were not tested, and no protection against them is claimed. Taken together, Tables~\ref{tab:admissibility} and \ref{tab:corrupt} locate the benefit of the physics term not in accuracy against a clean finite-element field, where it is marginal, but in the admissibility of the solution and, for the one kind of label defect tested, in a partial protection of the strong form against corrupted training labels.
+
+% EDIT: Limitations paragraph added at the end of the section in place of the undefined \ref{sec:limitations}; wording from MANUSCRIPT.md §3, with v2 figures in place of that draft's NRMSE values (0.58 / 2.2–2.4 are v1 and are not used).
+\paragraph{Limitations}
+The focus of this work is on surrogate models built by machine learning and on the finite-element simulation that supplies their training data. The adequacy of the finite-element model was assessed by comparison with analytical solutions for the drawing stress and by internal consistency tests, as described in Section~\ref{sec:res_fem_verification}, and the surrogates are evaluated with respect to that model: their accuracy on it, their transferability beyond the training range and their sensitivity to corrupted labels in the data source. A broader analysis tied directly to industrial drawing equipment requires additional verification by full-scale experiments, which lie outside the scope of this study. % src: MANUSCRIPT.md §3
+The factorial grid is incomplete and unbalanced: the level $v = 5$~m/min is represented by 122 cases against 554--607 for the other levels, each batch of simulations holds a single level of speed (Section~\ref{sec:prep-data}), and 13.2\,\% of the raw cases are bit-identical duplicates of another case differing only in the friction label, so friction cannot be used as an extrapolation axis. % src: MANUSCRIPT.md §3; ERRATA.md E-12 (122 vs 554–607), E-06 (13.2 %); VALIDATION.md §6 (speed = batch)
+The shear component $\tau_{rz}$ is essentially not predicted from the one-dimensional representation: its NRMSE, normalised by the standard deviation over the held-out cases, is 0.47--0.49 on the random hold-out and 1.6--1.9 with the highest speed withheld, against a physical scale of 0.67~MPa mean absolute value, two orders of magnitude below the normal components. Macro-averaged figures are therefore dominated by the normal components, and per-component figures are given alongside them. % src: RESULTS.md §1.3б (τ_rz NRMSE random 0.471 / 0.485 / 0.476; extrap:v_max 1.622 / 1.945 / 1.879); PLAYBOOK.md §2.4 (0.67 MPa)
+The effect of corrupted training labels was examined on the random split only, with three seeds and for one kind of defect, a constant offset of $\sigma_{\theta\theta}$ that the radial equilibrium residual sees directly, and defects of other kinds were not tested. % src: runs_v2.csv stage=corrupt (split random only, seeds 0-2); corruption.py (DEFAULT_COMPONENT=1, DEFAULT_OFFSET_MPA=250.0, mode constant_offset on all 20 radii)
