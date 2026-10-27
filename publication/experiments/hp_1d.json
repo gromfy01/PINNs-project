@@ -1,0 +1,5 @@
+{
+  "mlp":   {"n_layers": 3, "n_units": 96, "learning_rate": 0.003, "lambda_physics": 0.0, "lambda_bc": 0.0},
+  "pinn":  {"n_layers": 3, "n_units": 96, "learning_rate": 0.003},
+  "vpinn": {"n_layers": 3, "n_units": 96, "learning_rate": 0.003}
+}
