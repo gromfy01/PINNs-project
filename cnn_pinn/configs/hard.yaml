@@ -1,0 +1,13 @@
+# Пробный прогон на существующих данных: вариант hard, окно 2R, сетка 32×64.
+name: hard
+variant: hard
+data: data/trial_w2.npz
+width: 64
+scale: 300.0        # общий масштаб напряжений, МПа (п. 3 шаг 4)
+lr: 0.002
+wd: 1.0e-5
+batch: 32
+epochs: 200
+patience: 30
+seed: 0
+split_seed: 0

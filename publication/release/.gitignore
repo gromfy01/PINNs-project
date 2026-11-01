@@ -1,0 +1,5 @@
+__pycache__/
+*.npz
+runs*.csv
+!results/runs_v2.csv
+tables/

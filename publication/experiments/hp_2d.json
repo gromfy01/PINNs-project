@@ -1,0 +1,5 @@
+{
+  "mlp2d":          {"n_layers": 3, "n_units": 96, "learning_rate": 0.002, "lambda_physics": 0.0, "lambda_bc": 0.0},
+  "pinn2d_reduced": {"n_layers": 3, "n_units": 96, "learning_rate": 0.002},
+  "pinn2d_full":    {"n_layers": 3, "n_units": 96, "learning_rate": 0.002}
+}

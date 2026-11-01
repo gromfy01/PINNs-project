@@ -1,0 +1,10 @@
+# Tested with Python 3.11 on CPU (Linux) with:
+#   numpy 2.4.6, scipy 1.17.1, pandas 3.0.6, matplotlib 3.11.2,
+#   torch 2.14.1, jax 0.10.2, optax 0.2.8
+numpy>=2.0      # tested 2.4.6
+scipy           # tested 1.17.1
+pandas          # tested 3.0.6
+matplotlib      # tested 3.11.2
+torch           # tested 2.14.1; a CPU build is sufficient
+jax[cpu]        # tested 0.10.2
+optax           # tested 0.2.8

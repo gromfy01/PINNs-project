@@ -1,0 +1,1340 @@
+\documentclass[pdflatex,sn-basic,Numbered]{sn-jnl}
+
+\usepackage{graphicx}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{booktabs}%
+
+\usepackage{tabularx}
+\usepackage{accents}
+\newcommand{\edot}{\accentset{\scalebox{0.4}{$\bullet$}}{\varepsilon}}
+\newcommand{\pending}[1]{{\color{red}[#1]}}
+
+\newlength{\nomenlabelwidth}
+\makeatletter
+\newenvironment{nomenclature}[1][Nomenclature]{%
+  \section*{#1}%
+  \settowidth{\nomenlabelwidth}{$\sigma_{rr},\sigma_{\theta\theta},\sigma_{zz}$${}={}$}%
+  \begin{list}{}{%
+    \setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}%
+    \setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}%
+    \setlength{\labelsep}{0pt}\setlength{\labelwidth}{\nomenlabelwidth}%
+    \setlength{\leftmargin}{\nomenlabelwidth}%
+    \let\makelabel\@mklab}\raggedright}%
+  {\end{list}}
+\newcommand{\entry}[2]{\item[\hfill#1${}={}$]#2}
+\newcommand{\EntryHeading}[1]{\itemsep8pt\goodbreak\item[\bfseries#1\hfill]\itemsep0pt\@itempenalty=1000\relax}
+\makeatother
+
+\raggedbottom
+\graphicspath{{../overleaf/}}%
+
+\begin{document}
+
+\title{Physics-informed versus data-driven surrogates for residual stress after wire drawing: accuracy, physical admissibility and behaviour outside the training range}
+
+\author*[1]{\fnm{Dmitriy} \sur{Demin}}\email{ddemin@hse.ru}
+\author[1]{\fnm{Georgii} \sur{Romanenko}}\email{Georgii.v.romanenko@gmail.com}
+
+\affil*[1]{\orgname{HSE University}, \orgaddress{\street{11 Pokrovsky Boulevard}, \city{Moscow}, \country{Russia}}}
+
+\abstract{\unboldmath A data-driven multilayer perceptron (MLP), a strong-form physics-informed neural network (PINN) and a weak-form variational PINN (VPINN), identical except for the loss, are compared as residual-stress surrogates on 1756 finite-element simulations of AISI~1020 wire drawing. All results refer to this reference, verified on 112 runs: without bearing terms or fitted parameters, Siebel's and Avitzur's relations exceed its drawing stress by 11--16\,\% on average. On radial profiles (one-dimensional track) the PINN has a lower error than the MLP on all thirteen splits, by under 0.4~MPa on random, interpolation and matched-control splits (errors 7--12~MPa), 0.6--1.9~MPa on three single-factor extrapolations and a joint semi-angle--reduction gap (8--26~MPa) and 7.5~MPa at the highest speed (48--56~MPa). The difference is significant on four splits, none surviving Holm correction, and with less training data no advantage is established. With the axial coordinate as input (extended track) the PINN trails the MLP by 0.2~MPa on the random split (not significant). Admissibility improves instead. On the random and semi-angle splits the PINN lowers the MLP's radial equilibrium residual by 40--52\,\% in both tracks, on the random split both one-dimensional physics-informed networks lower its free-surface radial stress 3.9--5.3-fold, and the axial residual falls significantly (33--41\,\%) only with the axial equation in the loss. A synthetic $+250$~MPa offset of $\sigma_{\theta\theta}$ in 10\,\% of training cases, which the radial residual sees directly, raises the error 1.64-fold for the PINN against 1.79 (VPINN) and 1.81 (MLP), the PINN--MLP gap surviving Holm correction only at 5\,\%.}
+
+\keywords{physics-informed neural networks, wire drawing, residual stresses, variational PINN, finite element simulation, surrogate modelling}
+
+\maketitle
+
+\section{Introduction}
+
+Metal forming is a fundamental process in modern manufacturing, significantly impacting the final geometry, microstructure, and mechanical properties of manufactured products. Among various forming operations, wire drawing stands out as a widely employed technique, yet one that demands exceptional attention to surface quality, dimensional precision, and performance stability.
+The critical factor determining the dimensional stability, fatigue resistance, and durability of cold-drawn wire lies in the residual stresses generated during intense and non-uniform plastic deformation processes \citep{burioli2024novel,lim2026study,shin2026accurate,delrey2025effect,delrey2026advances,he2003residual,overstam2006influence,aghdami2020inverse,radionova2022fem, selbmann2024residual, suliga2024influence, ruminski2025effect}. In particular, as demonstrated in \citep{shin2026accurate} through precise finite-element analysis, the alternating loading patterns during multi-pass wire drawing result in intricate residual stress distributions that significantly influence the subsequent behavior of the wire. Studies \citep{delrey2025effect, delrey2026advances} indicate that the die geometry and the conditions of lubrication during the processing of ZnAl15\% alloy significantly affect the magnitude and distribution of residual stresses. For austenitic stainless steel X5CrNi18-10, as demonstrated in \citep{selbmann2024residual}, it has been both experimentally and numerically verified that adjusting the inlet die angle and drawing speed allows for precise control over the residual stress state. However, this approach necessitates extensive computational resources. In the production of superconducting wires based on Nb3Sn, the effect of transverse deformation applied before heat treatment on the critical current has to be assessed \citep{burioli2024novel}. For high-strength, unalloyed steels like 30MnSi6, ensuring the stability of mechanical properties after bi-directional drawing is crucial \citep{lim2026study}. This imposes strict limits on the acceptable level of residual stresses, making it a critical consideration in manufacturing processes. Thus, the capacity for swift and physically accurate prediction of residual stresses has become an indispensable aspect of contemporary drawing process design. Finite element analysis (FEM), rightfully regarded as the gold standard for stress-strain modelling during drawing, allows for highly accurate simulation of stress fields with the aid of axisymmetric and three-dimensional formulations. These advanced methods enable the intricate evolution of stress patterns to be meticulously reproduced, taking into account intricate contact interactions, substantial plastic deformations, material hardening, and thermal effects. However, the computational expense associated with a single FEM analysis remains prohibitively high, rendering it unsuitable for multi-parameter studies, rapid optimization, and real-time decision-making. This has spurred a surge in interest in surrogate models that promise orders-of-magnitude reduction in prediction time while maintaining acceptable levels of accuracy.
+
+The advancements in machine learning (ML) technology have opened up a whole new realm of possibilities for streamlining finite element analysis (FEA) in industrial settings \citep{mozaffar2022mechanistic, goodfellow2016deep, weichert2019review}. By training artificial neural networks (ANNs) on representative datasets generated through FEA, these networks can almost instantaneously approximate highly nonlinear mappings between process parameters and stress fields.
+In the realm of wire drawing, this approach has been systematically explored in several studies \citep{gromov2026residual,demin2025forecasting,demin2024application}. One integrated scheme involving both FEA and ANNs \citep{gromov2026residual} showcased the potential to predict residual stresses with remarkable accuracy. Moreover, the research conducted in \citep{demin2024application} demonstrated that ANNs are capable of not only predicting residual stresses but also accurately reproducing accumulated strains in wires.
+Further investigations \citep{demin2025forecasting} have shown that when the hyperparameters are optimised with tools such as Optuna \citep{akiba2019optunanextgenerationhyperparameteroptimization}, BayesianOpt or Scikit-optimize, a multi-layer perceptron (MLP) reaches a coefficient of determination $R^2$ above 0.99 for all components of the residual stress tensor in low-carbon steel wire.
+Similar patterns are observed in related domains. Convolutional neural networks prove effective in indentation analysis, simultaneously predicting non-equiaxial residual stresses and plastic flow properties \citep{park2026indentation, han2024evaluation}. For real-time estimation of three-dimensional residual stress distributions during machining, architectures based on the Incepu-Net approach \citep{wang2025online} are employed. Hybrid FEM-ANN-XGBoost models are utilised for predicting drawing forces \citep{tsui2026metrology}.
+A comprehensive review \citep{weichert2019review} underscores the prevailing trend towards integrating machine learning techniques for optimising manufacturing processes.
+
+Nonetheless, purely data-driven models have a fundamental flaw: they cannot guarantee adherence to the laws of physics, specifically the equations of equilibrium, boundary conditions, and the governing principles of the mechanics of deformable materials. This issue becomes particularly critical when extending predictions beyond the scope of the training data, raising legitimate concerns about the physical validity of the predicted stress patterns.
+To address this limitation, the concept of Physics-Informed Neural Networks (PINNs) was introduced. The idea was first proposed in \citep{raissi2019physics} and has undergone rapid development in recent years \citep{karniadakis2021physics}. The core concept behind PINNs lies in integrating differential equations that describe the physical principles of a process directly into the loss function. This allows the neural network to be penalized not only for discrepancies with the data but also for violating conservation laws, boundary conditions, and initial conditions.
+As demonstrated in \citep{haghighat2021physics}, this methodology ensures enhanced generalization capabilities and physical consistency in predictions for solid mechanics challenges. A comprehensive analysis \citep{ra2026physics} highlights the rapid expansion of physically informed machine learning in a wide range of manufacturing processes.
+
+There are already successful examples of PINN applications in predicting residual stresses during ultrasonic surface treatment of 20CrNiMo steel \citep{yang2025prediction}. Additionally, PINNs have been used to identify the effective friction coefficient and the normalised load factor that govern subsurface residual stresses in tractional sliding \citep{mehedihasan2026inverse}, to model machining-induced residual stresses \citep{hasan2025machining} and to predict the high-temperature creep rupture life of 2.25Cr-1Mo steel \citep{muransky2026application}. In sheet metal forming, a purely data-driven network and a PINN constrained by the equilibrium equations were compared as stress surrogates for V-bending \citep{munzone2024comparative}. Both gave good approximations, and the data-driven network was slightly more accurate, so the benefit of the physics term cannot be taken for granted. The convergence of hybrid finite-element-machine learning models and physics-driven machine learning approaches for predicting the properties of additive manufactured steels underscores a broader trend towards the integration of prior physical understanding into learning algorithms \citep{laakso2024hybrid, rahman2025physics}.
+
+Despite the general progress made, the full potential of physical informed neural networks (PINNs) for predicting residual stresses after wire drawing remains largely unexplored. In \citep{demin2025forecasting}, where a purely data-driven multi-layer perceptron reached $R^2$ above 0.99, no explicit equilibrium constraints were imposed on the network.
+Consequently, it is still not clear whether physical regularization improves prediction quality, or whether the rigidity imposed by equilibrium equations reduces accuracy on real-world datasets. Moreover, the existing literature lacks a systematic comparison of different PINN implementations, especially between the strong (differential) and weak (variational) formulations of physical laws for this class of problems.
+The present study seeks to bridge this gap by conducting a direct comparative analysis of three surrogate families on a unified dataset obtained through finite-element simulations of an axisymmetric wire-drawing process: a data-driven multi-layer perceptron (MLP), a strong-form physics-informed neural network (PINN), and a variational PINN (VPINN) built on the weak (integral) formulation of the equilibrium equations. The three families share one architecture, one optimiser and the same training budget and differ only in the composition of the loss, so that any difference in behaviour is attributable to the physics term rather than to the model or the training procedure.
+
+This work follows the two earlier studies of the first author and co-workers reviewed above \citep{demin2024application,demin2025forecasting}, but it asks a different question. Those studies selected and tuned a purely data-driven model and reported the accuracy of its prediction. Here the data-driven network is the baseline, and the object of study is what the physics term in the loss adds to it. Besides accuracy, three aspects are examined that concern the physics term and the behaviour of the surrogates rather than the choice of the model. The first is the admissibility of the predicted fields with respect to equilibrium and the traction-free condition, measured with the same operators on the finite-element source itself. The second is the behaviour outside the training range. Thirteen splits are used for it: a random hold-out, two interior levels, the highest level of each of four factors, a gap in the joint range of the die semi-angle and the reduction that the design leaves uncovered, and a random control of the same size for each of the last five. The third is the sensitivity of the surrogates to one kind of defect in the training labels. The finite-element dataset is also new. It was generated for a material different from those of the earlier studies, AISI~1020 steel described by the Johnson--Cook model, in a coupled temperature--displacement analysis. Its cleaning is documented step by step, with the reason and the number of cases removed at each step (Section~\ref{sec:prep-data}), and its drawing stress is checked against classical analytical relations (Section~\ref{sec:res_fem_verification}).
+
+
+Each of the three families is studied in two tracks. In the one-dimensional track the surrogate maps the process parameters and the radial coordinate to the residual stress tensor along a representative section. In the extended track the axial coordinate is added as an input and the full two-dimensional field is predicted, so that both equilibrium equations can be evaluated on the prediction. The influence of the software back-end is examined separately, by training the same strong-form PINN in two independent implementations, PyTorch~\citep{paszke2019pytorch} and JAX~\citep{bradbury2018jax}. A DeepXDE implementation~\citep{lu2021} runs on the PyTorch back-end and differentiates with the same automatic-differentiation engine, so the comparison involves two differentiation engines rather than three.
+It is of paramount importance that all surrogates employ an identical representation of input features --- the process parameters and the point coordinates --- as well as a uniform output vector of the residual stress tensor components. A single group-aware data-partitioning scheme, in which all points of one finite-element computation are kept together on the same side of every split~\citep{roberts2017crossvalidation}, and a shared set of quality indicators are used throughout.
+
+This experimental design guarantees that any statistically significant differences in prediction accuracy can be attributed to the way physical knowledge is integrated and to the software implementation, excluding the influence of extraneous factors. Accuracy is assessed per component of the stress tensor and as a field-averaged macro-RMSE. Differences between families are tested with a paired $t$-test over the random seeds within each split ($n = 5$ pairs in the one-dimensional track, $n = 3$ in the extended track), with a Holm correction over the thirteen splits, a Friedman test being used only as an auxiliary check across splits. The random interpolation split holds out 263 finite-element computations, and the families of both tracks are compared on it over several random seeds. The finite-element source itself is evaluated on the same held-out computations in both tracks.
+The findings yield quantitatively supported recommendations for selecting a surrogate architecture for the prediction of residual stresses following drawing operations, and delineate the conditions under which strong and weak forms of physical regularisation are worthwhile in mechanical-engineering processes.
+
+
+
+\section{Materials and methods}
+\subsection{Materials and process parameters}
+\label{sec:materials}
+
+The process modelled is axisymmetric wire drawing through a conical die. The computational domain and its boundary conditions are shown in Fig.~\ref{fig:scheme}. Five characteristic surfaces are distinguished: 
+$S_1$ - is the axis of symmetry of the wire; 
+$S_2$ - is the outlet surface, on which the drawing velocity is prescribed; 
+$S_3$ - is the free lateral surface; 
+$S_4$ - is the contact surface between the wire and the die; and $S_5$ - is the entry surface of the wire. 
+
+The half-angle of the deformation zone, also termed the die semi-angle, is denoted $\alpha$, $D_0$ and $D$ are the initial and final diameters of the wire, $L$ is the length of the inclined part of the deformation zone, measured along the die cone, and $L_b$ is the length of the cylindrical calibration zone that follows the cone, the bearing length.
+The radial coordinate $r$ is measured from the axis and the axial coordinate $z$ along the direction of metal flow. The three geometric parameters of Table~\ref{tab:fem_params} are expressed through this notation: the reduction of diameter $Q=100\,(D_0-D)/D_0$ follows from $D_0$ and $D$ and is given in per cent, the half-angle of the deformation zone is $\alpha$, and the calibration ratio $k$ relates the bearing length $L_b$ to the initial diameter of the wire, $L_b = kD_0$.
+
+\begin{figure}[t]
+\centering
+\includegraphics{pictures/process_scheme.pdf}
+\caption[Axisymmetric wire-drawing process and its boundaries]{Axisymmetric wire-drawing process. $S_1$~--~axis of symmetry, $S_2$~--~outlet surface of the wire, $S_3$~--~free lateral surface, $S_4$~--~contact surface with the die, $S_5$~--~entry surface of the wire, $\alpha$~--~half-angle of the deformation zone, $D_0$ and $D$~--~initial and final diameters of the wire, $L$~--~length of the inclined part of the deformation zone, $L_b$~--~length of the calibration zone, the cylindrical part of $S_4$ behind the cone (bearing length), $F$~--~drawing force. Not to scale}
+\label{fig:scheme}
+\end{figure}
+
+
+A series of axisymmetric FEM simulations of the wire-drawing process was carried out in Abaqus CAE~\citep{abaqus2022}.
+The workpiece was a rectangular longitudinal section discretised with a CAX4RT element mesh. The geometry of the die was described by three parameters: the reduction ($Q$), the half-angle of the deformation zone ($\alpha$), and the ratio between the bearing length $L_b$ and the initial diameter of the wire ($k$). Process parameters varied during the campaign were the Coulomb friction coefficient ($\mu$) and the drawing velocity ($v$). The ranges of these parameters are summarised in Table~\ref{tab:fem_params}.
+
+Material behaviour is described by the Johnson--Cook model for the low-carbon steel AISI 1020, with the constants of
+\citep{10.1680/jemmr.16.00019} and the temperature-related properties after \citep{shi2006analytical}. The analysis is a coupled temperature--displacement one, and the
+initial temperature is $20^\circ$C throughout. The flow stress follows the constitutive equation
+\begin{equation}
+\sigma_f = \bigl(A + B\varepsilon^{\,n}\bigr)
+           \left(1 + C\ln\frac{\edot}{\edot_0}\right)
+           \bigl(1 - \theta^{\,m}\bigr), \qquad
+\theta = \frac{T - T_{\mathrm{tr}}}{T_{\mathrm{melt}} - T_{\mathrm{tr}}},
+\label{eq:johnson-cook}
+\end{equation}
+in which the first factor describes strain hardening, with $A$ the initial yield stress and $B$
+and $n$ the hardening constants. The second factor describes the rise of the flow stress with the
+strain rate, with $C$ the rate sensitivity and $\edot_0$ the reference strain rate. The third
+factor describes thermal softening, with $\theta$ the homologous temperature between the
+transition temperature $T_{\mathrm{tr}}$ and the melting temperature $T_{\mathrm{melt}}$ and $m$
+the softening exponent. Since Eq.~\eqref{eq:johnson-cook} describes the behaviour of the material
+as a function of strain, strain rate and temperature, $\sigma_f = \sigma_f(\varepsilon,\edot,T)$,
+it is defined only at stated values of these three quantities, and no single number describes
+the pass.
+
+
+Where a single representative flow stress is needed -- in the comparison with the analytical
+solutions of Section~\ref{sec:res_fem_verification}, which are energy methods -- it is formed
+by averaging the constitutive equation \eqref{eq:johnson-cook} along the deformation path of
+each material point, weighted by plastic work, and then over the section weighted by radius:
+$\sigma_f = \int\sigma(\varepsilon,\edot,T)\,\mathrm{d}\varepsilon_p /
+\int\mathrm{d}\varepsilon_p$.
+The same constitutive description was used in all simulations, so the resulting dataset reflects pure variation of geometry and process conditions. Spatial coordinates of mesh nodes and the four cylindrical components of the residual stress tensor were exported from the Abaqus Output Database (\texttt{.odb}) files through scripts written against the Abaqus CAE Python API. Only the nodes lying within 25--75\,\% of the length of the wire were retained for surrogate-model training, because this region corresponds to the steady-state deformation regime and is most representative of the residual stress field of interest. Each retained set was downsampled to 20 radial points so that all simulations share the same spatial grid.
+
+
+
+\begin{table}[!h]
+\centering
+\caption{Ranges of process parameters in the FEM campaign.}
+\label{tab:fem_params}
+
+\begin{tabularx}{\columnwidth}{@{}lX@{}}
+\toprule
+Parameter & Values \\
+\midrule
+Reduction $Q$, \% & 1.5, 2.5, 5, 10, 15, 20, 25 \\
+Calibration ratio $k$ & 0.0, 0.1, 0.3, 0.5, 0.75, 1.0 \\
+Die semi-angle $\alpha$, $^{\circ}$ & 4, 8, 12, 16, 20 \\
+Friction coefficient $\mu$ & 0.025, 0.05, 0.10 \\
+Drawing velocity $v$, m/min & 5, 10, 20, 40, 250 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The cleaning detailed in Section~\ref{sec:prep-data} removes friction-label duplicates, runs that did not complete the draw and the highest reduction level $Q=25\,\%$, at which several runs ceased to be drawing because the wire adhered to the die, and leaves 1756 valid simulations for surrogate-model training.
+
+The modelling approach follows established practice in the numerical analysis of wire drawing: an axisymmetric finite-element discretisation, a Coulomb contact formulation at the die interface, and a thermo-visco-elasto-plastic material description. Independent studies built on the same components \citep{shin2026accurate,he2003residual,overstam2006influence,selbmann2024residual} report good agreement with measurements, which supports the approach. The present dataset itself was not compared with measurements on drawn wire, and the residual stress values are therefore interpreted with respect to the model that produced them. The internal consistency of that model, and its agreement with the analytical solutions for the drawing stress, are examined in Section~\ref{sec:res_fem_verification}.
+
+
+\subsection{Preparing Data for Machine Learning}
+\label{sec:prep-data}
+\label{sec:fem-dataset}
+
+
+\paragraph{Exported fields and their limits}
+Each report holds one frame of nodal values, the last one of the run: the coordinates $(r,z)$ and the stress components S11, S22, S33, S12, which in the CAX convention are $\sigma_{rr}$, $\sigma_{zz}$, $\sigma_{\theta\theta}$, $\tau_{rz}$. The export can be extended with further fields as the parameters under study require. The dedicated runs of Section~\ref{sec:res_fem_verification}, for instance, also carry the equivalent plastic strain PEEQ and the temperature, written as histories in time.
+The targets are read directly from these columns, which are present in all 2443 exported reports, the raw set from which the 1756 cases of Section~\ref{sec:materials} are obtained by the filtering described below, and the identity of every stored field is verified against all quantities of the report, not only the four expected ones.
+The 2443 runs come from seven batches of simulations, and each batch holds a single level of the drawing speed. The levels of 10 and 40~m/min were computed in two batches each, and the levels of 5, 20 and 250~m/min in one batch each. An effect of the drawing speed therefore cannot be separated from a difference between the batches.
+The dataset was regenerated from the raw Abaqus reports, where the four components $(\sigma_{rr}, \sigma_{\theta\theta}, \sigma_{zz}, \tau_{rz})$ are read from the columns S.S11, S.S33, S.S22 and S.S12 respectively.
+Nodal averaging leaves a residual at the free surface: on the final dataset the mean $|\sigma_{rr}|$ at $r=R$ is 3.52~MPa and $|\tau_{rz}|$ 0.24~MPa.
+This is the accuracy with which the source itself satisfies the traction-free condition and is the baseline for every boundary-condition metric in Section~\ref{sec:res_fem}.
+In the retained runs the exported cross-section is unloaded (median $|\int\sigma_{zz}\,\mathrm{d}S|/S$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa), so the drawing force is not read from these cases.
+
+\paragraph{Axial window}
+For the further preparation of the data only the values within 25--75\,\% of the length of the wire are used, which lie in the region of steady-state drawing.
+The window is used in two variants, and the choice determines the form of the equations used later. In the main track the field inside the window is collapsed along the axis, that is, replaced by its median within each of 20 radial bins, so that only the radial coordinate $r$ remains and the equilibrium condition enters in its radial form, Eq.~\eqref{eq:eq_red}. In the extended track the axial coordinate is kept, the field is described in $(r,z)$, and the full equations \eqref{eq:eq_full_r}--\eqref{eq:eq_full_z} with derivatives in both coordinates apply (Section~\ref{sec:models}). What the one-dimensional variant loses was measured component by component (Table~\ref{tab:zshare}). For the normal components the share of the in-window variance along $z$ is 10--12\,\% and collapsing the field along $z$ lowers their mean absolute value by 2--4\,\%, whereas for $\tau_{rz}$ the two amount to 40\,\% and 79\,\%, because this component changes sign along $z$ and largely cancels when the field is collapsed.
+The shear component is therefore not predictable from the one-dimensional variant, which is a property of the data rather than of any model. Inside the window the mean $|\tau_{rz}|$ of the run shown in Fig.~\ref{fig:fem-fields} is 1.06~MPa, against 11.0~MPa outside it.
+
+Coordinates in the field plots are dimensionless throughout. In Fig.~\ref{fig:fem-fields} the radius is normalised by the billet radius, written $R$ in the axis label of that figure, so that the drawn part of the wire ends at $r/R = 0.9$, and the axial coordinate by the length of the model.
+In Figs.~\ref{fig:compare-fields} and \ref{fig:residual-maps} the radius is normalised by the surface radius of the same cross-section, so that $r/R = 1$ is the free surface at every axial position, and $z$ by the window length.
+The radial axis is stretched relative to the axial one: at a window length of 3.5--7.7 radii an equal-aspect panel degenerates into a strip.
+
+\begin{table}[htbp]
+\centering
+\caption[Variance along $z$ and the effect of collapsing the field]{Share of the variance along $z$ inside the axial window and mean absolute value of each component for the field in $(r,z)$ and for the profile in $r$ obtained by collapsing it along $z$, i.e.\ by taking its median within each of the 20 radial bins.}
+\label{tab:zshare}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Component & Share of the variance along $z$ & Field in $(r,z)$, MPa & Profile in $r$, MPa \\
+\midrule
+$\sigma_{rr}$           & 0.114 & 47.9  & 46.6  \\
+$\sigma_{\theta\theta}$ & 0.116 & 56.6  & 54.4  \\
+$\sigma_{zz}$           & 0.098 & 140.2 & 137.6 \\
+$\tau_{rz}$             & 0.397 & 3.22  & 0.68  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Profiles and grids}
+For the main track the window nodes are sorted by radius and split into 20 equal-count bins. The bin radius and the four components are the medians within each bin.
+Radii are stored per case, and $r$ is normalised by the outermost bin radius of the same case, so that $r=1$ is the free surface by construction.
+Numerical effects inherent in the finite-element treatment of large plastic deformation displace individual nodes in the vicinity of the axis across the axis of symmetry, so that the radial coordinate recovered for them turns out slightly negative ($|r|/R \le 0.054$). In all $1/r$ terms the radius is therefore clipped at $0.05R$.
+For the extended track the same nodes are binned on an $8\times20$ grid in $(z,r)$ by the median. The radius $r$ is normalised by the surface radius of the same axial slice, $z$ by the window ($z=0$ entry, $z=1$ exit).
+Targets stay in MPa, and since the components differ by two orders of magnitude, with a mean $|\sigma|$ of about 79~MPa for the normal components against 0.67~MPa for $\tau_{rz}$, per-component errors are always reported next to macro-averaged ones.
+
+\paragraph{Filtering}
+In the further preparation of the data a part of the computed results had to be discarded, and this was necessary for several distinct reasons. Cases are removed whole, before any split, in the order of Table~\ref{tab:filtering}. The level $Q=25\,\%$ is excluded entirely: there the process ceased to be drawing in several runs (the billet adhered to the die and the step degenerated into tension), and 17.5\,\% of its runs did not complete against 4.3--6.0\,\% at the other levels.
+Cases whose profile is bit-identical to another case differing only in the friction label are dropped, keeping one per group (323 of the 2443 raw cases, 13.2\,\%, of which 319 survive the two preceding filters and are counted in Table~\ref{tab:filtering}).
+Finally, runs that stopped before the wire had passed through the die are removed: their tail retains the billet radius $R_0$ and the die reference point lies inside the axial extent of the wire (153 of the 159 such runs on the raw grid).
+Where the undrawn part enters the window the surface radius varies along it (spread above 0.1~mm against a median of 0.0026~mm), and what the profile labels as free-surface $\sigma_{rr}$ is contact pressure, down to $-571.3$~MPa against $-19.7$~MPa at worst in clean cases.
+These 89 cases are removed before splitting: on the random split of the uncleaned set 73 of them fell into the training pool, where the data term contradicts the traction-free condition.
+Three further runs at $Q=1.5\,\%$ and $v=250$~m/min were removed with them. They were flagged by an earlier check of the tail but did complete the pass: their largest radius, 17.82--17.88~mm, is a bulge of the wire head outside the window. All results below refer to the remaining 1756 cases.
+
+\begin{table}[htbp]
+\centering
+\caption{Case-level filtering applied before splitting.}
+\label{tab:filtering}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Step & Removed & Remaining \\
+\midrule
+Raw reports                                            &     & 2443 \\
+Level $Q=25\,\%$ excluded                                & 275 & 2168 \\
+Friction label outside the design (file-name typo)     & 1   & 2167 \\
+Bit-identical duplicates differing only in $\mu$ label & 319 & 1848 \\
+Runs that did not complete the pass through the die    & 89  & 1759 \\
+Completed runs flagged by an earlier check of the tail & 3   & 1756 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The final dataset has 1756 cases: $35\,120$ radial points in the main track and $280\,960$ grid points in the extended track.
+
+\paragraph{Group-aware splits}
+For the training that follows, several scenarios of partitioning the initial sample were considered, each of them addressing a different question about the behaviour of the surrogates.
+The runs carried out according to the design of Table~\ref{tab:fem_params} yield, once the filtering described above has been applied, configurations of points that are distinct within the window considered: the computations whose fields coincided were removed as duplicates. The partitioning is accordingly performed at the level of whole computations, so that the points belonging to one computation are never distributed between the training and the test set.
+A random 15\,\% hold-out measures interpolation only. To measure transfer beyond the training range, entire factor levels are held out (Table~\ref{tab:splits}).
+Each extrapolation split is accompanied by two controls. The \emph{matched} control withholds a random subset of the same size drawn from the whole pool, so that the difference $\Delta\mathrm{RMSE} = \mathrm{RMSE}(\text{extrap}) - \mathrm{RMSE}(\text{matched})$ separates the cost of leaving the training range from the cost of a smaller training set.
+The \emph{interior} control withholds an inner level of the same axis ($\alpha = 12^\circ$, $Q = 10\,\%$), which separates the cost of a gap inside the factor grid from the cost of leaving its range.
+A further partition, \texttt{extrap\_joint:alpha\_Q}, is defined by a joint departure from the ranges of two factors, the die semi-angle $\alpha$ and the reduction $Q$: the region $\alpha = 20^\circ \wedge Q \ge 15\,\%$ is withheld as a whole. Along either of the two axes taken separately the test cases of this partition remain inside the training range, so that what is probed is a region of the joint factor space left uncovered by the design, and not extrapolation beyond the range of a single factor.
+A coverage report states, for each axis, whether the test range leaves the training range. Transfer beyond the training range is claimed only for those axes for which it does.
+The partitions are fixed (seed 42). The five training seeds of Section~\ref{sec:models} vary the initialisation, the batch order and the 15\,\% early-stopping subset carved from the training pool.
+
+\begin{table}[htbp]
+\centering
+\caption[The 13 case-level splits of the 1756 cases]{The 13 case-level splits of the 1756 cases. $n_\text{train}$ is the training pool, including the early-stopping subset.}
+\label{tab:splits}
+\begin{tabular}{@{}lllrr@{}}
+\toprule
+Split & Held-out cases & Kind & $n_\text{train}$ & $n_\text{test}$ \\
+\midrule
+\texttt{random}              & random 15\,\%                         & interpolation           & 1493 & 263 \\
+\texttt{extrap:alpha\_max}   & $\alpha = 20^\circ$                   & extrapolation, $\alpha$ & 1377 & 379 \\
+\texttt{extrap:Q\_high}      & $Q = 20\,\%$                            & extrapolation, $Q$      & 1484 & 272 \\
+\texttt{extrap:k\_max}       & $k = 1.0$                             & extrapolation, $k$      & 1466 & 290 \\
+\texttt{extrap:v\_max}       & $v = 250$~m/min                       & extrapolation, $v$      & 1255 & 501 \\
+\texttt{extrap\_joint:alpha\_Q}& $\alpha = 20^\circ \wedge Q \ge 15\,\%$ & gap in the joint $(\alpha, Q)$ range & 1642 & 114 \\
+\texttt{interp:alpha\_mid}   & $\alpha = 12^\circ$                   & interior control        & 1416 & 340 \\
+\texttt{interp:Q\_mid}       & $Q = 10\,\%$                            & interior control        & 1438 & 318 \\
+\texttt{matched:alpha\_max}  & random, same size                     & matched control         & 1377 & 379 \\
+\texttt{matched:Q\_high}     & random, same size                     & matched control         & 1484 & 272 \\
+\texttt{matched:k\_max}      & random, same size                     & matched control         & 1466 & 290 \\
+\texttt{matched:v\_max}      & random, same size                     & matched control         & 1255 & 501 \\
+\texttt{matched:alpha\_Q}     & random, same size                     & matched control         & 1642 & 114 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Preparing Machine Learning models}
+
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\linewidth]{pictures/mlp_schematic.pdf}
+    \caption[Training of the data-driven MLP surrogate]{Training of the data-driven MLP surrogate. The architecture and every
+    hyperparameter are fixed before any held-out region is evaluated. The loop shown
+    is the training loop of a single run, and no hyperparameter search surrounds it.}
+    \label{fig:architecture}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\linewidth]{pictures/pinn_schematic.pdf}
+    \caption[Training of the physics-informed surrogate]{Training of the physics-informed surrogate: shared trunk, equilibrium
+    residual and traction-free boundary term in the loss. The loss weights are fixed
+    a priori. The only quantity read from the data is the gradient-norm calibration
+    $g$ of Eq.~\eqref{eq:calib}, set once on the first mini-batch.}
+    \label{fig:architecture-pinn}
+\end{figure}
+
+\label{sec:models}
+In preparing the machine-learning models whose comparative analysis is reported
+below, a single network architecture and a single optimiser were adopted for
+every family, and within each track all families were trained under the same
+conditions. The network and its inputs are described first, then the two tracks
+and the treatment of the axial coordinate, the loss function and its weak-form
+variant, the training protocol, the metrics and the physical audit, the two
+backends, the statistical treatment of the results and, last, the architecture
+and hyperparameters held fixed throughout.
+
+\paragraph{Network and inputs}
+All surrogates share one network and one optimiser, and the families compared
+with one another are trained under the same conditions: the same limit on the
+number of epochs, the same early-stopping criterion with the same patience, the
+same mini-batch size and batch-ordering rule, and the same seeds. The values,
+which differ between the main and the extended track, are stated in full in
+``Training protocol'' below. The
+families differ only in the composition of the loss (Table~\ref{tab:families},
+Figs.~\ref{fig:architecture} and~\ref{fig:architecture-pinn}). In the main track the input is
+$\mathbf{x}=(Q,k,\alpha,\mu,v,r)$, with $r\in[0,1]$ the radius normalised by the
+free-surface radius of the same case ($r=1$ is the free surface).
+The radius is augmented by a Fourier embedding~\citep{tancik2020fourier} $[\sin(2\pi k r),\cos(2\pi k r)]$,
+$k=1,\dots,4$.
+Inputs and targets are standardised with training-set statistics. The body is a
+multilayer perceptron with three hidden layers of 96 $\tanh$ units and a linear
+head with four outputs
+$\hat{\boldsymbol\sigma}=(\hat\sigma_{rr},\hat\sigma_{\theta\theta},\hat\sigma_{zz},\hat\tau_{rz})$,
+mapped back to physical units, by inverting the standardisation, before entering any physical term.
+This configuration was selected with
+Optuna~\citep{akiba2019optunanextgenerationhyperparameteroptimization} at the initial design
+stage of the study and then held fixed.
+All arithmetic is in double precision in both backends.
+Each FEM case contributes 20 radial points, always kept in the same partition
+(group-aware splitting~\citep{roberts2017crossvalidation}).
+
+\paragraph{Two tracks and the role of $z$}
+The physics-informed families are built on the equations of equilibrium of an
+axisymmetric body, which are given below. The quantities entering them depend
+on both coordinates, $r$ and $z$. In preparing the models, however, relations
+\eqref{eq:eq_full_r}--\eqref{eq:eq_full_z} undergo a number of changes, which
+are set out in the remainder of this paragraph.
+In the main track the axial coordinate is not an input: each case is one radial
+profile, the median along the steady-state axial window (25--75\,\% of the wire
+length, about 3.5 radii long).
+Axial derivatives of the network therefore do not exist, and the axisymmetric
+equilibrium equations
+\begin{align}
+  R_r &= \frac{\partial\sigma_{rr}}{\partial r}
+        + \frac{\partial\tau_{rz}}{\partial z}
+        + \frac{\sigma_{rr}-\sigma_{\theta\theta}}{r} = 0, \label{eq:eq_full_r}\\
+  R_z &= \frac{\partial\tau_{rz}}{\partial r}
+        + \frac{\partial\sigma_{zz}}{\partial z}
+        + \frac{\tau_{rz}}{r} = 0 \label{eq:eq_full_z}
+\end{align}
+can only be imposed with the axial terms dropped. Whether that is admissible was
+measured on the raw FEM fields (all 2443 exported cases before filtering, $20\times20$ $(z,r)$ grid, median per
+case): in \eqref{eq:eq_full_r} the dropped $|\partial\tau_{rz}/\partial z|$ is
+1.3\,\% of the retained terms (75th percentile 3.9\,\%). In \eqref{eq:eq_full_z}
+the dropped $|\partial\sigma_{zz}/\partial z|$ is 68\,\% (75th percentile 86\,\%).
+The radial equation is therefore used in the reduced form
+\begin{equation}
+  R_1(r) = \frac{\partial\sigma_{rr}}{\partial r}
+         + \frac{\sigma_{rr}-\sigma_{\theta\theta}}{r},
+  \label{eq:eq_red}
+\end{equation}
+whereas the axial equation is not used in the main track, for a reason stronger
+than the size of the dropped term: the remainder is a total derivative,
+\begin{equation}
+  \frac{\partial\tau_{rz}}{\partial r} + \frac{\tau_{rz}}{r}
+  \equiv \frac{1}{r}\,\frac{\partial\,(r\cdot\tau_{rz})}{\partial r},
+  \label{eq:identity}
+\end{equation}
+so forcing it to zero means that the product $r\cdot\tau_{rz}$ does not depend on $r$ and, with regularity on
+the axis ($\tau_{rz}(0)=0$), $\tau_{rz}\equiv0$ over the whole radius. That is not
+an approximate axial balance but the statement that shear is absent, which the
+FEM data contradict (median relative range of $r\cdot\tau_{rz}$ along the radius
+3.15).
+The term exists in the code under its true name (zero-shear penalty,
+$\lambda_{\mathrm{shear}}$) and is switched off, $\lambda_{\mathrm{shear}}=0$, in
+every run reported here.
+
+In the extended track the axial coordinate is added,
+$\mathbf{x}=(Q,k,\alpha,\mu,v,z,r)$. The field is sampled on an $8\times20$ $(z,r)$
+grid inside the same window, one median per cell, without collapsing the axial
+direction. The coordinate $z$ is normalised to the window (0 = inlet, 1 = outlet) and $r$ to the
+surface radius of the same axial section.
+Both equations are then written in full, and three families are compared:
+\texttt{mlp2d} (no physics), \texttt{pinn2d\_reduced} ($R_r$ without
+$\partial\tau_{rz}/\partial z$, exactly the operator of the main track) and
+\texttt{pinn2d\_full} (both residuals).
+Physical derivatives follow from the chain rule,
+$\partial/\partial r_{\mathrm{phys}}=R^{-1}\partial/\partial r$,
+$\partial/\partial z_{\mathrm{phys}}=L_w^{-1}\partial/\partial z$, with $R$ and $L_w$
+the surface radius and window length of the case. The $1/r$ factor uses $r$
+clipped at $0.05R$, since nodal radii near the axis carry noise (worst
+$|r|/R=0.054$).
+
+\paragraph{Loss function}
+Every physics-informed family minimises
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_{\mathrm{data}}
+              + \lambda_{\mathrm{bc}}\,\mathcal{L}_{\mathrm{bc}}
+              + \lambda_{\mathrm{phys}}\,g\,\mathcal{L}_{\mathrm{phys}},
+  \label{eq:loss}
+\end{equation}
+with $\mathcal{L}_{\mathrm{data}}$ the mean squared error in standardised output
+space. The boundary term enforces the traction-free condition at the free
+surface,
+\begin{equation}
+  \mathcal{L}_{\mathrm{bc}} = \Bigl\langle
+     \bigl(\hat\sigma_{rr}(r{=}1)/s_{rr}\bigr)^2
+   + \bigl(\hat\tau_{rz}(r{=}1)/s_{rz}\bigr)^2 \Bigr\rangle_{\mathrm{batch}},
+  \label{eq:lbc}
+\end{equation}
+where $s_c$ is the training standard deviation of component $c$. The condition is
+imposed and later audited at the same point, $r=1$ (at every $z$ in the extended
+track). The physics term is a $\log(1+x^2)$ transform of the dimensionless
+residual,
+\begin{equation}
+  \mathcal{L}_{\mathrm{phys}} = \Bigl\langle \log\!\bigl(1 + (R/s_R)^2\bigr) \Bigr\rangle,
+  \label{eq:lphys}
+\end{equation}
+evaluated at the 20 data radii (collocation points coincide with data points),
+with scales $s_{R_1}=(s_{rr}+s_{\theta\theta})/R_{\mathrm{char}}$ for the radial and
+$s_{R_z}=s_{zz}/L_{\mathrm{char}}+s_{rz}/R_{\mathrm{char}}$ for the axial equation,
+$R_{\mathrm{char}}$ and $L_{\mathrm{char}}$ being the mean surface radius and window
+length of the training set.
+Without this scaling the physics term falls several orders of magnitude below
+$\mathcal{L}_{\mathrm{data}}$ and is inert whatever $\lambda$. Scaling the axial
+residual with $R_{\mathrm{char}}$ instead of $L_{\mathrm{char}}$ has the same effect.
+
+The weights are fixed a priori and shared by all physics-informed families,
+$\lambda_{\mathrm{phys}}=0.3$, $\lambda_{\mathrm{bc}}=0.5$,
+but $\lambda_{\mathrm{phys}}$ is read as a share of the data gradient: before
+training, $g$ is set once on the first mini-batch so that the gradient norms of
+the physics and data terms with respect to the network parameters coincide,
+\begin{equation}
+  g = \lVert\nabla_{\theta}\mathcal{L}_{\mathrm{data}}\rVert_2 \big/
+      \lVert\nabla_{\theta}\mathcal{L}_{\mathrm{phys}}\rVert_2 .
+  \label{eq:calib}
+\end{equation}
+This balancing \citep{wang2022} is what makes strong and weak
+forms comparable: the weak residual projects the same residual onto oscillating
+test functions and is damped roughly two-hundred-fold, so that at equal nominal
+$\lambda$ the weak term contributed 0.36\,\% of the data-gradient norm against
+37\,\% for the strong term, and ``strong versus weak'' degenerated into ``physics
+on versus off''.
+The measured multipliers in the main stage are $g\approx0.165$ (0.13--0.22) for
+the strong and $g\approx4.97$ (2.8--8.0) for the weak form. The factor $g$ is logged with
+every PyTorch run.
+
+\paragraph{Weak form (VPINN)}
+Multiplying \eqref{eq:eq_red} by $r\,v_k(r)$ with test functions
+$v_k=\sin(k\pi r)$, $k=1,\dots,8$, $v_k(0)=v_k(1)=0$, and integrating by parts over
+$[0,1]$ gives \citep{kharazmi2021}
+\begin{equation}
+  W_k = -\int_0^1 \hat\sigma_{rr}\,\bigl(v_k + r\,v_k'\bigr)\,dr
+        + \int_0^1 \bigl(\hat\sigma_{rr}-\hat\sigma_{\theta\theta}\bigr)\,v_k\,dr ,
+  \label{eq:weak}
+\end{equation}
+evaluated by 32-point Gauss--Legendre quadrature and inserted into
+\eqref{eq:lphys} with scale $s_W=s_{rr}+s_{\theta\theta}$.
+No derivative of the network is computed: this, not another way of computing the
+same derivative, is the substantive difference between the two families.
+
+\begin{table}[t]
+\caption[Model families and the composition of their loss]{Model families. Within each track all families share the network, the
+optimiser, the training conditions (epoch limit, early-stopping rule,
+mini-batch size), the seeds and the splits. Only the loss composition differs.
+$R_1$: reduced radial residual
+\eqref{eq:eq_red}. $R_r,R_z$: full residuals
+\eqref{eq:eq_full_r}--\eqref{eq:eq_full_z}. $W_k$: weak residual \eqref{eq:weak}.}
+\label{tab:families}
+\centering
+\setlength{\tabcolsep}{5pt}%
+\begin{tabular}{@{}llllc@{}}
+\toprule
+Family & Input & Physics term & BC term & Network derivative \\
+\midrule
+MLP                     & $(Q,k,\alpha,\mu,v,r)$   & --                                        & --  & none \\
+PINN (strong)           & $(Q,k,\alpha,\mu,v,r)$   & $R_1$, pointwise                          & yes & $\partial/\partial r$ (autodiff) \\
+VPINN (weak)            & $(Q,k,\alpha,\mu,v,r)$   & $W_k$, $k\le8$, 32-pt quadrature          & yes & none \\
+\texttt{mlp2d}          & $(Q,k,\alpha,\mu,v,z,r)$ & --                                        & --  & none \\
+\texttt{pinn2d\_reduced}& $(Q,k,\alpha,\mu,v,z,r)$ & $R_r$ without $\partial\tau_{rz}/\partial z$ & yes & $\partial/\partial r$ \\
+\texttt{pinn2d\_full}   & $(Q,k,\alpha,\mu,v,z,r)$ & $R_r$ and $R_z$, full                     & yes & $\partial/\partial r,\ \partial/\partial z$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Training protocol}
+As noted above, a meaningful comparison between the model families requires
+that they be brought to the training stage under equal conditions. The protocol
+described below was designed to that end.
+The protocol is enforced by construction rather than by configuration: every
+family is trained by the same trainer class, in which the family selects only the
+composition of the loss, and one launcher writes every run with its
+hyperparameters to a single log.
+It is identical for all families: AdamW~\citep{loshchilov2019adamw}, learning rate
+$3\times10^{-3}$ ($2\times10^{-3}$ in the extended track), no schedule, weight
+decay $10^{-4}$, gradient-norm clipping at 1.0, mini-batches of 64 cases (32),
+at most 800 epochs (300), early stopping on the macro-RMSE of an internal
+early-stopping subset of 15\,\% of the training cases with patience 40 (30), and
+restoration of the best state.
+Every configuration is trained with five seeds (0--4) on the thirteen splits of
+Table~\ref{tab:splits} and in the backend comparison, and with three seeds (0--2)
+in the training-set-size and label-corruption stages described below and in the
+extended track.
+The seed governs initialisation, batch order and the internal early-stopping subset,
+while the test cases of a split are the same for every seed (split seed 42).
+The training-set-size stage measures how the accuracy of each family depends on
+the amount of training data. On the \texttt{random} and
+\texttt{extrap:alpha\_max} splits each family is trained on group-aware
+subsamples of 10/25/50/100\,\% of the training pool, each smaller subsample
+being contained in the larger ones. The subsamples are the same for all
+families and seeds, and the test cases of the split are kept unchanged. The
+macro-RMSE on these test cases as a function of the fraction of the training
+pool is given in Section~\ref{sec:res_extrap}.
+The subsamples are nested but not stratified by $v$ (the launcher uses
+\texttt{nested\_subsamples}, not the stratified variant), so the sparsest level
+$v = 5$~m/min (122 cases) can be under-represented at 10\,\%.
+Label corruption adds $+250$\,MPa to $\sigma_{\theta\theta}$ over the whole profile of 0/1/5/10\,\% of
+the training cases (0\,\% being the clean reference, with nested lists shared by all
+families and a clean hold-out). The defect is a constant offset of one component over a whole case rather than Gaussian noise, which averages out over a profile. Its size is that of a defect found in the raw reports: in the runs that stopped before the wire had left the die (Section~\ref{sec:prep-data}) the drawn part still carries the drawing load, and its axial stress stays near $+280$~MPa almost uniformly over the radius. The offset is applied to $\sigma_{\theta\theta}$, which enters the radial equilibrium equation, so that the test probes the physics term on a defect that its residual can see. An offset of $\sigma_{zz}$, the component affected in those runs, does not enter the one-dimensional residual at all.
+
+
+\paragraph{Metrics and physical audit}
+The primary metric is the macro-RMSE (mean over the four components of the
+component RMSE, MPa). $R^2$ is reported with a single denominator, the standard
+deviation of each component over the whole dataset, since a denominator taken
+from the held-out slice is not comparable between regions.
+Physical admissibility is audited on the predictions with the operators of the
+loss (median $|R_1|$ over the profile by finite differences, and $|\hat\sigma_{rr}|$,
+$|\hat\tau_{rz}|$ at $r=1$), beside the same quantity computed on the FEM
+data of the same test cases, since the source itself satisfies the traction-free
+condition only approximately.
+
+\paragraph{Backends}
+The reference implementation is PyTorch (\texttt{torch.autograd}). An independent
+twin in JAX (\texttt{jax.grad}, \texttt{optax.adamw}) shares architecture, data,
+split, the epoch limit and early-stopping rule, and the nominal hyperparameters,
+but draws initial weights and batch order from its own random stream.
+The twin implements the strong-form loss with the nominal weight
+$\lambda_{\mathrm{phys}}=0.3$ applied directly, since the gradient-norm calibration of
+\eqref{eq:calib} is not implemented in it. With $g$ between 0.13 and 0.22 in the
+PyTorch runs of this comparison, the physics term enters the PyTorch loss with the
+effective weight $\lambda_{\mathrm{phys}}g\approx0.05$, about one sixth of the weight used in JAX.
+The time per epoch does not depend on this weight, but the number of epochs to early
+stopping, and with it the total training time, depends on the loss, so only the time
+per epoch is compared between the two implementations.
+With identical weights copied into both networks, $\partial\hat\sigma_{rr}/\partial r$
+at 64 random inputs agrees to $8.7\times10^{-15}$ absolute and $9.8\times10^{-16}$
+relative (forward pass $1.0\times10^{-15}$), i.e.\ to double-precision round-off,
+so no accuracy difference between backends can originate in automatic
+differentiation.
+Each backend is then trained with five seeds on \texttt{random} and
+\texttt{extrap:alpha\_max} and compared by the paired test below, with wall-clock
+training time measured on CPU in double precision. The runs were executed four at a
+time on one machine, the default of the launcher, with PyTorch restricted to one thread
+per run.
+A DeepXDE implementation of the same network obtains its derivatives through
+\texttt{torch.autograd.grad} on the PyTorch backend \citep{lu2021}. It is therefore not a third
+differentiation engine and is not reported separately.
+
+\paragraph{Statistical treatment}
+The unit of replication is the training run (seed), not the test case. Within a
+split, two families are compared by a paired $t$-test over seeds ($\alpha=0.05$,
+with no verdict for fewer than three seeds), with $|\Delta|$ reported beside the pooled
+seed standard deviation as effect size.
+Where a table reports the same comparison of a physics-informed family with the MLP
+on several splits, data fractions or corruption rates, the $p$-values of that comparison
+are in addition adjusted by the Holm step-down procedure~\citep{holm1979} over all of its
+tests in the table, and the caption names this set of tests.
+Ranking of the three families within a split uses the Friedman
+test~\citep{friedman1937} with the Nemenyi post hoc test, blocks being seeds
+\citep{demsar2006}. Indistinguishability is not
+transitive, so distinguishable pairs are listed rather than ``clusters''.
+Splits are never pooled: ranks in \texttt{extrap:alpha\_max} and in
+\texttt{random} describe different tasks.
+The excess error of an extrapolation split over its matched control is tested by
+Welch's unpaired $t$-test~\citep{welch1947}. Trends across data fraction and corruption rate are tested by
+least squares of the seed-wise PINN$-$MLP gap on $\log$(fraction) and on the rate.
+Testing across hold-out cases rather than across seeds was also examined and is not used here:
+it quantifies the sampling variance of the hold-out, that is, on how many cases one model beats
+another, and not whether an advantage reproduces when the models are retrained, which is the
+question at issue.
+
+\paragraph{Fixed architecture and hyperparameters}
+One architecture and one hyperparameter set were fixed before any held-out
+region was evaluated and were not tuned per family or per split, so no
+extrapolation error entered their choice.
+
+\section{Results and Discussion}
+
+\subsection{FEM results}
+\label{sec:res_fem_verification}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{pictures/fig2_fem_fields.png}
+    \caption[Residual stress fields from the finite-element simulation]{Distribution of residual stresses obtained from the FEM simulation at $Q = 10\,\%$, $k = 0.5$, $\alpha = 12^\circ$, $\mu = 0.05$, $v = 10$~m/min. Panels from left to right: the components $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$ and $\tau_{rz}$ over the full axial extent of the wire, each with its own colour scale graduated in MPa. The radius is normalised by the billet radius $R = 18$~mm and the axial coordinate by the model length of 139.5~mm. Dashed lines mark the axial window 25--75\,\% of the model length from which the training data are taken.}
+    \label{fig:fem-fields}
+\end{figure}
+
+Verification of the simulation results was carried out by comparison with the established
+analytical solutions for the drawing stress, those of Siebel
+\citep{siebel1943erwaermung,siebel1947drahtziehen} and of Avitzur
+\citep{avitzur1963small,avitzur1964large}, the latter both in its friction-factor form and in the
+Coulomb form on which Vega et~al.\ \citep{vega2009temperature} base their modification, and by
+internal consistency tests of the exported fields.
+
+The drawing stress cannot be read from the cases used for the surrogates, whose exported frame is
+taken after the wire has left the die and the section is unloaded (median
+$|\int\sigma_{zz}\,\mathrm{d}S|/S$ of 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa).
+It is obtained instead from a dedicated series of runs of the same model, in which the reaction at
+the die reference point and the coordinates, equivalent plastic strain and temperature of a
+radial row of material points are written as histories in time over the whole pass. The series
+covers a reduction of 10\,\% in diameter at die semi-angles of $8^\circ$, $12^\circ$ and
+$16^\circ$, calibration ratios of 0, 0.1, 0.3, 0.5, 0.75 and 1, drawing speeds of 10 and 20~m/min and all three friction
+coefficients, together with a reduction of 15\,\% at $8^\circ$ without a bearing zone ($k = 0$). In total, 112 runs are
+used, 106 of the 108 combinations at 10\,\% and the six at 15\,\%.
+The axial reaction is averaged over the steady phase of the pass, in which the wire and the die
+are in contact and both the deformation process and the deformation zone are stable. The phase
+is found from the signal itself, and within it the reaction varies by 1.9--4.4\,\% about its
+mean. The drawing stress is then
+\begin{equation}
+\sigma_d = \frac{F}{S}, \qquad S = \pi R_f^2,
+\label{eq:sigma-d}
+\end{equation}
+where $F$ is the time-averaged axial reaction and $S$ the cross-section of the drawn wire, with
+the outlet radius $R_f$ taken as reached in the model rather than from the nominal reduction. It is
+the smallest radial coordinate of the surface node over the pass, and the reduction in diameter
+$1-R_f/R_0$ obtained with it is 10.2--11.5\,\% in the runs at the nominal 10\,\% and 15.1--15.5\,\%
+in those at 15\,\%. The same radius enters all analytical relations below.
+For a typical run, at a reduction of 10\,\% in
+diameter, a die semi-angle of $12^\circ$, a calibration ratio of 0.5, a drawing speed of 10~m/min and
+$\mu = 0.05$, the drawing stress is 121.7~MPa. This run appears in Table~\ref{tab:drawstress}
+together with the other runs at $k = 0.5$, and the summary rows of the table cover all runs.
+
+The first two relations compared below are the classical ones. In the slab-method form of Siebel,
+\begin{equation}
+\sigma_d = \sigma_f\left[\ln\frac{1}{1-r}\,(1+\mu\cot\alpha) + \frac{2}{3}\,\alpha\right],
+\label{eq:siebel}
+\end{equation}
+with $r = 1-(R_f/R_0)^2$ the reduction in area, $\alpha$ the die semi-angle and $\sigma_f$ the flow
+stress, and, in the upper-bound form of Avitzur,
+\begin{equation}
+\begin{split}
+\sigma_d = \sigma_f\biggl[\,&2f(\alpha)\ln\frac{R_0}{R_f}
+  + \frac{2}{\sqrt3}\,\frac{\alpha-\sin\alpha\cos\alpha}{\sin^2\alpha}\\
+  &+ \frac{2}{\sqrt3}\,m\cot\alpha\ln\frac{R_0}{R_f}
+  + \frac{2}{\sqrt3}\,m\,\frac{L_b}{R_f}\biggr],
+\end{split}
+\label{eq:avitzur}
+\end{equation}
+whose four terms are the ideal deformation work, the redundant shear, the friction on the cone and
+the friction in the bearing zone. Here $f(\alpha)$ is the closed form of the deformation integral,
+$f\to1$ as $\alpha\to0$, so that the first
+term reduces to $\ln[1/(1-r)]$, $m$ is the friction factor and $L_b$ the bearing length
+\citep{siebel1947drahtziehen,avitzur1968metal,avitzur1971study}. In the model
+$L_b = kD_0 = 36k$~mm (Section~\ref{sec:materials}), so that $L_b/R_f$ is 2.2--2.3 times the
+calibration ratio.
+
+Equation~\eqref{eq:avitzur} measures the friction through the factor $m$, the ratio of the
+interface shear stress to the shear yield stress, whereas the simulations are driven by a Coulomb
+coefficient $\mu$. The Siebel relation above already takes $\mu$ directly. The conversion
+$m = \sqrt3\,\mu$ holds only where the normal pressure on the contact equals the flow stress, so it
+is an assumption about the contact rather than a change of units. Avitzur gives the bound in a
+second form in which $\mu$ enters directly and the bearing zone is treated as a cylinder along which the
+axial stress grows under Coulomb friction \citep{avitzur1968metal,avitzur1971study}. In the writing
+of Vega et~al.\ \citep{vega2009temperature,vega2009investigation,haddi2011analysis}, who
+build their modification on it, it reads
+\begin{equation}
+\frac{\sigma_d}{\sigma_f} = \frac{\begin{aligned}
+  &2f(\alpha)\ln\frac{R_0}{R_f}
+  + \frac{2}{\sqrt3}\left(\frac{\alpha}{\sin^2\alpha}-\cot\alpha\right)\\
+  &+ 2\mu\left[\cot\alpha\left(1-\ln\frac{R_0}{R_f}\right)\ln\frac{R_0}{R_f}
+  + \frac{L_b}{R_f}\right]\end{aligned}}
+  {\displaystyle 1+2\mu\,\frac{L_b}{R_f}},
+\label{eq:avitzur-vega}
+\end{equation}
+written here for zero back tension and with the flow stress in place of the yield stress of the
+original. The denominator is Avitzur's treatment of the bearing zone
+\citep{avitzur1964large,avitzur1968metal}. It is what the axial force balance on a cylindrical
+bearing zone under Coulomb friction gives when the normal pressure follows from the yield condition,
+$p = \sigma_f-\sigma_z$, and is evaluated at the exit stress:
+$\sigma_z(L_b) = \sigma_z(0) + 2\mu\,(L_b/R_f)\,[\sigma_f-\sigma_z(L_b)]$, which rearranges to the form
+of Eq.~\eqref{eq:avitzur-vega}. Integrating the same balance along the bearing length instead gives
+$\sigma_z(L_b) = \sigma_f-[\sigma_f-\sigma_z(0)]\exp(-2\mu L_b/R_f)$. The two agree to first order in
+$2\mu L_b/R_f$, and at the present parameters the integrated form lies above
+Eq.~\eqref{eq:avitzur-vega} by at most 4.4\,\%. Both forms thus carry an explicit assumption about
+the normal pressure in the bearing zone.
+
+The modification of Vega et~al.\ makes $\mu$ a function of the temperature of the die. In the
+simulations $\mu$ is prescribed and constant, so the modification has no counterpart in the model
+and lies outside the scope of this work. It is outlined in Appendix~\ref{app:vega}, and
+Eq.~\eqref{eq:avitzur-vega} is evaluated here with the prescribed coefficient of each run.
+
+For each run the three relations are evaluated with one and the same flow stress, obtained from
+the constitutive equation~\eqref{eq:johnson-cook} by averaging it along the strain, strain-rate
+and temperature histories exported for that run (Section~\ref{sec:materials}). It lies between
+314 and 331~MPa depending on the run, and no parameter is fitted. Along these histories the equivalent plastic
+strain reaches 0.22--0.34 on the axis, 0.27--0.40 at the surface and 0.30--0.46 at its maximum,
+which lies at $r/R = 0.89$--0.94, that is, at a depth of 6--11\,\% of the radius below the surface. The strain rate, taken as the 95th percentile of each
+node's history, reaches 4.5--16~s$^{-1}$ and the surface temperature 47--98~$^\circ$C. The flow
+stress averaged at the individual nodes lies between 306 and 338~MPa over all runs and varies
+across the section by at most 15~MPa within a run. Within a run $\sigma_f$
+multiplies each relation as a whole, so the columns of Table~\ref{tab:drawstress} differ only in
+the bracketed work terms, and an error in $\sigma_f$ would shift all three predictions of that
+run by the same factor.
+The rows of Table~\ref{tab:drawstress} are the runs at 10~m/min with a calibration ratio of 0.5 at
+the reduction of 10\,\% and without a bearing zone ($k = 0$) at 15\,\%. Since the computed drawing
+stress changes with $k$ by at most 0.4\,\%, as shown below, these runs stand for all calibration
+ratios. Below the rows, Table~\ref{tab:drawstress} gives for each relation the mean absolute
+deviation from the finite-element value over all 112 runs and the secant slope
+$\mathrm{d}\sigma_d/\mathrm{d}\mu$ between $\mu = 0.025$ and $\mu = 0.1$ at $\alpha = 12^\circ$,
+averaged over both speeds and all calibration ratios.
+
+The flow stress and the temperature rise can also be estimated in closed form, from the
+approximate relations of the theory of drawing and without the histories of the model
+(Appendix~\ref{app:closed}). The flow stress of this estimate is 313--336~MPa, in agreement with
+the 314--331~MPa above, and no column of Table~\ref{tab:drawstress} uses it.
+
+\begin{table}[htbp]
+\centering
+\caption{Wire drawing stresses calculated using analytical and FEM models}
+\label{tab:drawstress}
+\begin{tabular}{@{}ccccc rrr r@{}}
+\toprule
+\multicolumn{5}{c}{Parameters} & \multicolumn{3}{c}{Analytical, MPa} & Simulation, MPa \\
+\cmidrule(r){1-5}\cmidrule(lr){6-8}\cmidrule(l){9-9}
+$Q$, \% & $\alpha$ & $v$, m/min & $k$ & $\mu$ & Siebel & Avitzur & Avitzur\_mod & FEM \\
+\midrule
+10 & $8^\circ$  & 10 & 0.5 & 0.025 & 109.5 & 114.2 & 112.9 & 98.0 \\
+10 & $8^\circ$  & 10 & 0.5 & 0.050 & 121.9 & 126.5 & 123.9 & 110.9 \\
+10 & $8^\circ$  & 10 & 0.5 & 0.100 & 147.1 & 151.8 & 146.4 & 135.0 \\
+10 & $12^\circ$ & 10 & 0.5 & 0.025 & 124.9 & 132.2 & 131.2 & 111.4 \\
+10 & $12^\circ$ & 10 & 0.5 & 0.050 & 133.9 & 141.2 & 139.3 & 121.7 \\
+10 & $12^\circ$ & 10 & 0.5 & 0.100 & 152.6 & 159.9 & 155.9 & 141.8 \\
+10 & $16^\circ$ & 10 & 0.5 & 0.025 & 142.5 & 152.6 & 151.9 & 125.3 \\
+10 & $16^\circ$ & 10 & 0.5 & 0.050 & 149.9 & 160.0 & 158.4 & 134.5 \\
+10 & $16^\circ$ & 10 & 0.5 & 0.100 & 165.5 & 175.6 & 172.2 & 152.5 \\
+15 & $8^\circ$  & 10 & 0    & 0.025 & 152.6 & 157.3 & 154.3 & 134.6 \\
+15 & $8^\circ$  & 10 & 0    & 0.050 & 171.4 & 176.1 & 170.0 & 150.7 \\
+15 & $8^\circ$  & 10 & 0    & 0.100 & 211.2 & 215.9 & 203.2 & 180.3 \\
+\midrule
+\multicolumn{5}{@{}l}{mean absolute deviation, 112 runs} & 10.6\,\% & 16.2\,\% & 14.2\,\% & --- \\
+\multicolumn{5}{@{}l}{$\mathrm{d}\sigma_d/\mathrm{d}\mu$ at $\alpha=12^\circ$, MPa} & 374 & 373 & 332 & 409 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The finite-element drawing stress depends only weakly on the calibration ratio. Over $k$ from 0 to
+1 it changes by at most 0.4\,\% at every semi-angle, friction coefficient and drawing speed. The
+analytical relations behave differently. Their bearing terms assume contact along the whole length
+of the bearing zone, under a normal pressure equal to the flow stress in Eq.~\eqref{eq:avitzur}
+with $m=\sqrt3\,\mu$ and to $\sigma_f-\sigma_z$ in Eq.~\eqref{eq:avitzur-vega}, and they grow with
+$\mu L_b/R_f$. From $k=0$ to $k=1$ these terms raise the prediction of Eq.~\eqref{eq:avitzur} by
+between 24\,\%, at $16^\circ$ and $\mu=0.025$, and 93\,\%, at $8^\circ$ and $\mu=0.1$, and that of
+Eq.~\eqref{eq:avitzur-vega} by 12\,\% and 36\,\% at the same two combinations. This spread belongs
+to the analytical bearing terms alone. It is widest where the friction is high and the semi-angle
+small, because there the bearing term is large compared with the rest of the prediction, and it
+has no counterpart in the computed drawing stress. Table~\ref{tab:drawstress} therefore compares
+both relations without their bearing terms. With those terms the mean deviation from the computed
+drawing stress over all 112 runs rises to 43.2\,\% for Eq.~\eqref{eq:avitzur} and to 26.1\,\% for
+Eq.~\eqref{eq:avitzur-vega}, and over the 18 runs at $k=1$ to 79.8\,\% and 40.6\,\%.
+
+Without the bearing terms all three relations lie above the computed drawing stress in every run.
+On average the excess is 10.6\,\% for Siebel's relation, Eq.~\eqref{eq:siebel}, 14.2\,\% for the
+Coulomb form of Avitzur's solution, Eq.~\eqref{eq:avitzur-vega}, and 16.2\,\% for its
+friction-factor form, Eq.~\eqref{eq:avitzur} with $m=\sqrt3\,\mu$, the columns \emph{Siebel},
+\emph{Avitzur\_mod} and \emph{Avitzur} of Table~\ref{tab:drawstress}.
+
+The three relations differ mainly in two terms. The redundant shear is the same in both forms of
+Avitzur's solution and exceeds the term $2\alpha/3$ of Siebel's relation by 16--17\,\%. The
+friction on the cone is $2\mu\cot\alpha\ln(R_0/R_f)\,\sigma_f$ in Siebel's relation and, with
+$m=\sqrt3\,\mu$, in the friction-factor form, whereas in the Coulomb form it is multiplied by
+$1-\ln(R_0/R_f)$, that is, by 0.88--0.89 at the reduction of 10\,\% and by 0.83--0.84 at 15\,\%.
+The friction-factor form therefore lies above Siebel's relation in every run, by 2.2--7.1\,\%.
+The Coulomb form lies between the two, except in the 16 runs at $8^\circ$ in which the friction on
+the cone is a large part of the work, the twelve at $\mu = 0.1$ and a reduction of 10\,\% and the
+four at $\mu \ge 0.05$ and 15\,\%. There the reduction of its friction term outweighs its excess
+in redundant shear over Siebel's relation, and it falls below that relation.
+
+The excess over the computed drawing stress lies in the frictionless part of the work. Extrapolated linearly to $\mu = 0$ from the means over $k$ at 10\,\% and 10~m/min, the
+computed drawing stress is 86, 101 and 116~MPa at $\alpha = 8^\circ$, $12^\circ$ and $16^\circ$,
+against 97, 116 and 135~MPa from Siebel's relation. At $12^\circ$ and $16^\circ$ the friction terms
+then narrow the gap, because the model is more sensitive to friction than the relations, 409 and
+367~MPa per unit $\mu$ against 374 and 311 for Siebel's relation, 373 and 311 for the friction-factor
+form and 332 and 276 for the Coulomb form, that is, 9 to 25\,\% less. At $8^\circ$ the two slopes nearly
+coincide, 498 against 506~MPa, and the gap narrows only relative to the growing drawing stress.
+The friction terms of Eqs.~\eqref{eq:siebel} and \eqref{eq:avitzur} take the pressure on the cone
+equal to the flow stress, whereas the mean normal pressure on the cone obtained from the die
+reactions is 1.02--1.10, 1.16--1.24 and 1.27--1.35 times the flow stress at $8^\circ$, $12^\circ$
+and $16^\circ$ at the reduction of 10\,\% and 0.83--0.92 times at 15\,\%. At 10\,\% the deviation
+accordingly falls with friction, from 12.4\,\% at $\mu = 0.025$ to 8.3\,\% at $\mu = 0.1$ for
+Siebel, and grows with the semi-angle for both Avitzur forms. At 15\,\% the deviations are
+14.6\,\% for Siebel, 17.6\,\% for the friction-factor form and 13.2\,\% for the Coulomb form, and
+that of Siebel's relation rises with friction, from 13.4 to 16.6\,\%, consistent with a cone
+pressure below the flow stress. The drawing speed enters through the flow stress alone. Doubling
+it raises the computed drawing stress by 2.5--3.0\,\%, close to the 2.6--2.8\,\% that the rate
+term of Eq.~\eqref{eq:johnson-cook} gives for a doubled strain rate, and the deviations at 10 and
+20~m/min differ by less than 0.1 percentage points.
+
+The heating of the wire can be checked directly, since the dedicated export also carries the
+temperature history. The drawing work per unit volume of drawn wire equals $\sigma_d$. If a
+fraction $\beta$ of it becomes heat in the wire, the energy balance of the pass gives a mean
+temperature rise of $\beta\,\sigma_d/(\rho c)$, with $\rho$ the density and $c$ the specific heat.
+In the model the cross-section mean of the peak nodal rise is 22--42~$^\circ$C, and the balance
+evaluated with the computed drawing stress lies 1--11\,\% above it. Table~\ref{tab:deltaT} gives
+both, as the columns \emph{FEM} and \emph{energy}, for the runs at 10~m/min, averaged over the
+calibration ratios at the reduction of 10\,\%. Taken at the end of deformation rather than as a
+peak over the history, the mean rise is 21--37~$^\circ$C and the balance lies 5--25\,\% above it.
+The heating of the section is therefore set by the deformation work, with the bearing zone
+contributing practically nothing. The rise is largest at the surface, 27--78~$^\circ$C. All
+temperatures are given in degrees Celsius, the initial temperature being 20~$^\circ$C in every run.
+
+\begin{table}[htbp]
+\centering
+\caption{Wire drawing temperatures calculated using analytical and FEM models}
+\label{tab:deltaT}
+\begin{tabular}{@{}lllrr@{}}
+\toprule
+ & & & \multicolumn{2}{c}{$\Delta T$, $^\circ$C} \\
+\cmidrule(l){4-5}
+$Q$, \% & $\alpha$ & $\mu$ & energy & FEM \\
+\midrule
+10 & $8^\circ$  & 0.025 & 23.8 & 22.3 \\
+10 & $8^\circ$  & 0.050 & 27.0 & 24.9 \\
+10 & $8^\circ$  & 0.100 & 32.8 & 30.1 \\
+10 & $12^\circ$ & 0.025 & 27.1 & 26.2 \\
+10 & $12^\circ$ & 0.050 & 29.6 & 28.3 \\
+10 & $12^\circ$ & 0.100 & 34.5 & 32.6 \\
+10 & $16^\circ$ & 0.025 & 30.5 & 30.2 \\
+10 & $16^\circ$ & 0.050 & 32.7 & 31.9 \\
+10 & $16^\circ$ & 0.100 & 37.1 & 35.9 \\
+15 & $8^\circ$  & 0.025 & 32.8 & 30.3 \\
+15 & $8^\circ$  & 0.050 & 36.7 & 33.6 \\
+15 & $8^\circ$  & 0.100 & 43.9 & 39.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The exported histories also allow the friction coefficient to be recovered from the data rather
+than read from the file name: at the end of the pass, when only the bearing zone is in contact with the
+tail of the billet, the ratio of the axial to the radial reaction returns the prescribed
+coefficient in all 88 runs with a bearing zone.
+
+The region of the design covered by these runs limits what the comparison establishes. The
+analytical relations are normally applied, and have been validated, where the inhomogeneity
+parameter of the deformation zone,
+\begin{equation}
+\Delta = \frac{R_0+R_f}{R_0-R_f}\,\sin\alpha,
+\label{eq:delta}
+\end{equation}
+lies within the range of 1 to 3. The parameter is the ratio of the mean diameter of the zone to
+the length of contact along the die cone, $L$ in Fig.~\ref{fig:scheme}. Evaluated like the
+relations themselves with the exit radius reached in the model, it lies in that range only at
+$8^\circ$, where it is
+2.5--2.6 at the reduction of 10\,\% and 1.7 at 15\,\%. At 10\,\% it is 3.6--3.7 at $12^\circ$
+and 4.5--4.7 at $16^\circ$. With the nominal exit radius it would be 2.64, 3.95 and 5.24 at
+$8^\circ$, $12^\circ$ and $16^\circ$ and the reduction of 10\,\%, and 1.72 at $8^\circ$ and 15\,\%,
+which leaves the same runs inside and outside that range.
+The ideal work accounts for 45 to 68\,\% of the predicted drawing
+stress. The deviations of Table~\ref{tab:drawstress} therefore characterise the closed-form
+solutions within and somewhat beyond the range where they are expected to hold. They lie 11 to
+16\,\% above the numerical solution on average, with the upper bound above the slab estimate.
+
+In addition, five internal consistency tests were run on the 1756 retained cases. The exported cross-section is self-equilibrated to 3.2\,\%: the median $|\int\sigma_{zz}\,\mathrm{d}S|/S$ is 5.3~MPa against an rms $\sigma_{zz}$ of 167~MPa.
+Local equilibrium closes to 2.1\,\% of the sum of the moduli of its terms.
+At the free surface $|\sigma_{rr}|$ is 4.0~MPa against 54.0~MPa in the bulk, i.e.\ 7.4\,\% (a nodal value, whereas the 3.52~MPa of Section~\ref{sec:prep-data} is the mean over the cases of the outermost bin of the 20-bin profile),
+on the axis $|\sigma_{rr}-\sigma_{\theta\theta}| = 1.07$~MPa (0.6\,\%),
+and the residual field stays below the flow stress everywhere: the maximum von Mises stress over the retained cases is 232.6~MPa, against the 314--331~MPa that the constitutive equation returns along the histories of the 112 dedicated runs above.
+Kinematically, on the retained cases the exit radius follows $R_0(1-Q/100)$ to 0.11\,\% (ratio 1.0011) and $|\mathrm{tr}\,\mathbf{LE}| = 5.1\times10^{-4}$, i.e.\ plastic incompressibility holds to 0.05\,\%.
+These tests verify the mesh, the contact and the solver of the model. The comparison of the computed residual stresses with measurements on drawn wire is the subject of the further work outlined in Section~\ref{sec:conclusions}.
+
+\subsection{ML models results}
+\label{sec:results}
+
+All seed-replicated results below were obtained on the cleaned dataset of 1756 cases (Section~\ref{sec:prep-data}) in 341 training runs: 195 for the split matrix, 72 for the training-set-size study, 36 for label corruption, 20 for the backend comparison and 18 for the two-dimensional ablation. The only results obtained otherwise, the field maps of the two-dimensional families and the single-seed training they were drawn from, are described in Section~\ref{sec:res_fem}.
+The three one-dimensional families -- the data-driven MLP, the strong-form PINN and the weak-form VPINN -- share the network, the optimiser, the epoch limit, the early-stopping rule, the mini-batch size and the seeds, and differ only in the composition of the loss (Section~\ref{sec:models}). Accuracy is reported as macro-RMSE, the mean of the four component RMSEs in MPa, as mean~$\pm$~standard deviation over five seeds. Differences between families are tested with a paired $t$-test over seeds \citep{demsar2006} and called established at $p<0.05$. The difference itself, the macro-RMSE of a physics-informed family minus that of the MLP averaged over the seeds, is denoted $\Delta$ in this section. It is a difference of errors in MPa, negative where the physics-informed family is more accurate, and is unrelated to the inhomogeneity parameter $\Delta$ of Section~\ref{sec:res_fem_verification}. Because $\tau_{rz}$ is two orders of magnitude smaller than the normal components, a coefficient of determination over the normal components only, $R^2_{\mathrm{n}}$, is given alongside. It is taken with a single global denominator, the variance of each component over the whole dataset, and where a per-component $R^2$ or NRMSE below uses the held-out slice as denominator, this is stated at the number.
+Throughout this section the finite-element solution serves as the reference field, and this sets the domain of applicability of the results reported below. They characterise the surrogate models with respect to that reference, namely their accuracy on it, their transferability beyond the training range and their sensitivity to corrupted labels in the source. The Limitations paragraph at the end of the section returns to this point.
+
+\subsubsection{Extrapolation versus interpolation}
+\label{sec:res_extrap}
+
+
+Table~\ref{tab:main} gives the macro-RMSE on all thirteen splits. On the random hold-out all three families reach 8.0~MPa with $R^2_{\mathrm{n}}=0.99$, against 66~MPa for the constant predictor, and are indistinguishable. The informative contrast is between each region split and its matched control of the same size, which separates the cost of leaving the training range from the cost of having fewer training cases.
+
+\begin{sidewaystable}
+\centering
+\caption[Macro-averaged RMSE on the 13 splits of the main track]{Macro-averaged RMSE on the held-out cases for the 13 splits of the main track, MPa, mean $\pm$ sd over 5 seeds. Split types are defined in Section~\ref{sec:fem-dataset}.}
+\label{tab:main}
+
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+Split & Held-out region & $n_\mathrm{train}$ & $n_\mathrm{test}$ & MLP & PINN & VPINN \\
+\midrule
+\texttt{random} & random 15\,\% of all cases & 1493 & 263 & 8.04 $\pm$ 0.33 & 7.98 $\pm$ 0.21 & 7.98 $\pm$ 0.15 \\
+\addlinespace
+\texttt{interp:Q\_mid} & $Q = 10\,\%$ (interior level) & 1438 & 318 & 12.40 $\pm$ 1.39 & 12.20 $\pm$ 1.20 & 10.96 $\pm$ 0.78 \\
+\texttt{interp:alpha\_mid} & $\alpha = 12^\circ$ (interior level) & 1416 & 340 & 9.06 $\pm$ 0.25 & 8.69 $\pm$ 0.21 & 8.99 $\pm$ 0.25 \\
+\addlinespace
+\texttt{extrap:Q\_high} & $Q = 20\,\%$ (highest level) & 1484 & 272 & 26.27 $\pm$ 1.69 & 24.35 $\pm$ 1.59 & 23.41 $\pm$ 0.79 \\
+\texttt{extrap:k\_max} & $k = 1.0$ (highest level) & 1466 & 290 & 9.45 $\pm$ 0.56 & 8.29 $\pm$ 0.38 & 8.98 $\pm$ 0.16 \\
+\texttt{extrap:alpha\_max} & $\alpha = 20^\circ$ (highest level) & 1377 & 379 & 13.63 $\pm$ 0.51 & 13.05 $\pm$ 0.49 & 12.98 $\pm$ 0.64 \\
+\texttt{extrap:v\_max} & $v = 250$ m/min (highest level) & 1255 & 501 & 55.83 $\pm$ 19.04 & 48.35 $\pm$ 6.99 & 48.42 $\pm$ 4.80 \\
+\addlinespace
+\texttt{extrap\_joint:alpha\_Q} & $\alpha = 20^\circ$ and $Q \ge 15\,\%$ & 1642 & 114 & 16.60 $\pm$ 0.84 & 15.54 $\pm$ 0.37 & 16.30 $\pm$ 0.85 \\
+\addlinespace
+\texttt{matched:Q\_high} & random, $n_\mathrm{test}$ of \texttt{extrap:Q\_high} & 1484 & 272 & 7.96 $\pm$ 0.12 & 7.80 $\pm$ 0.07 & 7.74 $\pm$ 0.29 \\
+\texttt{matched:k\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:k\_max} & 1466 & 290 & 8.32 $\pm$ 0.15 & 8.18 $\pm$ 0.12 & 8.29 $\pm$ 0.11 \\
+\texttt{matched:alpha\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:alpha\_max} & 1377 & 379 & 8.11 $\pm$ 0.26 & 7.88 $\pm$ 0.28 & 8.18 $\pm$ 0.22 \\
+\texttt{matched:v\_max} & random, $n_\mathrm{test}$ of \texttt{extrap:v\_max} & 1255 & 501 & 8.73 $\pm$ 0.12 & 8.44 $\pm$ 0.12 & 8.55 $\pm$ 0.14 \\
+\texttt{matched:alpha\_Q} & random, $n_\mathrm{test}$ of \texttt{extrap\_joint:alpha\_Q} & 1642 & 114 & 7.50 $\pm$ 0.16 & 7.17 $\pm$ 0.38 & 7.34 $\pm$ 0.14 \\
+\bottomrule
+\end{tabular}
+\end{sidewaystable}
+
+\begin{table}[t]
+\caption[Cost of holding out a whole factor level]{Cost of holding out a whole factor level, averaged over the three families: macro-RMSE on the held-out region, on the matched control of the same size, their ratio, $R^2_{\mathrm{n}}$ on the held-out region, and the constant predictor (MPa).}
+\label{tab:axis}
+\centering
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Held-out region & Outside & Control & Ratio & $R^2_{\mathrm{n}}$ outside & Constant \\
+\midrule
+$k=1.0$                              & 8.9  & 8.3 & $\times1.08$ & $+0.98$ & 67 \\
+$\alpha=20^\circ$                    & 13.2 & 8.1 & $\times1.64$ & $+0.96$ & 61 \\
+$\alpha=20^\circ$, $Q\ge15\,\%$        & 16.1 & 7.3 & $\times2.20$ & $+0.94$ & 61 \\
+$Q=20\,\%$                             & 24.7 & 7.8 & $\times3.15$ & $+0.81$ & 60 \\
+$v=250$~m/min                        & 50.9 & 8.6 & $\times5.93$ & $+0.36$ & 71 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The cost of extrapolation differs between the process parameters by almost an order of magnitude, as Tables~\ref{tab:main} and \ref{tab:axis} show. Withholding the highest calibration ratio, $k=1.0$, affects the accuracy only slightly and costs a factor of 1.08. Relative to the matched control, the error of the MLP grows by $1.13\pm0.58$~MPa, a small but statistically significant increase, whereas that of the PINN grows by $0.11\pm0.40$~MPa, which lies within the scatter between seeds.
+Holding out the largest semi-angle costs a factor of 1.64 with $R^2_{\mathrm{n}}$ still at 0.96, and holding out only its combination with reductions of at least 15\,\% costs a factor of 2.20 with $R^2_{\mathrm{n}}$ of 0.94. The largest reduction costs a factor of 3.15 with $R^2_{\mathrm{n}}$ of 0.78--0.83, and the highest speed a factor of 5.93. The spread between axes is far larger than any difference between families, so a single ``extrapolation error'' would be uninformative.
+
+Removing an interior level is not free either. Along $\alpha$, where the volumes are nearly equal, withholding the interior level $\alpha=12^\circ$ gives 8.7--9.1~MPa at $R^2_{\mathrm{n}}=0.98$ and withholding the extreme level $\alpha=20^\circ$ gives 13.0--13.6~MPa at $R^2_{\mathrm{n}}=0.96$--$0.97$, against 8.0~MPa on the random hold-out. The hole inside the grid thus costs 0.7--1.1~MPa, and most of the price, a further 4--5~MPa, is paid for leaving the range.
+Along $Q$ the same pattern is steeper, 11.0--12.4~MPa for $Q=10\,\%$ against 23.4--26.3~MPa for $Q=20\,\%$.
+
+Withholding the highest drawing speed gives the largest loss of accuracy, and its interpretation requires care. In the source simulations each batch of runs holds a single level of $v$ and the highest level forms a batch of its own (Section~\ref{sec:prep-data}), so withholding it removes not only the extreme level of a factor but an entire batch: extrapolation along $v$ is here inseparable from a transfer to a batch that is not represented in training. With $v=250$~m/min withheld the error is 48--56~MPa, still below the 71~MPa of the constant predictor, but $R^2_{\mathrm{n}}$ falls to 0.23--0.45 and the shear component is reproduced no better than by a constant: its NRMSE, normalised here by the standard deviation over the held-out cases, is 1.6--1.9. The MLP, in addition,
+becomes unstable, with a spread of $\pm19$~MPa between seeds. These figures thus measure the joint effect of leaving the range of $v$ and of changing the batch of runs, and the loss of accuracy on this split cannot be attributed to extrapolation in speed alone. No claim about the physical effect of speed is made from it.
+
+
+Table~\ref{tab:paired} summarises the seed-paired tests. On the thirteen splits of the one-dimensional track the PINN has a lower macro-RMSE than the MLP, and the difference is established on four: the semi-angle extrapolation ($\Delta=-0.58$~MPa, $p=0.040$), the calibration-ratio extrapolation ($-1.16$~MPa, $p=0.033$), the joint departure from the range in semi-angle and reduction ($-1.06$~MPa, $p=0.011$) and the matched control of the speed split ($-0.29$~MPa, $p=0.006$). With a Holm step-down correction \citep{holm1979,demsar2006} over the thirteen splits none of the pairwise differences remains significant: the smallest adjusted $p$ is 0.079 for PINN$-$MLP and 0.195 for VPINN$-$MLP. The four verdicts are therefore read as a consistent direction, not as isolated proofs. In the extended track, with $z$ as an input, the direction is not reproduced on the random split, where both forms of the PINN are 0.2~MPa less accurate than the MLP, while on the semi-angle extrapolation they are 0.5~MPa more accurate. None of these differences is established over three seeds (Section~\ref{sec:res_fem}).
+The VPINN is established better than the MLP on two splits (\texttt{interp:Q\_mid}, $p=0.015$, and \texttt{matched:v\_max}, $p=0.022$). The strong form is established better than the weak form on \texttt{extrap:k\_max} ($-0.70$~MPa, $p=0.018$) and, by a margin smaller than the seed spread, on \texttt{matched:v\_max} ($-0.11$~MPa, $p=0.046$). On the remaining eleven splits the two physics-informed forms are indistinguishable. A Friedman test over seeds \citep{friedman1937,demsar2006} rejects equality on three of the four splits where the paired test does (\texttt{extrap:alpha\_max}, $p=0.041$, \texttt{extrap:k\_max}, $p=0.022$, and \texttt{matched:v\_max}, $p=0.007$, against $p=0.091$ on \texttt{extrap\_joint:alpha\_Q}), with the Nemenyi post-hoc separating only the MLP--PINN pair. Since indistinguishability there is not transitive, no ``single cluster'' is claimed. In absolute terms the advantage is small, 0.3--1.9~MPa at an error level of 8--16~MPa and of the same order as the seed spread. On accuracy alone the physics term therefore gives no decisive gain, and its other effects are examined in Section~\ref{sec:res_fem}.
+
+\begin{sidewaystable}
+\centering
+\caption[Seed-paired comparison with the data-driven baseline]{Seed-paired comparison of the physics-informed families with the data-driven baseline on every split of Table~\ref{tab:main}. $\Delta$ is the mean over seeds of the per-seed difference in macro-RMSE, MPa. Negative favours the physics-informed model. Two-sided paired $t$-test, $n = 5$ pairs, $\alpha = 0.05$. After a Holm correction over the 13 splits, 0 PINN $-$ MLP and 0 VPINN $-$ MLP differences remain significant.}
+\label{tab:paired}
+
+\begin{tabular}{@{}lrrrlrrrl@{}}
+\toprule
+ & \multicolumn{4}{c}{PINN $-$ MLP} & \multicolumn{4}{c}{VPINN $-$ MLP} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9}
+Split & $\Delta$, MPa & $t$ & $p$ & verdict & $\Delta$, MPa & $t$ & $p$ & verdict \\
+\midrule
+\texttt{random} & $-0.07$ & $-0.47$ & 0.664 & n.s. & $-0.06$ & $-0.48$ & 0.654 & n.s. \\
+\addlinespace
+\texttt{interp:Q\_mid} & $-0.20$ & $-0.50$ & 0.643 & n.s. & $-1.44$ & $-4.09$ & 0.015 & VPINN better \\
+\texttt{interp:alpha\_mid} & $-0.37$ & $-2.02$ & 0.113 & n.s. & $-0.07$ & $-0.45$ & 0.676 & n.s. \\
+\addlinespace
+\texttt{extrap:Q\_high} & $-1.92$ & $-2.58$ & 0.062 & n.s. & $-2.87$ & $-2.74$ & 0.052 & n.s. \\
+\texttt{extrap:k\_max} & $-1.16$ & $-3.18$ & 0.033 & PINN better & $-0.46$ & $-1.72$ & 0.161 & n.s. \\
+\texttt{extrap:alpha\_max} & $-0.58$ & $-3.01$ & 0.040 & PINN better & $-0.66$ & $-2.59$ & 0.061 & n.s. \\
+\texttt{extrap:v\_max} & $-7.48$ & $-0.73$ & 0.508 & n.s. & $-7.41$ & $-1.02$ & 0.366 & n.s. \\
+\addlinespace
+\texttt{extrap\_joint:alpha\_Q} & $-1.06$ & $-4.42$ & 0.011 & PINN better & $-0.30$ & $-0.62$ & 0.568 & n.s. \\
+\addlinespace
+\texttt{matched:Q\_high} & $-0.16$ & $-2.20$ & 0.093 & n.s. & $-0.22$ & $-1.52$ & 0.204 & n.s. \\
+\texttt{matched:k\_max} & $-0.14$ & $-1.83$ & 0.141 & n.s. & $-0.03$ & $-0.26$ & 0.809 & n.s. \\
+\texttt{matched:alpha\_max} & $-0.23$ & $-2.15$ & 0.098 & n.s. & $+0.07$ & $0.55$ & 0.613 & n.s. \\
+\texttt{matched:v\_max} & $-0.29$ & $-5.31$ & 0.006 & PINN better & $-0.18$ & $-3.64$ & 0.022 & VPINN better \\
+\texttt{matched:alpha\_Q} & $-0.33$ & $-1.59$ & 0.186 & n.s. & $-0.16$ & $-1.56$ & 0.195 & n.s. \\
+\bottomrule
+\end{tabular}
+\end{sidewaystable}
+
+\begin{table}[t]
+\caption[Accuracy against the size of the training set]{Accuracy against the size of the training set: macro-RMSE (MPa) versus the fraction of the training pool, three seeds. $\Delta$ is PINN minus MLP with the seed-paired $p$-value. Slope of $\Delta$ on $\log(\text{fraction})$: $+0.20$~MPa ($p=0.21$) on \texttt{random}, $-0.35$~MPa ($p=0.070$) on \texttt{extrap:alpha\_max}. After a Holm correction over the eight PINN $-$ MLP comparisons of the table none remains significant, the smallest adjusted $p$ being 0.26 (\texttt{extrap:alpha\_max}, 25\,\%).}
+\label{tab:curves}
+\centering
+\setlength{\tabcolsep}{5pt}%
+\begin{tabular}{@{}lrrrrrrr@{}}
+\toprule
+Split & Fraction & $n_{\mathrm{train}}$ & MLP & PINN & VPINN & $\Delta$ & $p$ \\
+\midrule
+\texttt{random} & 10\,\%  & 149  & $13.09\pm0.67$ & $12.48\pm0.18$ & $12.98\pm0.10$ & $-0.61$ & 0.317 \\
+                & 25\,\%  & 373  & $9.92\pm0.40$  & $9.46\pm0.39$  & $9.92\pm0.18$  & $-0.46$ & 0.099 \\
+                & 50\,\%  & 746  & $8.80\pm0.15$  & $8.34\pm0.06$  & $8.53\pm0.21$  & $-0.46$ & 0.048 \\
+                & 100\,\% & 1493 & $8.19\pm0.34$  & $8.09\pm0.20$  & $8.03\pm0.19$  & $-0.10$ & 0.718 \\
+\addlinespace
+\texttt{extrap:alpha\_max} & 10\,\%  & 138  & $20.48\pm0.63$ & $20.72\pm0.21$ & $20.68\pm0.67$ & $+0.24$ & 0.498 \\
+                           & 25\,\%  & 344  & $16.74\pm0.99$ & $17.33\pm1.17$ & $17.03\pm0.33$ & $+0.59$ & 0.033 \\
+                           & 50\,\%  & 688  & $14.01\pm0.40$ & $14.06\pm0.70$ & $14.17\pm0.95$ & $+0.05$ & 0.886 \\
+                           & 100\,\% & 1377 & $13.48\pm0.58$ & $12.95\pm0.36$ & $12.70\pm0.48$ & $-0.54$ & 0.238 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:curves} shows how the accuracy changes with the size of the training set. It is often expected that physical constraints in the loss are most useful when the data are scarce, and the present results do not confirm this. On the random split the gap between the PINN and the MLP narrows as the training set grows, from $-0.61$ to $-0.10$~MPa, in line with that expectation, but on the semi-angle extrapolation it changes in the opposite direction, from $+0.24$ to $-0.54$~MPa. Neither trend is statistically significant: the slope is $+0.20$~MPa per unit of the logarithm of the fraction with $p=0.21$ on the first split and $-0.35$~MPa with $p=0.070$ on the second. Of the eight individual comparisons only two are significant, at 50\,\% of the data with $p=0.048$ and at 25\,\% with $p=0.033$, and they have opposite signs, as may happen by chance. Neither survives a Holm correction over the eight comparisons, the adjusted $p$-values being 0.34 and 0.26. At the smallest fraction the gap is not significant on either split. The claim that the physics term is most useful when the data are scarce is therefore not made.
+
+\subsubsection{Backend comparison}
+\label{sec:res_backend}
+
+The strong-form PINN was trained in two independent implementations, in PyTorch and in JAX, on the random split and the semi-angle extrapolation, five seeds each. Apart from their random streams, the two differ in the weight of the physics term: the JAX implementation applies $\lambda_{\mathrm{phys}}$ without the calibration of Eq.~\eqref{eq:calib}, so that its physics term carries about six times the weight it has in PyTorch (Section~\ref{sec:models}). The engines were checked first: on bit-identical weights and inputs the derivative $\partial\sigma_{rr}/\partial r$ from \texttt{torch.autograd} and from \texttt{jax.grad} agrees to $8.7\times10^{-15}$ absolute ($9.8\times10^{-16}$ relative), i.e.\ to machine precision. A DeepXDE implementation \citep{lu2021} of the same network runs on the PyTorch backend and differentiates with the same \texttt{torch.autograd.grad}, so the comparison involves two automatic-differentiation engines, not three.
+
+
+The implementations are statistically indistinguishable in accuracy (Table~\ref{tab:backend}): $+0.14$~MPa on the random split ($p=0.27$) and $+0.43$~MPa on the extrapolation ($p=0.17$), with the same sign on both. The second gap is of the order of the seed spread: a difference of this size arises between two implementations of one method that differ in their random streams and, here, in the effective physics weight.
+Differences of a few tenths of a megapascal between backends are of the same order as the
+spread between two implementations of one method and cannot be attributed to the differentiation
+engine, so no conclusion about a preferred backend follows from accuracy.
+The physical audit is consistent with the larger physics weight of the JAX runs. On the random split the median reduced radial residual $|R_1|$ of their predictions is $608\pm41$~MPa/m against $749\pm42$~MPa/m for PyTorch (paired $p=0.008$), whereas on the extrapolation the two do not differ significantly, $991\pm123$ against $1077\pm77$~MPa/m ($p=0.17$).
+Since accuracy does not separate the two implementations, the choice rests on cost, and of the cost only the time per epoch is compared, because it does not depend on the weight of the physics term. An epoch takes 0.745~s in JAX against 0.575~s in PyTorch, that is, 30\,\% longer (paired $p=0.005$, $n=10$, and per split $p=0.018$ on \texttt{random} and $p=0.144$ on \texttt{extrap:alpha\_max}, Table~\ref{tab:backend}). The number of epochs before early stopping, 695 against 538 (paired $p=0.021$, including three runs that stopped at the 800-epoch cap, two with JAX and one with PyTorch), and with it the total training time are not compared, since they depend on the loss. In the split matrix, for instance, the PINN, whose loss differs from that of the MLP only by the physics and boundary terms, stops after 596 epochs on average against 418 for the MLP. The timings also depend on the load of the machine, on which four runs were executed at once. The PyTorch runs of this comparison reproduce the corresponding runs of the split matrix to the last recorded digit of the error and of the epoch count, yet took between 0.86 and 1.56 times as long.
+The difference of 30\,\% per epoch is therefore a property of the two implementations on CPU in double precision under this load, not a ranking of the differentiation engines, and it is not transferred to other hardware or precision.
+
+\begin{sidewaystable}
+\centering
+\caption[The strong-form PINN in PyTorch and in JAX]{The strong-form PINN in two implementations, PyTorch and JAX, on the \texttt{random} and \texttt{extrap:alpha\_max} splits, 5 seeds each: accuracy (macro-RMSE, MPa), effective weight of the physics term and cost. The JAX implementation applies $\lambda_{\mathrm{phys}}=0.3$ without the calibration $g$ of Eq.~\eqref{eq:calib}, so its epoch counts are not comparable with those of PyTorch and only the time per epoch is compared. Mean $\pm$ sd over seeds. The $p$-values are from a seed-paired $t$-test. Timings are for CPU, double precision, four runs at a time.}
+\label{tab:backend}
+
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Split & Backend & macro-RMSE, MPa & $\lambda_{\mathrm{phys}}g$ & Epochs & s/epoch \\
+\midrule
+\texttt{random} & PyTorch & 7.98 $\pm$ 0.21 & 0.050 $\pm$ 0.010 & 548 $\pm$ 128 & 0.554 $\pm$ 0.100 \\
+ & JAX & 8.12 $\pm$ 0.18 & 0.3 (no $g$) & 694 $\pm$ 86 & 0.803 $\pm$ 0.044 \\
+ & paired $p$ (JAX vs PyTorch) & $p = 0.269$ & --- & $p = 0.110$ & $p = 0.018$ \\
+\addlinespace
+\texttt{extrap:alpha\_max} & PyTorch & 13.05 $\pm$ 0.49 & 0.050 $\pm$ 0.009 & 528 $\pm$ 154 & 0.596 $\pm$ 0.049 \\
+ & JAX & 13.49 $\pm$ 0.30 & 0.3 (no $g$) & 696 $\pm$ 97 & 0.688 $\pm$ 0.131 \\
+ & paired $p$ (JAX vs PyTorch) & $p = 0.169$ & --- & $p = 0.155$ & $p = 0.144$ \\
+\midrule
+both splits & PyTorch & --- & 0.050 $\pm$ 0.009 & 538 $\pm$ 134 & 0.575 $\pm$ 0.078 \\
+ & JAX & --- & 0.3 (no $g$) & 695 $\pm$ 86 & 0.745 $\pm$ 0.110 \\
+ & ratio JAX/PyTorch & --- & $\times$6.0 & $\times$1.29 & $\times$1.30 \\
+ & paired $p$ ($n = 10$) & --- & --- & $p = 0.021$ & $p = 0.005$ \\
+\bottomrule
+\end{tabular}
+\end{sidewaystable}
+
+\subsubsection{PINN, MLP and FEM}
+\label{sec:res_fem}
+
+On individual components the families are as close as on the macro figure: on the random split of the one-dimensional track the component RMSE (five seeds) is 5.0--5.1~MPa for $\sigma_{rr}$, 7.0~MPa for $\sigma_{\theta\theta}$, 19.5--19.7~MPa for $\sigma_{zz}$ and 0.36--0.37~MPa for $\tau_{rz}$ for all three families. The low $R^2$ of the shear component (0.76--0.78 against 0.98--0.99 for the normal components, with the held-out standard deviation as the denominator of the per-component $R^2$) reflects
+the axial collapse of the profile, under which the mean absolute value of $\tau_{rz}$ falls by 79\,\% because the component changes sign along $z$ (Section~\ref{sec:prep-data}). The comparison with the finite-element source is made on the extended track, where $z$ is an input and the full $8\times20$ field is predicted (Section~\ref{sec:models}), because only there can both equilibrium equations be evaluated on the prediction.
+
+The field maps of Figs.~\ref{fig:compare-fields} and \ref{fig:residual-maps} were drawn from an earlier single-seed training on 1498 cases with a common hold-out of 261 cases: the 1848-case set cleaned by the window mask alone (89 cases removed, 1759 in total), on whose random split of 1571/277 the mask removes 73 training and 16 test cases.
+The 1756-case set of Section~\ref{sec:prep-data} removes in addition the three runs flagged by the earlier check of the tail. The other stages of the matrix were run on it, including the seed-replicated runs of the three two-dimensional families.
+
+Table~\ref{tab:admissibility} gives the accuracy and the physical admissibility of these runs on the held-out cases of the random split (263) and of the semi-angle extrapolation (379), three seeds each. The equilibrium residuals are taken in the full form, with all terms, by finite differences on the $8\times20$ grid of the predicted field. Their median is taken over all nodes of each case and then over the cases, in MPa/m. The traction-free violations are the mean absolute values of the predicted $\sigma_{rr}$ and $\tau_{rz}$ on the material surface, $r/R=1$, over the axial nodes and the cases. For the source the same quantities are computed from the finite-element data of the same held-out cases, on the same grid and with the same operators, the surface values being those of the outermost radial node.
+\begin{sidewaystable}
+\caption[Accuracy and physical admissibility of the two-dimensional families]{Accuracy and physical admissibility of the three two-dimensional families ($z$ as input, $8\times20$ grid) on the held-out cases of the 1756-case set, mean~$\pm$~sd over three seeds: macro-RMSE (mean of the four component RMSEs), median full-form equilibrium residuals and mean traction-free violations at $r/R=1$. In brackets, change of the mean residual relative to the MLP on the same split. The three configurations differ only in the physics terms of the loss. FEM: the same quantities for the finite-element data of the same held-out cases.}
+\label{tab:admissibility}
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrrrrr@{}}
+\toprule
+ & & & \multicolumn{2}{c}{Equilibrium residual, MPa/m} & \multicolumn{2}{c}{Traction-free violation, MPa} \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Split & Configuration & Macro-RMSE, MPa & $|R_r|$ & $|R_z|$ & $|\sigma_{rr}(r{=}1)|$ & $|\tau_{rz}(r{=}1)|$ \\
+\midrule
+\texttt{random} & FEM                & ---           & 416 & 273 & 3.53 & 0.538 \\
+                & MLP                & $7.81\pm0.22$ & $1040\pm81$ & $238\pm9$ & $3.19\pm0.57$ & $0.337\pm0.013$ \\
+                & PINN, reduced form & $8.05\pm0.44$ & $626\pm26$ ($-40\,\%$) & $217\pm5$ ($-9\,\%$) & $0.83\pm0.57$ & $0.061\pm0.019$ \\
+                & PINN, full form    & $8.02\pm0.56$ & $553\pm72$ ($-47\,\%$) & $140\pm5$ ($-41\,\%$) & $0.56\pm0.25$ & $0.132\pm0.041$ \\
+\addlinespace
+\texttt{extrap:alpha\_max} & FEM                & ---            & 528 & 388 & 3.53 & 0.816 \\
+                           & MLP                & $12.70\pm0.03$ & $1426\pm93$ & $281\pm26$ & $5.35\pm1.42$ & $0.547\pm0.123$ \\
+                           & PINN, reduced form & $12.18\pm0.34$ & $739\pm41$ ($-48\,\%$) & $242\pm4$ ($-14\,\%$) & $1.02\pm0.44$ & $0.107\pm0.021$ \\
+                           & PINN, full form    & $12.21\pm0.51$ & $686\pm54$ ($-52\,\%$) & $188\pm26$ ($-33\,\%$) & $0.78\pm0.12$ & $0.090\pm0.015$ \\
+\bottomrule
+\end{tabular}
+\end{sidewaystable}
+In accuracy the families do not part, and in the extended track the PINN is not more accurate than the MLP on the random split. There its macro-RMSE is $8.05\pm0.44$~MPa in the reduced form and $8.02\pm0.56$~MPa in the full form against $7.81\pm0.22$~MPa for the MLP. Both forms are thus 0.2~MPa less accurate, a difference that is not established ($p=0.44$ and $0.41$, three seed pairs). On the semi-angle extrapolation both forms are 0.5~MPa more accurate than the MLP, which is not established either ($p=0.10$ and $0.23$). In this track the physics terms therefore neither cost nor add accuracy that three seeds can resolve. The families are as close on individual components. On the random split the component RMSE is 4.7--5.0~MPa for $\sigma_{rr}$, 6.7--6.9~MPa for $\sigma_{\theta\theta}$, 18.6--19.1~MPa for $\sigma_{zz}$ and 1.18--1.23~MPa for $\tau_{rz}$, and, with the variance over the 263 held-out cases as the denominator, $R^2$ is 0.98--0.99 for the normal components and 0.93--0.94 for $\tau_{rz}$ in all three families.
+
+In admissibility they do. Both forms of the PINN reduce the median radial residual of the MLP, by 40 and 47\,\% on the random split and by 48 and 52\,\% on the extrapolation ($p<0.01$), since the loss of both contains the radial equation. The axial residual falls by 41 and 33\,\% with the full form ($p=0.0015$ and $0.0022$) but by only 9 and 14\,\% with the reduced one ($p=0.085$ and $0.15$). The loss of the reduced form, like that of the one-dimensional PINN, contains the radial equation alone, since without $\partial\sigma_{zz}/\partial z$, a term amounting to 68\,\% of the retained ones, the axial equation cannot be written. The gain in axial equilibrium thus comes from the axial term in the loss, not from ``physics in general''. The separation is sharpest at the free surface. On the random split the mean $|\sigma_{rr}(r{=}1)|$ is 3.19~MPa for the MLP against 0.83 and 0.56~MPa for the reduced and full forms, 3.8 and 5.7~times lower, and on the extrapolation it is 5.35~MPa against 1.02 and 0.78~MPa, 5.3 and 6.9~times lower. The reduction is established for the full form on both splits ($p=0.028$) but not for the reduced form ($p=0.069$ and $0.056$), whose violation varies strongly between seeds, from 0.39 to 1.47~MPa on the random split. The shear traction $|\tau_{rz}(r{=}1)|$ falls by a factor of 2.6--6.1 in both forms on both splits ($p\le0.018$).
+
+The source row of Table~\ref{tab:admissibility} sets these values against the finite-element data of the same held-out cases. The radial residual of the source is 416~MPa/m on the random split and 528~MPa/m on the extrapolation. The MLP exceeds it 2.5 and 2.7~times, the reduced form of the PINN 1.5 and 1.4~times and the full form 1.3~times on both splits. The axial residual of all three families lies below that of the source, by 13 and 28\,\% for the MLP, 21 and 38\,\% for the reduced form and 49 and 52\,\% for the full form, presumably because a smooth surrogate does not reproduce the node-to-node scatter of the finite-element field, which a finite difference over the eight axial nodes amplifies. At the free surface the source violates the traction-free condition by 3.53~MPa on both splits. The MLP stays near this level on the random split (3.19~MPa) and exceeds it 1.5~times on the extrapolation (5.35~MPa), whereas the reduced and full forms of the PINN satisfy the condition 4.2 and 6.3~times more strictly than the source on the random split and 3.5 and 4.5~times on the extrapolation. The shear traction of all three families lies below that of the source, 0.538 and 0.816~MPa. Since the finite-element field is affected by nodal extrapolation and averaging, a surrogate that violates the boundary condition by less than its source is, in this specific sense, more physically admissible than the data.
+
+Figures~\ref{fig:compare-fields} and \ref{fig:residual-maps} show the fields of the earlier single-seed training, in which the source was evaluated on the same 261 held-out cases as the three families, for the case with the median error of the full PINN rather than the best. The predicted stress fields of the three families are visually alike, whereas their residual fields are not. Within each component the colour scale is shared by the FEM reference and all families, so that the panels of one column are directly comparable, and the radial axis is stretched, the window being about 3.5 radii long.
+
+In these figures the residuals are made dimensionless. The equilibrium residuals $R_r$, $R_z$ of Section~\ref{sec:models} are divided by the scales of the loss term \eqref{eq:lphys}, $s_{R_1}=(s_{rr}+s_{\theta\theta})/R_{\mathrm{char}}$ and $s_{R_z}=s_{zz}/L_{\mathrm{char}}+s_{rz}/R_{\mathrm{char}}$, computed once from the FEM data and applied identically to the source and all families, since otherwise each family would be normalised by itself and the values would not be comparable. A value of 0.1 means that the equation fails to close by 10\,\% of the characteristic magnitude of its own terms. Medians are taken over the interior grid nodes of all held-out cases together, where the central difference is second-order accurate. At the edges of the grid it degenerates to a one-sided difference.
+
+In that training the macro-RMSE, the mean of the four component RMSEs, was 7.52~MPa for the MLP against 7.78 and 7.73~MPa for the reduced and full forms of the PINN, a spread of 0.26~MPa in favour of the MLP. The median dimensionless radial residual was 0.041 for the source, 0.115 for the MLP and 0.064 and 0.062 for the reduced and full forms, the axial residual 0.091, 0.074, 0.064 and 0.047, and $|\sigma_{rr}(r{=}1)|$ was 3.54, 2.90, 0.78 and 0.56~MPa. The single-seed training thus orders the source and the three families as Table~\ref{tab:admissibility} does.
+
+The ordering is the same on the one-dimensional track over five seeds.
+On the random split the median reduced radial residual $|R_1|$, Eq.~\eqref{eq:eq_red}, taken over the interior points of each held-out profile and then over the cases, is 402~MPa/m for the source, $1351\pm146$~MPa/m for the MLP, $749\pm42$~MPa/m for the PINN and $1071\pm26$~MPa/m for the VPINN (mean~$\pm$~standard deviation over five seeds), that is, 3.4, 1.9 and 2.7 times that of the source. The traction at the free surface, $|\sigma_{rr}(r{=}1)|$, is 3.48~MPa for the source, $3.41\pm0.61$~MPa for the MLP, $0.87\pm0.21$~MPa for the PINN and $0.64\pm0.14$~MPa for the VPINN. The advantage persists with $\alpha=20^\circ$ withheld, where $|\sigma_{rr}(r{=}1)|$ is $3.95\pm0.82$~MPa for the MLP against $1.74\pm0.32$~MPa for the PINN and $1.80\pm0.66$~MPa for the VPINN and 3.35~MPa for the source. It disappears only on the speed extrapolation discussed above, where all three families lose accuracy and $|\sigma_{rr}(r{=}1)|$ reaches 28--34~MPa for every family against 3.10~MPa for the source.
+
+
+
+The corruption experiment of Table~\ref{tab:corrupt} gives the clearest effect of the physics term on the error in this study, for the one kind of label defect that was tested. On clean labels the PINN and the MLP are indistinguishable ($\Delta=-0.10$~MPa, $p=0.72$): the term adds nothing where data and equations already agree. When 1, 5 and 10\,\% of the training cases carry corrupted labels, the gap $\Delta$ widens monotonically to $-0.48$, $-1.11$ and $-1.59$~MPa. Both errors are measured on the clean hold-out and both grow with the corrupted fraction, that of the MLP faster, so that the increasingly negative gap is a growing advantage of the PINN. Taken one fraction at a time, this advantage is significant at 5 and 10\,\% ($p=0.010$ and $0.037$) but not at 1\,\% ($p=0.10$). After a Holm correction over the four fractions, the clean reference included, only the 5\,\% level remains significant (adjusted $p=0.039$, against 0.111 at 10\,\% and 0.200 at 1\,\%), and no difference between the VPINN and the MLP is significant at any fraction, before or after the correction. The growth of the gap with the corrupted fraction is better supported than the gap at any single fraction. A regression of the gap on the corrupted fraction over the twelve seed-level points (four fractions, three seeds each) gives $-14.2$~MPa per unit fraction ($p=0.00036$, $R^2=0.74$): the advantage grows by about 1.4~MPa for every 10\,\% of corrupted labels. In relative terms the protection is partial. At 10\,\% the error of the MLP has grown by a factor of 1.81 (from 8.19 to 14.84~MPa) and that of the PINN by 1.64 (from 8.09 to 13.25~MPa), so that the PINN still loses most of the accuracy that the MLP loses. The weak form is hardly protected (1.79), although its loss contains the same radial term and the same traction-free term. The result also rests on a single kind of corruption, a constant offset of $\sigma_{\theta\theta}$ over the whole profile of a corrupted case, and the loss of accuracy is concentrated in that component. At 10\,\% its RMSE on the clean hold-out is 31.3~MPa for the MLP and 26.3~MPa for the PINN, against 7.3 and 7.2~MPa on clean labels, whereas the RMSE of each of the other components changes by less than 2~MPa. Such an offset leaves $\sigma_{rr}$ and $\tau_{rz}$ at $r=1$ unchanged, so the traction-free term does not see it. A prediction that followed the corrupted labels would, however, violate the radial equation \eqref{eq:eq_red} at every radius through the term $(\sigma_{rr}-\sigma_{\theta\theta})/r$, which the strong-form residual penalises point by point. Defects that this residual does not see, such as an offset of $\sigma_{zz}$, which does not enter \eqref{eq:eq_red}, were not tested, and no protection against them is claimed. Taken together, Tables~\ref{tab:admissibility} and \ref{tab:corrupt} locate the benefit of the physics term not in accuracy against a clean finite-element field, where it is marginal, but in the admissibility of the solution and, for the one kind of label defect tested, in a partial protection of the strong form against corrupted training labels.
+
+\paragraph{Limitations}
+The focus of this work is on surrogate models built by machine learning and on the finite-element simulation that supplies their training data. The adequacy of the finite-element model was assessed by comparison with analytical solutions for the drawing stress and by internal consistency tests, as described in Section~\ref{sec:res_fem_verification}, and the surrogates are evaluated with respect to that model: their accuracy on it, their transferability beyond the training range and their sensitivity to corrupted labels in the data source. A broader analysis tied directly to industrial drawing equipment requires additional verification by full-scale experiments, which lie outside the scope of this study.
+The factorial grid is incomplete and unbalanced: the level $v = 5$~m/min is represented by 122 cases against 554--607 for the other levels, each batch of simulations holds a single level of speed (Section~\ref{sec:prep-data}), and 13.2\,\% of the raw cases are bit-identical duplicates of another case differing only in the friction label, so friction cannot be used as an extrapolation axis.
+The shear component $\tau_{rz}$ is essentially not predicted from the one-dimensional representation: its NRMSE, normalised by the standard deviation over the held-out cases, is 0.47--0.49 on the random hold-out and 1.6--1.9 with the highest speed withheld, against a physical scale of 0.67~MPa mean absolute value, two orders of magnitude below the normal components. Macro-averaged figures are therefore dominated by the normal components, and per-component figures are given alongside them.
+The effect of corrupted training labels was examined on the random split only, with three seeds and for one kind of defect, a constant offset of $\sigma_{\theta\theta}$ that the radial equilibrium residual sees directly, and defects of other kinds were not tested.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{pictures/fig5_compare_fields.png}
+    \caption[Residual stress components: finite element against the three families]{Distribution of the residual stress tensor components over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 2.5\,\%$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min. Rows: FEM reference and the three model families. Columns: $\sigma_{rr}$, $\sigma_{\theta\theta}$, $\sigma_{zz}$, $\tau_{rz}$. The colour scale is common to all rows within a component. $r$ is normalised by the surface radius in the same cross-section ($r/R = 1$ is the free surface), $z$ by the window length. The case shown has the median test error of the full PINN in the single-seed training with a common hold-out of 261 cases.}
+    \label{fig:compare-fields}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{pictures/fig6_residual_maps.png}
+    \caption[Equilibrium residuals and the traction-free violation]{Comparison of the equilibrium residual distributions $R_r$ and $R_z$ over the investigated region for FEM, MLP, and PINN in the full and reduced formulations at $Q = 2.5\,\%$, $k = 0.1$, $\alpha = 8^\circ$, $\mu = 0.10$, $v = 20$~m/min (same case as Fig.~\ref{fig:compare-fields}). (a) radial residual $R_r$, (b) axial residual $R_z$, both made dimensionless by the characteristic magnitude of the terms entering the respective equation. The panel titles give the median $|R|$ over the interior nodes of all 261 test cases of the same single-seed training. (c) distribution over the test cases of the traction-free violation $|\sigma_{rr}|$ at $r/R = 1$, mean marked. The FEM column is the reference: the source itself does not satisfy the equations exactly.}
+    \label{fig:residual-maps}
+\end{figure}
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{table}[t]
+\centering
+\caption[Effect of corrupted training labels]{Effect of corrupted training labels on the \texttt{random} split. In the stated fraction of the training cases a constant offset of $+250$~MPa is added to $\sigma_{\theta\theta}$ over the whole profile. Macro-RMSE on the clean hold-out, MPa, mean $\pm$ sd over 3 seeds. Below the rule: the seed-paired gap to the data-driven baseline with its two-sided paired $p$-value and the value $p_{\mathrm{Holm}}$ adjusted by the Holm procedure over the four fractions of the same comparison, the clean reference included, and the regression of the gap on the corrupted fraction, a single test that is not adjusted. After the Holm correction the PINN $-$ MLP gap remains significant only at 5\,\%, and no VPINN $-$ MLP gap is significant before or after it.}
+\label{tab:corrupt}
+
+\setlength{\tabcolsep}{5pt}%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+ & \multicolumn{4}{c}{Corrupted training labels, \%} & \\
+\cmidrule(lr){2-5}
+Family & 0 & 1 & 5 & 10 & $\times$(10\,\%/0\,\%) \\
+\midrule
+MLP & 8.19 $\pm$ 0.34 & 9.02 $\pm$ 0.34 & 12.00 $\pm$ 0.57 & 14.84 $\pm$ 0.15 & $\times$1.81 \\
+PINN & 8.09 $\pm$ 0.20 & 8.54 $\pm$ 0.09 & 10.89 $\pm$ 0.48 & 13.25 $\pm$ 0.69 & $\times$1.64 \\
+VPINN & 8.03 $\pm$ 0.19 & 9.13 $\pm$ 0.32 & 11.11 $\pm$ 0.04 & 14.34 $\pm$ 0.69 & $\times$1.79 \\
+\midrule
+$\Delta$(PINN $-$ MLP), MPa & $-0.10$ & $-0.48$ & $-1.11$ & $-1.59$ & --- \\
+$p$ (paired, 3 seeds) & 0.718 & 0.100 & 0.010 & 0.037 & --- \\
+$p_{\mathrm{Holm}}$ (4 fractions) & 0.718 & 0.200 & 0.039 & 0.111 & --- \\
+$\Delta$(VPINN $-$ MLP), MPa & $-0.16$ & $+0.11$ & $-0.89$ & $-0.50$ & --- \\
+$p$ (paired, 3 seeds) & 0.478 & 0.747 & 0.123 & 0.253 & --- \\
+$p_{\mathrm{Holm}}$ (4 fractions) & 0.956 & 0.956 & 0.492 & 0.760 & --- \\
+\midrule
+\multicolumn{6}{@{}p{0.58\textwidth}@{}}{Regression of the seed-level gap $\Delta$(PINN $-$ MLP) on the corruption fraction ($n = 12$ points): slope $= -14.20$ MPa per unit fraction ($-1.42$ MPa per 10 percentage points), $p = 0.00036$, $R^2 = 0.735$.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusions}
+\label{sec:conclusions}
+
+In the present work a series of axisymmetric finite-element simulations of cold drawing of AISI~1020 wire was carried out over a factorial grid of process parameters, and the computed residual-stress fields were assembled and filtered into a working dataset of 1756 cases (Section~\ref{sec:fem-dataset}). On this dataset three families of surrogate models were prepared -- a data-driven multilayer perceptron, a strong-form physics-informed network and its weak, variational counterpart -- sharing the architecture, the optimiser, the epoch limit, the early-stopping rule, the mini-batch size and the seeds and differing only in the composition of the loss (Section~\ref{sec:models}). For the comparative assessment several partitions of the preprocessed sample were constructed: a random hold-out, the removal of an interior level of a factor, the removal of the highest level of a single factor, the removal as a whole of a region of the joint space of two factors -- the die semi-angle and the reduction -- left uncovered by the design, the held-out cases of that region still lying inside the training range along each of the two axes taken separately, and random controls of the same size as the corresponding held-out region, which separate the cost of leaving the training range from the cost of a smaller training pool (Section~\ref{sec:results}). Auxiliary series addressed the size of the training pool, the software backend, the two-dimensional formulation with the axial coordinate as an input and the deliberate corruption of the training labels. In total, 341 training runs were performed. On the results of the study the following conclusions can be drawn.
+
+\begin{enumerate}
+
+\item On the cleaned dataset of 1756 axisymmetric finite-element simulations, three surrogate families sharing everything but the loss reproduce the reference field to about 8~MPa of macro-RMSE on a random hold-out, with $R^2_{\mathrm{n}} = 0.99$ against 66~MPa for the constant predictor. The cost of prediction outside the training range is governed by the factor withheld rather than by the family: measured against a random control of the same size, the error grows by a factor of 1.08 for the calibration ratio and 1.64 for the die semi-angle, but by 3.15 for the highest reduction and 5.93 for the highest drawing speed, the axis that coincides with the batch of simulations (Table~\ref{tab:axis}).
+
+\item The three families do not differ in accuracy in a way that this study can establish. On the thirteen splits of the one-dimensional track the strong-form PINN has the lower macro-RMSE, and the difference is significant on four of them in a seed-paired test. However, it amounts to under 0.4~MPa on the random, interpolation and matched-control splits, where the errors are 7--12~MPa, to 0.6--1.9~MPa on the three single-factor extrapolations and the joint semi-angle--reduction gap, where they are 8--26~MPa, and to 7.5~MPa at the highest speed, where all three families have errors of 48--56~MPa. These differences are mostly comparable with the spread over seeds, and none of the differences from the data-driven baseline remains significant once the Holm correction for the thirteen splits is applied, as Table~\ref{tab:paired} shows. The advantage of the PINN is therefore a consistent tendency rather than a proven gain in accuracy. In the extended track even the tendency is absent: on the random split both forms of the PINN are 0.2~MPa less accurate than the MLP and on the semi-angle extrapolation 0.5~MPa more accurate, and none of these differences is established (Table~\ref{tab:admissibility}). Nor does the physics term help more when the training set is small: as the training set grows, the difference between the PINN and the MLP changes by $+0.20$~MPa per unit of the logarithm of the fraction on the random split and by $-0.35$~MPa on the semi-angle extrapolation, that is, in opposite directions, and neither trend is statistically significant, with $p=0.21$ and $p=0.070$ respectively, as Table~\ref{tab:curves} shows.
+
+\item The two software backends, PyTorch and JAX, compute the same derivatives to round-off and are statistically indistinguishable in accuracy, although the JAX implementation was trained without the gradient-norm calibration and hence with a physics weight about six times larger (Table~\ref{tab:backend}). The choice of backend is thus a matter of computational cost and not of the result obtained. Of the cost, only the time per epoch can be compared between the two implementations, and on CPU in double precision, with four runs executing at once, it was 30\,\% longer in JAX.
+
+\item The contribution of the physics term lies in the admissibility of the predicted field and, for the one kind of label defect tested, in a partial protection of the strong form against corrupted training labels, not in accuracy. At an accuracy indistinguishable from that of the data-driven baseline, both forms of the two-dimensional PINN reduce its median radial equilibrium residual by 40--52\,\% and its mean violation of the traction-free condition by a factor of 3.8--6.9 over three seeds, the latter reduction being established for the full form (Table~\ref{tab:admissibility}). Their violation of the boundary condition also falls below that of the finite-element source itself, by a factor of 3.5--6.3 on the same held-out cases (Table~\ref{tab:admissibility}), as does that of the one-dimensional PINN and VPINN on the random split over five seeds (Section~\ref{sec:res_fem}). The axial residual, by contrast, falls by 33--41\,\% only in the configuration whose loss contains the axial equation, so that this part of the gain is traceable to that term and not to the physics term in general (Table~\ref{tab:admissibility}). When a constant offset of $+250$~MPa is added to $\sigma_{\theta\theta}$ in a fraction of the training cases, a defect that the radial equilibrium residual sees directly, the error of the PINN grows more slowly than that of the MLP, by a factor of 1.64 against 1.81 at 10\,\% of corrupted cases, and the gap in its favour widens by about 1.4~MPa per 10\,\% of corrupted cases ($p=0.00036$), whereas on clean labels the two are indistinguishable (Table~\ref{tab:corrupt}). The protection is partial and is not shared by the weak form (1.79). Taken one fraction at a time, the gap survives a Holm correction only at 5\,\%, and defects of other kinds were not tested.
+
+\item The shear component $\tau_{rz}$ cannot be recovered from a one-dimensional, window-averaged representation: it changes sign along the axial coordinate, so that 79\,\% of its magnitude is lost when the field is collapsed along $z$, which is a property of the representation and not of any model. A two-dimensional formulation with $z$ as an input predicts this component with $R^2 = 0.93$--$0.94$ on the random split (held-out denominator, three seeds).
+
+\end{enumerate}
+
+The reference against which all of the above is measured is the finite-element solution itself. Its adequacy is addressed by the verification described in Section~\ref{sec:res_fem_verification}: on 112 dedicated runs of the same model, covering reductions of 10 and 15\,\%, die semi-angles of 8--16$^\circ$, calibration ratios from 0 to 1, two drawing speeds and all three friction coefficients, the drawing stress obtained from the computed reaction is compared, with no fitted parameters, with the classical analytical descriptions of the process, namely the relation of Siebel and the upper-bound solution of Avitzur, the latter in its friction-factor form and in the Coulomb form on which Vega et~al.\ base their modification. Without their bearing terms the three relations lie above the computed drawing stress in every run, by 11 to 16\,\% on average. They reproduce its dependence on the drawing speed, whereas their sensitivity to friction falls 9 to 25\,\% below the computed one at die semi-angles of $12^\circ$ and $16^\circ$. It is with respect to a reference field verified in this way that the conclusions listed above are to be read. Further work is directed at experimental validation of the residual-stress field. Two independent methods are suited to this. X-ray diffraction measures the stress in a thin surface layer of the drawn wire without destroying it \citep{he2003residual}. The distribution through the thickness requires a separate, destructive method, in which surface layers are removed in succession by etching or machining and the residual stresses are recovered from the deformation of the remaining specimen after each step.
+
+
+
+
+
+
+
+\begin{nomenclature}
+\entry{$D_0,D$}{initial and final diameters of the wire (m)}
+\entry{$Q$}{reduction of diameter, $100\,(D_0-D)/D_0$ (\%)}
+\entry{$k$}{calibration ratio (bearing length over initial wire diameter)}
+\entry{$L$}{length of the inclined part of the deformation zone, along the die cone (m)}
+\entry{$L_b$}{bearing length, the length of the calibration zone (m)}
+\entry{$L_w$}{length of the axial window (m)}
+\entry{$r,z$}{radial and axial coordinates (m)}
+\entry{$R$}{billet radius (Fig.~\ref{fig:fem-fields}) or surface radius of the cross-section (Figs.~\ref{fig:compare-fields}--\ref{fig:residual-maps})}
+\entry{$\sigma_{rr},\sigma_{\theta\theta},\sigma_{zz}$}{normal residual stress components (MPa)}
+\entry{$\tau_{rz}$}{shear residual stress component (MPa)}
+\entry{$R_r,R_z$}{radial and axial equilibrium residuals}
+\entry{$R_0,R_f$}{radius of the billet and of the drawn wire, the latter as reached in the model (m)}
+\entry{$v$}{drawing velocity (m/min)}
+\entry{$p$}{normal pressure on the die contact (MPa)}
+\entry{$m$}{friction factor, ratio of the interface shear stress to the shear yield stress, and in Eqs.~\eqref{eq:johnson-cook} and \eqref{eq:closed-flow} the thermal-softening exponent of the Johnson--Cook model}
+\entry{$f(\alpha)$}{die-angle function of the Avitzur velocity field}
+\entry{$c$}{specific heat (J\,kg$^{-1}$K$^{-1}$)}
+\entry{$T$}{temperature ($^\circ$C)}
+\EntryHeading{Greek Letters}
+\entry{$\alpha$}{die semi-angle, the half-angle of the deformation zone (deg)}
+\entry{$\mu$}{Coulomb friction coefficient}
+\entry{$\sigma_d$}{drawing stress (MPa)}
+\entry{$\sigma_f$}{flow stress (MPa)}
+\entry{$\varepsilon_{\mathrm{hom}},\varepsilon_{\mathrm{eff}}$}{homogeneous and effective strain}
+\entry{$\edot$}{mean strain rate over the pass (s$^{-1}$)}
+\entry{$\Delta$}{inhomogeneity parameter of the deformation zone (Section~\ref{sec:res_fem_verification}), and in Section~\ref{sec:results} the difference in macro-RMSE between a physics-informed family and the MLP (MPa)}
+\entry{$\Phi$}{excess-work factor}
+\entry{$\beta$}{fraction of plastic work converted to heat}
+\entry{$\rho$}{density (kg\,m$^{-3}$)}
+\EntryHeading{Abbreviations}
+\entry{MLP}{multilayer perceptron (data-driven surrogate)}
+\entry{PINN}{physics-informed neural network (strong form)}
+\entry{VPINN}{variational physics-informed neural network (weak form)}
+\entry{FEM}{finite-element method}
+\end{nomenclature}
+
+\backmatter
+
+\section*{Declarations}
+
+\bmhead{Conflict of interest} The authors declare no competing interests.
+
+\bmhead{Data availability} The data and code that support the findings of this study are available from the corresponding author on reasonable request.
+
+\begin{appendices}
+\counterwithin*{equation}{section}%
+
+\section{Temperature Dependence of Friction}\label{app:vega}
+
+Vega et~al.\ \citep{vega2009temperature,vega2009investigation,haddi2011analysis} build their
+modification on the Coulomb form of Avitzur's solution, Eq.~\eqref{eq:avitzur-vega}. They drop the
+assumption that $\mu$ is a constant of the
+lubricant and make it a function of the temperature measured by a thermocouple set in the die above
+the bearing zone, which they take to be proportional to the temperature of the wire--die interface,
+\begin{equation}
+\mu = \mu_0\left(\frac{T}{T_0}\right)^{m_\mu},
+\label{eq:mu-temperature}
+\end{equation}
+with $\mu_0$ the coefficient at a reference temperature $T_0$.
+Inverting Eq.~\eqref{eq:avitzur-vega} against their own force measurements, they obtain
+$\mu_0 = 0.0125$,
+$m_\mu = 2.68$ and $T_0 = 15.6\,^\circ$C for copper drawn in oil at 1--7~m/s, the temperatures
+entering the ratio in degrees Celsius.
+
+The temperature dependence of friction was not studied in this work and lies outside its scope.
+In the model the Coulomb coefficient keeps its prescribed value throughout the pass, and the
+published constants only indicate the size of the effect. The cross-section mean of the
+temperature rise in the wire is 22--42~$^\circ$C (Section~\ref{sec:res_fem_verification}), so that
+the pass-mean temperature, the initial 20~$^\circ$C plus half the rise, is 31--41~$^\circ$C. With
+$\mu_0$ taken as the prescribed coefficient and $T_0$ as the initial 20~$^\circ$C,
+Eq.~\eqref{eq:mu-temperature} would multiply the coefficient by 3.3 to 6.8 at the pass-mean
+temperature, or by 6.4 to 13.1 if $T_0$ is taken as the 15.6~$^\circ$C reference temperature of
+the original calibration. For steel wire such a relation would have to be identified as Vega
+et~al.\ did for copper, from measured drawing forces and die temperatures.
+
+\section{Closed Estimate of the Flow Stress and the Temperature Rise}\label{app:closed}
+
+The flow stress and the temperature rise can also be estimated without the strain, strain-rate and
+temperature histories of the model, from the approximate relations of the theory of drawing. The
+strain follows from the excess-work correlation \citep{backofen1972deformation}, the strain rate
+from the kinematics of the die cone and the temperature rise from the energy balance of the pass,
+as in the classical estimates of the heating of drawn wire \citep{siebel1943erwaermung}. Apart from
+the material constants and the entry radius, these relations need the die semi-angle, the drawing
+speed and the friction coefficient of the run. The only quantity taken from the finite-element
+solution is the exit radius $R_f$ reached in the model, as in Eq.~\eqref{eq:sigma-d}:
+\begin{align}
+\varepsilon_{\mathrm{hom}} &= 2\ln\frac{R_0}{R_f}, \qquad
+\Phi = 0.8 + \frac{\Delta}{4.4}, \qquad
+\varepsilon_{\mathrm{eff}} = \Phi\,\varepsilon_{\mathrm{hom}}, \label{eq:closed-strain}\\
+\edot &= \frac{6\,v\,R_f^2\tan\alpha\,\ln(R_0/R_f)}{R_0^3-R_f^3}, \label{eq:closed-rate}\\
+\langle\sigma_f\rangle &= \left(A + \frac{B\,\varepsilon_{\mathrm{eff}}^{\,n}}{n+1}\right)
+  \left(1 + C\ln\frac{\edot}{\edot_0}\right)
+  \bigl(1 - \bar\theta^{\,m}\bigr), \label{eq:closed-flow}\\
+\Delta T &= \frac{\beta\,\sigma_d}{\rho c}, \label{eq:closed-rest}
+\end{align}
+where $\Delta$ is the inhomogeneity parameter of Eq.~\eqref{eq:delta}, $\Phi$ the excess-work factor, $\edot$ the mean strain rate over the time taken to
+traverse the cone at constant volume flow, and $\langle\sigma_f\rangle$ the flow stress of the
+estimate. It is Eq.~\eqref{eq:johnson-cook} with the strain term averaged over the strain from zero
+to $\varepsilon_{\mathrm{eff}}$ and with $\bar\theta$ the homologous temperature at the initial
+20~$^\circ$C plus half the rise $\Delta T$. The drawing stress of the estimate is
+Eq.~\eqref{eq:avitzur} with the friction factor set to $\sqrt3\,\mu$ and without the bearing term. The
+excess-work correlation is quoted in the literature in more than one form. Replacing
+$\Phi = 0.8+\Delta/4.4$ by the alternative $\Phi = 0.88+0.12\,\Delta$ changes $\Phi$ by a factor of
+1.1 to 1.3 but the flow stress, and the estimated temperature rise, by only 0.3 to 1.0\,\%,
+because the hardening term of the constitutive equation is small against $A$. The
+choice therefore does not carry the comparison. The temperature
+needs no input from the model, because it closes on the deformation work itself: that work per
+unit volume is the part of $\sigma_d$ raised in the cone, a fraction $\beta$ of which becomes
+heat, so the mean rise is $\Delta T = \beta\,\sigma_d/(\rho c)$. Since $\sigma_d$ depends on the
+flow stress and the flow stress on the temperature, this is a fixed point, reached in at most
+seven iterations. For the
+112 runs the fixed point returns a flow stress of 313--336~MPa, in agreement with the
+314--331~MPa used in Table~\ref{tab:drawstress}, at $\Delta = 1.7$--4.7,
+$\varepsilon_{\mathrm{eff}} = 0.30$--0.45 and $\edot = 2.4$--10.0~s$^{-1}$, all obtained with the exit
+radius reached in the model. With the nominal exit radius $R_0(1-Q/100)$ instead, $\Delta$ would be
+1.7--5.2 and $\varepsilon_{\mathrm{eff}}$ 0.30--0.42, while the flow stress would stay within
+313--336~MPa.
+The closed
+estimate is quoted with its own value throughout, and no column of Table~\ref{tab:drawstress}
+uses it.
+
+The closed estimate of the temperature rise, Eq.~\eqref{eq:closed-rest} with the drawing stress
+of the estimate, lies 19--32\,\% above the computed rise. The reason is its drawing stress, which
+follows Avitzur's relation and exceeds the computed one by 12--24\,\%. The closure itself is sound,
+since with the computed drawing stress the same balance lies only 1--11\,\% above the computed
+rise (Section~\ref{sec:res_fem_verification}), and the error is inherited from the work term.
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{appendices}
+
+\bibliography{../overleaf/asmejour-sample}
+
+\end{document}
