@@ -47,10 +47,13 @@ def make_split(P: np.ndarray, seed: int, frac=(0.70, 0.15, 0.15)):
         n = sum(len(groups[j]) for j in order)
         acc = 0
         for j in order:
-            share = acc / n
+            share = (acc + 0.5 * len(groups[j])) / n          # середина вклада семейства
             (te if share < frac[2] else va if share < frac[2] + frac[1] else tr).extend(groups[j])
             acc += len(groups[j])
-    return np.array(sorted(tr)), np.array(sorted(va)), np.array(sorted(te))
+    tr, va, te = np.array(sorted(tr)), np.array(sorted(va)), np.array(sorted(te))
+    got = np.array([len(tr), len(va), len(te)]) / len(P)
+    assert np.all(np.abs(got - np.array(frac)[[0, 1, 2]]) < 0.02) or len(P) < 500, got
+    return tr, va, te
 
 
 def git_hash() -> str:
@@ -115,7 +118,8 @@ def main():
             sched.step()
             tot += loss.item() * len(b)
         v = val_rmse()
-        hist.append({"epoch": ep, "train_loss": tot / len(tr), "val_rmse_macro": v})
+        hist.append({"epoch": ep, "train_loss": tot / len(tr), "val_rmse_macro": v,
+                     "lr": opt.param_groups[0]["lr"]})
         if v < best:
             best, best_ep = v, ep
             best_state = {k: t.clone() for k, t in model.state_dict().items()}
@@ -133,7 +137,8 @@ def main():
     met = evaluate(pred, Y[te], grid, Y[tr].mean(0), flags)
     met.update(best_epoch=best_ep, epochs_run=len(hist), val_rmse_macro=best, train_seconds=train_s,
                predict_ms_per_regime=pred_ms, n_params=sum(p.numel() for p in model.parameters()),
-               n_train=len(tr), n_val=len(va), n_test=len(te))
+               n_train=len(tr), n_val=len(va), n_test=len(te),
+               lr_at_best=float(hist[best_ep]["lr"]))
     torch.save({"state": model.state_dict(), "x_mean": mu, "x_std": sd, "scale": scale,
                 "grid": meta["grid"], "window_R": meta["window_R"], "variant": cfg["variant"],
                 "width": cfg.get("width", 64)}, os.path.join(out, "model.pt"))

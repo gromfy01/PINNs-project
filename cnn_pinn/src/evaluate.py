@@ -70,10 +70,10 @@ def evaluate(pred: np.ndarray, y: np.ndarray, g: Grid, y_train_mean: np.ndarray,
     out["max_abs_sigma_median"] = float(np.median(np.abs(y).reshape(len(y), -1).max(1)))
 
     if flags:
-        per = np.sqrt(np.mean(e ** 2, axis=(2, 3))).mean(1)       # macro-RMSE по режиму
+        macro = lambda s: float(np.mean([_rms(e[s][:, c]) for c in range(4)]))  # noqa: E731
         for nm, m in flags.items():
             if m.any() and (~m).any():
-                out[f"rmse_macro_{nm}"] = float(np.sqrt(np.mean(per[m] ** 2)))
-                out[f"rmse_macro_not_{nm}"] = float(np.sqrt(np.mean(per[~m] ** 2)))
+                out[f"rmse_macro_{nm}"] = macro(m)
+                out[f"rmse_macro_not_{nm}"] = macro(~m)
                 out[f"n_{nm}"] = int(m.sum())
     return out

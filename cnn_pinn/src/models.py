@@ -100,5 +100,5 @@ def build(variant: str, grid: Grid, width: int = 64) -> nn.Module:
     if variant in ("hard", "data"):
         return FiLMDecoder(grid, variant, width=width)
     if variant == "profile1d":
-        return Profile1D(grid)
+        return Profile1D(grid, width=width)
     raise ValueError(f"неизвестный вариант {variant!r}")

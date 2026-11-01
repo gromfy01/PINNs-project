@@ -39,12 +39,24 @@ MU_LEVELS = (0.025, 0.05, 0.1)
 COMPONENTS = ("sigma_r", "sigma_theta", "sigma_z", "tau_rz")
 
 
-def steady_zone(r, z, szz, tol_r=0.05, tol_abs=15.0, tol_rel=0.05, bin_mm=3.0):
+def close_gaps(ok: np.ndarray, max_gap: int) -> np.ndarray:
+    """Заполнить провалы длиной ≤ max_gap внутри маски: разброс узловых значений σ_z на оси
+    ±15–20 МПа, и одиночный выброс иначе рвёт длинную установившуюся зону."""
+    ok = ok.copy()
+    idx = np.flatnonzero(ok)
+    for a, b in zip(idx[:-1], idx[1:]):
+        if 1 < b - a <= max_gap + 1:
+            ok[a:b] = True
+    return ok
+
+
+def steady_zone(r, z, szz, tol_r=0.05, tol_abs=15.0, tol_rel=0.05, bin_mm=3.0, max_gap=2):
     """
     Наибольший непрерывный участок по z, где радиус поверхности постоянен
     (в пределах tol_r, мм), а σ_z на поверхности и на оси отклоняется от своей
     медианы не больше чем на max(tol_abs, tol_rel·|медиана|). Медианы берутся по
-    средней части проволоки [0.2, 0.65]·L, где поле обычно установилось.
+    средней части проволоки [0.2, 0.65]·L, где поле обычно установилось. Провалы
+    до max_gap узлов внутри зоны закрываются (close_gaps).
     Возвращает (z_a, z_b, R) в мм или None.
     """
     z0, z1 = z.min(), z.max()
@@ -73,6 +85,7 @@ def steady_zone(r, z, szz, tol_r=0.05, tol_abs=15.0, tol_rel=0.05, bin_mm=3.0):
     ok = ((np.abs(rs_a - R_med) <= tol_r)
           & (np.abs(ss_a - s_med) <= max(tol_abs, tol_rel * abs(s_med)))
           & (np.abs(sa - a_med) <= max(tol_abs, tol_rel * abs(a_med))))
+    ok = close_gaps(ok, max_gap)
     best, cur = (0, -1), None
     for i, f in enumerate(ok):
         if f and cur is None:

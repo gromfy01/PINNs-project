@@ -2,7 +2,7 @@
 name: profile1d
 variant: profile1d
 data: data/trial_w2.npz
-width: 64
+width: 128
 scale: 300.0        # общий масштаб напряжений, МПа (п. 3 шаг 4)
 lr: 0.002
 wd: 1.0e-5
